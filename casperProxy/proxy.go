@@ -2,6 +2,7 @@ package casperproxy
 
 import (
 	"bufio"
+	"errors"
 	"io"
 	"log"
 	"net"
@@ -84,8 +85,9 @@ func (p *Proxy) interceptCommands(reader *bufio.Reader) error {
 		commandStr := strings.TrimSpace(message)
 		command, err := types.NewCommand(commandStr)
 		if err != nil {
-			log.Printf("Error parsing command from client: %v", err)
-
+			if !errors.Is(err, types.ErrUnsupportedCommandType) {
+				log.Printf("Error parsing command from client: '%s', error: %v", commandStr, err)
+			}
 			err = p.writeToServer(commandStr)
 			if err != nil {
 				return err
@@ -99,12 +101,16 @@ func (p *Proxy) interceptCommands(reader *bufio.Reader) error {
 			cgCommand, ok := command.(*types.CommandCG)
 			if !ok {
 				log.Printf("Received non-CG command from client: %s", commandStr)
-				continue
+				break
+			}
+
+			if *cgCommand.Call != types.CommandCallADD {
+				break
 			}
 
 			if cgCommand.TemplatePath == nil {
 				log.Printf("Received CG command without template path: %s", commandStr)
-				continue
+				break
 			}
 
 			switch *cgCommand.TemplatePath {
@@ -112,10 +118,26 @@ func (p *Proxy) interceptCommands(reader *bufio.Reader) error {
 				countdown, ok := cgCommand.JsonData.(*types.Countdown)
 				if !ok {
 					log.Printf("Received CG command with invalid JSON data for Countdown: %s", commandStr)
-					continue
+					break
 				}
-				log.Printf("Received Countdown command: Title=%s, TimerMinutes=%d, TimerSeconds=%d",
+				log.Printf("Received Countdown command: Title=%s, TimerMinutes=%s, TimerSeconds=%s",
 					countdown.Title, countdown.TimerMinutes, countdown.TimerSeconds)
+			case types.TemplatePathTitle:
+				title, ok := cgCommand.JsonData.(*types.Title)
+				if !ok {
+					log.Printf("Received CG command with invalid JSON data for Title: %s", commandStr)
+					break
+				}
+				log.Printf("Received Title command: Title=%s", title.Title)
+			case types.TemplatePathBar:
+				bar, ok := cgCommand.JsonData.(*types.Bar)
+				if !ok {
+					log.Printf("Received CG command with invalid JSON data for Bar: %s", commandStr)
+					break
+				}
+				log.Printf("Received Bar command: Number=%s, Title=%s", bar.Number, bar.Title)
+			default:
+				log.Printf("Received CG command with unsupported template path: %s", *cgCommand.TemplatePath)
 			}
 		}
 

@@ -9,11 +9,16 @@ type TemplatePaths string
 
 const (
 	TemplatePathCountdown TemplatePaths = "COUNTDOWN"
+	TemplatePathTitle     TemplatePaths = "TITLE"
+	TemplatePathBar       TemplatePaths = "BAR"
 )
 
 var commandTemplatePathMap = map[string]TemplatePaths{
 	"COUNTDOWN":         TemplatePathCountdown,
 	"COUNTDOWN_TO_TIME": TemplatePathCountdown,
+	"TITLE":             TemplatePathTitle,
+	"BAR_BLUE":          TemplatePathBar,
+	"BAR_RED":           TemplatePathBar,
 }
 
 func TemplatePathFromString(s string) (TemplatePaths, error) {

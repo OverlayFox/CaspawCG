@@ -112,6 +112,18 @@ func NewCommandCG(commandParts []string) (*CommandCG, error) {
 				return nil, fmt.Errorf("failed to unmarshal countdown data: %w", err)
 			}
 			jsonDataParsed = &countdownData
+		case TemplatePathTitle:
+			var titleData Title
+			if err := json.Unmarshal(jsonBytes, &titleData); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal title data: %w", err)
+			}
+			jsonDataParsed = &titleData
+		case TemplatePathBar:
+			var barData Bar
+			if err := json.Unmarshal(jsonBytes, &barData); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal bar data: %w", err)
+			}
+			jsonDataParsed = &barData
 		default:
 			return nil, fmt.Errorf("unsupported template path for JSON data: %s", *templatePath)
 		}
