@@ -2,8 +2,12 @@ package main
 
 import (
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
 
 	cp "github.com/OverlayFox/CaspawCG/casperProxy"
+	googleworkspace "github.com/OverlayFox/CaspawCG/googleWorkspace"
 )
 
 const (
@@ -13,7 +17,20 @@ const (
 )
 
 func main() {
-	proxy, err := cp.NewProxy(proxyPort, casparCGHost, casparCGPort)
+	gw, err := googleworkspace.NewHandler()
+	if err != nil {
+		log.Fatalf("Failed to create Google Workspace handler: %v", err)
+	}
+
+	gw.Start()
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	<-sigChan
+	log.Println("Received interrupt signal, shutting down...")
+	return
+
+	proxy, err := cp.NewProxy(proxyPort, casparCGHost, casparCGPort, gw)
 	if err != nil {
 		log.Fatalf("Failed to create proxy: %v", err)
 	}
