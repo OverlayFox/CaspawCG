@@ -8,17 +8,19 @@ import (
 type TemplatePaths string
 
 const (
-	TemplatePathCountdown TemplatePaths = "COUNTDOWN"
-	TemplatePathTitle     TemplatePaths = "TITLE"
-	TemplatePathBar       TemplatePaths = "BAR"
+	TemplatePathCountdown       TemplatePaths = "COUNTDOWN"
+	TemplatePathCountdownToTime TemplatePaths = "COUNTDOWN_TO_TIME"
+	TemplatePathTitle           TemplatePaths = "TITLE"
+	TemplatePathBarBlue         TemplatePaths = "BAR_BLUE"
+	TemplatePathBarRed          TemplatePaths = "BAR_RED"
 )
 
 var commandTemplatePathMap = map[string]TemplatePaths{
 	"COUNTDOWN":         TemplatePathCountdown,
-	"COUNTDOWN_TO_TIME": TemplatePathCountdown,
+	"COUNTDOWN_TO_TIME": TemplatePathCountdownToTime,
 	"TITLE":             TemplatePathTitle,
-	"BAR_BLUE":          TemplatePathBar,
-	"BAR_RED":           TemplatePathBar,
+	"BAR_BLUE":          TemplatePathBarBlue,
+	"BAR_RED":           TemplatePathBarRed,
 }
 
 func TemplatePathFromString(s string) (TemplatePaths, error) {

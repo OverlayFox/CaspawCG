@@ -1,6 +1,7 @@
 package types
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"strconv"
@@ -16,6 +17,47 @@ type CommandCG struct {
 	TemplatePath *TemplatePaths `json:"template_path,omitempty"`
 	PlayOnLoad   *bool          `json:"play_on_load,omitempty"`
 	JsonData     any            `json:"json_data,omitempty"`
+}
+
+func (c *CommandCG) Command() (string, error) {
+	if c.TemplatePath == nil {
+		return "", fmt.Errorf("template path must be specified")
+	}
+
+	commandParts := []string{
+		string(c.CommandType),
+		fmt.Sprintf("%d-%d", *c.Channel, *c.Layer),
+		string(*c.Call),
+		strconv.Itoa(*c.CgLayer),
+		fmt.Sprintf("\"%s\"", string(*c.TemplatePath)),
+	}
+
+	if c.PlayOnLoad != nil {
+		if *c.PlayOnLoad {
+			commandParts = append(commandParts, "1")
+		} else {
+			commandParts = append(commandParts, "0")
+		}
+	}
+
+	if c.JsonData != nil {
+		buf := &bytes.Buffer{}
+		enc := json.NewEncoder(buf)
+		enc.SetEscapeHTML(false) // Prevent HTML escaping
+		err := enc.Encode(c.JsonData)
+		if err != nil {
+			return "", fmt.Errorf("failed to encode JSON data: %w", err)
+		}
+
+		b := buf.Bytes()
+		if len(b) > 0 && b[len(b)-1] == '\n' {
+			b = b[:len(b)-1] // Remove trailing newline
+		}
+		escaped := strings.ReplaceAll(string(b), `"`, `\"`)
+		commandParts = append(commandParts, fmt.Sprintf("\"%s\"", escaped))
+	}
+
+	return strings.Join(commandParts, " "), nil
 }
 
 func NewCommandCG(commandParts []string) (*CommandCG, error) {
@@ -106,7 +148,7 @@ func NewCommandCG(commandParts []string) (*CommandCG, error) {
 		}
 
 		switch *templatePath {
-		case TemplatePathCountdown:
+		case TemplatePathCountdown, TemplatePathCountdownToTime:
 			var countdownData Countdown
 			if err := json.Unmarshal(jsonBytes, &countdownData); err != nil {
 				return nil, fmt.Errorf("failed to unmarshal countdown data: %w", err)
@@ -118,7 +160,7 @@ func NewCommandCG(commandParts []string) (*CommandCG, error) {
 				return nil, fmt.Errorf("failed to unmarshal title data: %w", err)
 			}
 			jsonDataParsed = &titleData
-		case TemplatePathBar:
+		case TemplatePathBarRed, TemplatePathBarBlue:
 			var barData Bar
 			if err := json.Unmarshal(jsonBytes, &barData); err != nil {
 				return nil, fmt.Errorf("failed to unmarshal bar data: %w", err)

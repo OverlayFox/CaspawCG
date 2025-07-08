@@ -119,6 +119,8 @@ func (p *Proxy) processClientCommands(clientConn net.Conn) error {
 			commandStr = newCommandStr
 		}
 
+		log.Printf("Forwarding command to server: %s", commandStr)
+
 		if err := p.forwardToServer(commandStr); err != nil {
 			return fmt.Errorf("failed to forward command to server: %w", err)
 		}
@@ -157,6 +159,8 @@ func (p *Proxy) handleCGCommand(command types.Command, originalCommand string) (
 		return originalCommand, nil
 	}
 
+	log.Printf("Processing CG command: %s", originalCommand)
+
 	if cgCommand.TemplatePath == nil {
 		log.Printf("CG command missing template path: %s", originalCommand)
 		return originalCommand, nil
@@ -172,7 +176,7 @@ func (p *Proxy) processCGTemplate(cgCommand *types.CommandCG, originalCommand st
 		return p.processCountdownTemplate(cgCommand, originalCommand)
 	case types.TemplatePathTitle:
 		return p.processTitleTemplate(cgCommand, originalCommand)
-	case types.TemplatePathBar:
+	case types.TemplatePathBarRed, types.TemplatePathBarBlue:
 		return p.processBarTemplate(cgCommand, originalCommand)
 	default:
 		log.Printf("Unsupported CG template path: %s", *cgCommand.TemplatePath)
@@ -211,6 +215,34 @@ func (p *Proxy) processTitleTemplate(cgCommand *types.CommandCG, originalCommand
 	return title.Command()
 }
 
+func getBarDanceComp(standings []*gTypes.DetailedDanceComp, layer int) (*types.Bar, error) {
+	mapping := map[int]int{
+		51: 0, // First place
+		52: 1, // Second place
+		53: 2,
+		54: 3,
+		55: 4,
+		56: 5,
+		57: 6,
+		58: 7,
+		59: 8,
+		60: 9,
+		61: 10,
+	}
+
+	if layer < 51 || layer > 61 {
+		return nil, fmt.Errorf("invalid layer %d for bar template", layer)
+	}
+	if len(standings) <= mapping[layer] {
+		return nil, fmt.Errorf("not enough dance competition standings for layer %d", layer)
+	}
+
+	return &types.Bar{
+		Number: standings[mapping[layer]].TotalScore,
+		Title:  standings[mapping[layer]].Name,
+	}, nil
+}
+
 // processBarTemplate handles bar template commands
 func (p *Proxy) processBarTemplate(cgCommand *types.CommandCG, originalCommand string) (string, error) {
 	bar, ok := cgCommand.JsonData.(*types.Bar)
@@ -218,10 +250,17 @@ func (p *Proxy) processBarTemplate(cgCommand *types.CommandCG, originalCommand s
 		return originalCommand, fmt.Errorf("invalid JSON data for Bar template: %s", originalCommand)
 	}
 
-	log.Printf("Processing Bar: Number=%s, Title=%s", bar.Number, bar.Title)
+	danceCompStandings := p.sheetsData.GetDetailedDanceComp()
+	barData, err := getBarDanceComp(danceCompStandings, *cgCommand.Layer)
+	if err != nil {
+		log.Printf("Error getting bar data for layer %d: %v", *cgCommand.Layer, err)
+		return originalCommand, fmt.Errorf("failed to get bar data: %w", err)
+	}
 
-	// Additional bar processing logic can be added here
-	return bar.Command()
+	bar.Number = barData.Number
+	bar.Title = barData.Title
+
+	return cgCommand.Command()
 }
 
 // forwardToServer sends a command to the CasparCG server
