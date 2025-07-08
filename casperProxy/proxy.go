@@ -7,11 +7,18 @@ import (
 	"io"
 	"log"
 	"net"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
 	"github.com/OverlayFox/CaspawCG/casperProxy/types"
 	gTypes "github.com/OverlayFox/CaspawCG/types"
+)
+
+const (
+	scheduleBarStartLayer = 41 // First layer for schedule bars
+	scheduleBarMaxChars   = 50 // Max characters per row in schedule bar template
 )
 
 type Proxy struct {
@@ -174,14 +181,126 @@ func (p *Proxy) processCGTemplate(cgCommand *types.CommandCG, originalCommand st
 	switch *cgCommand.TemplatePath {
 	case types.TemplatePathCountdown:
 		return p.processCountdownTemplate(cgCommand, originalCommand)
+	case types.TemplatePathCountdownToTime:
+		return p.processCountdownToTimeTemplate(cgCommand, originalCommand)
 	case types.TemplatePathTitle:
-		return p.processTitleTemplate(cgCommand, originalCommand)
+		return originalCommand, nil
 	case types.TemplatePathBarRed, types.TemplatePathBarBlue:
 		return p.processBarTemplate(cgCommand, originalCommand)
+	case types.TemplatePathSchedule:
+		return p.processScheduleTemplate(cgCommand, originalCommand)
+	case types.TemplatePathDanceComp:
+		return p.processDetailedDanceCompTemplate(cgCommand, originalCommand)
 	default:
 		log.Printf("Unsupported CG template path: %s", *cgCommand.TemplatePath)
 		return originalCommand, nil
 	}
+}
+
+func (p *Proxy) processDetailedDanceCompTemplate(cgCommand *types.CommandCG, originalCommand string) (string, error) {
+	danceComp, ok := cgCommand.JsonData.(*types.DetailedDanceComp)
+	if !ok {
+		return originalCommand, fmt.Errorf("invalid JSON data for Detailed Dance Competition template: %s", originalCommand)
+	}
+
+	finalist := p.sheetsData.GetDetailedDanceCompSingle()
+	if finalist == nil {
+		return originalCommand, fmt.Errorf("no detailed dance competition data available")
+	}
+
+	danceComp.Name = finalist.Name
+	danceComp.TotalScore = finalist.TotalScore
+	danceComp.AppearanceScore = finalist.Appearance
+	danceComp.ProfessionalismScore = finalist.Professionalism
+	danceComp.ConsistencyScore = finalist.Consistency
+	danceComp.ComplexityScore = finalist.Complexity
+	danceComp.DecibelsScore = finalist.Decibels
+	danceComp.OriginalityScore = finalist.Originality
+	danceComp.QuantumScore = finalist.Quantum
+
+	cleanName := strings.NewReplacer(" ", "_", "&", "_").Replace(finalist.Name)
+	pictureFileName := "danceComp/contestant_" + strings.ToLower(cleanName) + ".png"
+
+	absPicturePath, err := filepath.Abs("../casparCG/template/images/" + pictureFileName)
+	if err != nil {
+		log.Printf("Error resolving absolute path for %s: %v", pictureFileName, err)
+	}
+	if _, err := os.Stat(absPicturePath); err == nil {
+		danceComp.PicturePath = pictureFileName
+	} else if !os.IsNotExist(err) {
+		log.Printf("Error checking picture file %s: %v", absPicturePath, err)
+	}
+
+	return cgCommand.Command()
+}
+
+func (p *Proxy) getScheduleBar(schedule []*gTypes.ScheduleRow, layer int) (*types.ScheduleBar, error) {
+	if layer < 41 || layer > 44 {
+		return nil, fmt.Errorf("invalid layer %d for schedule bar template", layer)
+	}
+
+	if len(schedule) < 3 {
+		return nil, fmt.Errorf("not enough schedule rows for layer %d", layer)
+	}
+
+	bar := &types.ScheduleBar{
+		StartTime: schedule[layer-scheduleBarStartLayer].StartTime.Format("15:04"),
+		EndTime:   schedule[layer-scheduleBarStartLayer].EndTime.Format("15:04"),
+		Hotel:     schedule[layer-scheduleBarStartLayer].Hotel,
+		Room:      schedule[layer-scheduleBarStartLayer].Room,
+	}
+
+	title := schedule[layer-scheduleBarStartLayer].Title
+	if len(title) > scheduleBarMaxChars {
+		// Find the last whitespace before or at the maxChar character
+		splitIdx := scheduleBarMaxChars
+		for i := scheduleBarMaxChars; i >= 0; i-- {
+			if i < len(title) && title[i] == ' ' {
+				splitIdx = i
+				break
+			}
+		}
+		// If no whitespace found, just split at maxChar
+		if splitIdx == scheduleBarMaxChars {
+			bar.Row1 = ""
+			bar.Row2 = title[:scheduleBarMaxChars]
+			bar.Row3 = title[scheduleBarMaxChars:]
+		} else {
+			bar.Row1 = ""
+			bar.Row2 = strings.TrimSpace(title[:splitIdx])
+			bar.Row3 = strings.TrimSpace(title[splitIdx:])
+		}
+	} else {
+		bar.Row1 = title
+		bar.Row2 = ""
+		bar.Row3 = ""
+	}
+
+	return bar, nil
+}
+
+func (p *Proxy) processScheduleTemplate(cgCommand *types.CommandCG, originalCommand string) (string, error) {
+	bar, ok := cgCommand.JsonData.(*types.ScheduleBar)
+	if !ok {
+		return originalCommand, fmt.Errorf("invalid JSON data for Schedule Bar template: %s", originalCommand)
+	}
+
+	schedule := p.sheetsData.GetCurrentSchedule()
+	scheduleData, err := p.getScheduleBar(schedule, *cgCommand.Layer)
+	if err != nil {
+		return originalCommand, fmt.Errorf("failed to get schedule data: %w", err)
+	}
+
+	bar.Row1 = scheduleData.Row1
+	bar.Row2 = scheduleData.Row2
+	bar.Row3 = scheduleData.Row3
+	bar.StartTime = scheduleData.StartTime
+	bar.EndTime = scheduleData.EndTime
+	bar.Hotel = scheduleData.Hotel
+	bar.Room = scheduleData.Room
+
+	return cgCommand.Command()
+
 }
 
 // processCountdownTemplate handles countdown template commands
@@ -196,23 +315,28 @@ func (p *Proxy) processCountdownTemplate(cgCommand *types.CommandCG, originalCom
 	countdown.Title = countdownData.Title
 	countdown.TimerHours = countdownData.CountdownTime
 
-	log.Printf("Processing Countdown: Title=%s, TimerMinutes=%s, TimerSeconds=%s",
+	log.Printf("Processing Countdown: Title=%s, TimerMinutes=%s, TimerHours=%s",
 		countdown.Title, countdown.TimerMinutes, countdown.TimerHours)
 
-	return countdown.Command()
+	return cgCommand.Command()
 }
 
-// processTitleTemplate handles title template commands
-func (p *Proxy) processTitleTemplate(cgCommand *types.CommandCG, originalCommand string) (string, error) {
-	title, ok := cgCommand.JsonData.(*types.Title)
+// processCountdownToTimeTemplate handles countdown template commands
+func (p *Proxy) processCountdownToTimeTemplate(cgCommand *types.CommandCG, originalCommand string) (string, error) {
+	countdown, ok := cgCommand.JsonData.(*types.Countdown)
 	if !ok {
-		return originalCommand, fmt.Errorf("invalid JSON data for Title template: %s", originalCommand)
+		return originalCommand, fmt.Errorf("invalid JSON data for Countdown template: %s", originalCommand)
 	}
 
-	log.Printf("Processing Title: Title=%s", title.Title)
+	countdownData := p.sheetsData.GetCountdownToTime()
 
-	// Additional title processing logic can be added here
-	return title.Command()
+	countdown.Title = countdownData.Title
+	countdown.TimerHours = countdownData.CountdownTime
+
+	log.Printf("Processing Countdown to Time: Title=%s, TimerMinutes=%s, TimerHours=%s",
+		countdown.Title, countdown.TimerMinutes, countdown.TimerHours)
+
+	return cgCommand.Command()
 }
 
 func getBarDanceComp(standings []*gTypes.DetailedDanceComp, layer int) (*types.Bar, error) {
@@ -253,7 +377,6 @@ func (p *Proxy) processBarTemplate(cgCommand *types.CommandCG, originalCommand s
 	danceCompStandings := p.sheetsData.GetDetailedDanceComp()
 	barData, err := getBarDanceComp(danceCompStandings, *cgCommand.Layer)
 	if err != nil {
-		log.Printf("Error getting bar data for layer %d: %v", *cgCommand.Layer, err)
 		return originalCommand, fmt.Errorf("failed to get bar data: %w", err)
 	}
 

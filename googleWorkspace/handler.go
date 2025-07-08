@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -14,16 +15,19 @@ import (
 )
 
 type Handler struct {
-	sheets *sheets.SpreadsheetsService
-	id     string
+	sheets     *sheets.SpreadsheetsService
+	cgID       string
+	scheduleID string
 
 	countdown               *types.Countdown
 	countdownToTime         *types.Countdown
 	lowerThird              *types.LowerThird
 	detailedDanceCompSingle *types.DetailedDanceComp
 	detailedDanceComp       []*types.DetailedDanceComp
+	schedule                []*types.ScheduleRow
 
-	mtx sync.RWMutex
+	mtx         sync.RWMutex
+	scheduleMtx sync.RWMutex
 
 	ctx context.Context
 	wg  sync.WaitGroup
@@ -37,9 +41,10 @@ func NewHandler() (types.SheetsData, error) {
 	}
 
 	return &Handler{
-		sheets: srv.Spreadsheets,
-		id:     "1ag__aae56azH_D4yqQpXXf4GXpsMespSlju_ed20vVo",
-		ctx:    ctx,
+		sheets:     srv.Spreadsheets,
+		cgID:       "1ag__aae56azH_D4yqQpXXf4GXpsMespSlju_ed20vVo",
+		scheduleID: "1NZbShItG_jQRS48_PXtE0dRnQp0NqOrn__I6fxRpiws",
+		ctx:        ctx,
 
 		countdown: &types.Countdown{
 			Title:         "Countdown",
@@ -54,24 +59,30 @@ func NewHandler() (types.SheetsData, error) {
 			Row2: "",
 		},
 		detailedDanceComp: make([]*types.DetailedDanceComp, 0),
+		schedule:          make([]*types.ScheduleRow, 0),
 	}, nil
 }
 
 func (h *Handler) Start() {
-	h.pull()
-	return
-
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()
 
-		ticker := time.NewTicker(5 * time.Second)
-		defer ticker.Stop()
+		h.pullCgSheet()
+		h.pullSchedule()
+
+		ticker5sec := time.NewTicker(5 * time.Second)
+		defer ticker5sec.Stop()
+
+		ticker5min := time.NewTicker(5 * time.Minute)
+		defer ticker5min.Stop()
 
 		for {
 			select {
-			case <-ticker.C:
-				h.pull()
+			case <-ticker5sec.C:
+				h.pullCgSheet()
+			case <-ticker5min.C:
+				h.pullSchedule()
 			case <-h.ctx.Done():
 				log.Println("Stopping Google Sheets handler")
 				return
@@ -83,31 +94,76 @@ func (h *Handler) Start() {
 func (h *Handler) GetCountdown() *types.Countdown {
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
-	return h.countdown
+
+	countdownCopy := types.Countdown{}
+	if h.countdown != nil {
+		countdownCopy = *h.countdown
+	}
+
+	return &countdownCopy
 }
 
 func (h *Handler) GetCountdownToTime() *types.Countdown {
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
-	return h.countdownToTime
+
+	countdownToTimeCopy := types.Countdown{}
+	if h.countdownToTime != nil {
+		countdownToTimeCopy = *h.countdownToTime
+	}
+
+	return &countdownToTimeCopy
 }
 
 func (h *Handler) GetLowerThird() *types.LowerThird {
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
-	return h.lowerThird
+
+	lowerThirdCopy := types.LowerThird{}
+	if h.lowerThird != nil {
+		lowerThirdCopy = *h.lowerThird
+	}
+
+	return &lowerThirdCopy
 }
 
 func (h *Handler) GetDetailedDanceCompSingle() *types.DetailedDanceComp {
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
-	return h.detailedDanceCompSingle
+
+	detailedDanceCompCopy := types.DetailedDanceComp{}
+	if h.detailedDanceCompSingle != nil {
+		detailedDanceCompCopy = *h.detailedDanceCompSingle
+	}
+
+	return &detailedDanceCompCopy
 }
 
 func (h *Handler) GetDetailedDanceComp() []*types.DetailedDanceComp {
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
-	return h.detailedDanceComp
+
+	detailedDanceCompCopy := make([]*types.DetailedDanceComp, len(h.detailedDanceComp))
+	copy(detailedDanceCompCopy, h.detailedDanceComp)
+
+	return detailedDanceCompCopy
+}
+
+func (h *Handler) GetCurrentSchedule() []*types.ScheduleRow {
+	scheduleCopy := make([]*types.ScheduleRow, len(h.schedule))
+	h.scheduleMtx.RLock()
+	copy(scheduleCopy, h.schedule)
+	h.scheduleMtx.RUnlock()
+
+	currentSchedule := make([]*types.ScheduleRow, 0)
+	now := time.Now().Add(10 * time.Minute) // Only show events that aren't about to be over
+	for _, row := range scheduleCopy {
+		if now.After(row.EndTime) {
+			continue
+		}
+		currentSchedule = append(currentSchedule, row)
+	}
+	return currentSchedule
 }
 
 func (h *Handler) extractStringValue(resp *sheets.BatchGetValuesResponse, rangeIndex int, fieldName string) string {
@@ -128,8 +184,88 @@ func (h *Handler) extractStringValue(resp *sheets.BatchGetValuesResponse, rangeI
 	return ""
 }
 
-func (h *Handler) pull() {
-	resp, err := h.sheets.Values.BatchGet(h.id).Ranges("Main!B2:B3", "Main!B6:B7", "Main!F2:F3", "DanceComp!A2:F89", "Main!B10").Do()
+func (h *Handler) pullSchedule() {
+	resp, err := h.sheets.Values.BatchGet(h.scheduleID).Ranges("B2:B77", "E2:E77", "F2:H77").Do()
+	if err != nil {
+		log.Fatalf("Unable to retrieve data from sheet: %v", err)
+	}
+
+	if len(resp.ValueRanges) < 3 {
+		log.Println("Not enough data ranges returned from the schedule sheet")
+		return
+	}
+
+	titles := resp.ValueRanges[0].Values
+	rooms := resp.ValueRanges[1].Values
+	times := resp.ValueRanges[2].Values
+	scheduleList := make([]*types.ScheduleRow, 0, len(titles))
+
+	blacklist := []string{"Pickup Payment", "Crew", "[STREAMING]"}
+
+	for i := 0; i < len(titles); i++ {
+		var title, room, weekDay, startTime, duration string
+
+		if len(titles) > i && len(titles[i]) > 0 {
+			if val, ok := titles[i][0].(string); ok {
+				title = strings.TrimSpace(val)
+				lowerTitle := strings.ToLower(title)
+				blacklisted := false
+				for _, word := range blacklist {
+					if strings.Contains(lowerTitle, strings.ToLower(word)) {
+						blacklisted = true
+						break
+					}
+				}
+				if blacklisted {
+					continue // Skip this row if blacklisted
+				}
+			}
+		}
+
+		if len(rooms) > i && len(rooms[i]) > 0 {
+			if val, ok := rooms[i][0].(string); ok {
+				room = strings.TrimSpace(val)
+			}
+		}
+
+		if len(times) > i && len(times[i]) > 2 {
+			if val, ok := times[i][0].(string); ok {
+				weekDay = strings.TrimSpace(val)
+			}
+			if val, ok := times[i][1].(string); ok {
+				startTime = strings.TrimSpace(val)
+			}
+			if val, ok := times[i][2].(string); ok {
+				duration = strings.TrimSpace(val)
+			}
+		}
+
+		schedule, err := types.NewScheduleRow(title, room, weekDay, startTime, duration)
+		if err != nil {
+			log.Printf("Error creating schedule row for index %d: %v", i, err)
+			continue
+		}
+		scheduleList = append(scheduleList, schedule)
+	}
+
+	// Sort scheduleList by StartTime ascending (earliest first)
+	sort.Slice(scheduleList, func(i, j int) bool {
+		if scheduleList[i].StartTime.Before(scheduleList[j].StartTime) {
+			return true
+		}
+		if scheduleList[j].StartTime.Before(scheduleList[i].StartTime) {
+			return false
+		}
+		return scheduleList[i].EndTime.Before(scheduleList[j].EndTime) // If start times are equal, compare by end time
+	})
+
+	h.scheduleMtx.Lock()
+	h.schedule = scheduleList
+	h.scheduleMtx.Unlock()
+}
+
+func (h *Handler) pullCgSheet() {
+	resp, err := h.sheets.Values.BatchGet(h.cgID).Ranges("Main!B2:B3", "Main!B6:B7", "Main!F2:F3", "DanceComp!A2:F89", "Main!B10").Do()
 	if err != nil {
 		log.Fatalf("Unable to retrieve data from sheet: %v", err)
 	}
@@ -192,6 +328,8 @@ func (h *Handler) pull() {
 			return "0"
 		}
 
+		detailedDanceComp := make([]*types.DetailedDanceComp, 0)
+
 		// Process data in chunks of 8 rows per participant
 		for i := 0; i < len(values)-7; i += 8 {
 			name := getValue(i, 0)
@@ -199,7 +337,7 @@ func (h *Handler) pull() {
 				name = "Unknown"
 			}
 
-			h.detailedDanceComp = append(h.detailedDanceComp, &types.DetailedDanceComp{
+			detailedDanceComp = append(detailedDanceComp, &types.DetailedDanceComp{
 				Name:            name,
 				TotalScore:      getValue(i, 5),
 				Appearance:      getValue(i+1, 5),
@@ -211,15 +349,36 @@ func (h *Handler) pull() {
 				Quantum:         getValue(i+7, 5),
 			})
 		}
-	}
 
-	// Sort h.detailedDanceComp by TotalScore descending
-	sort.Slice(h.detailedDanceComp, func(i, j int) bool {
-		var scoreI, scoreJ float64
-		fmt.Sscanf(h.detailedDanceComp[i].TotalScore, "%f", &scoreI)
-		fmt.Sscanf(h.detailedDanceComp[j].TotalScore, "%f", &scoreJ)
-		return scoreI > scoreJ
-	})
+		// Sort h.detailedDanceComp by TotalScore descending
+		if len(detailedDanceComp) > 0 {
+			sort.Slice(detailedDanceComp, func(i, j int) bool {
+				if detailedDanceComp[i] == nil {
+					return false // nil goes to the back
+				}
+				if detailedDanceComp[j] == nil {
+					return true // non-nil comes before nil
+				}
+
+				// Handle nil or empty TotalScore
+				if detailedDanceComp[i].TotalScore == "" || detailedDanceComp[i].TotalScore == "0" {
+					if detailedDanceComp[j].TotalScore == "" || detailedDanceComp[j].TotalScore == "0" {
+						return false // both are empty/zero, keep order
+					}
+					return false // i goes after j
+				}
+				if detailedDanceComp[j].TotalScore == "" || detailedDanceComp[j].TotalScore == "0" {
+					return true // i goes before j
+				}
+
+				var scoreI, scoreJ float64
+				fmt.Sscanf(detailedDanceComp[i].TotalScore, "%f", &scoreI)
+				fmt.Sscanf(detailedDanceComp[j].TotalScore, "%f", &scoreJ)
+				return scoreI > scoreJ
+			})
+		}
+		h.detailedDanceComp = detailedDanceComp
+	}
 
 	// Extract selected dance comp participant (Main!B8)
 	if danceCompName := h.extractStringValue(resp, 4, "dance competitor"); danceCompName != "" {

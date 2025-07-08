@@ -10,4 +10,6 @@ type SheetsData interface {
 
 	GetDetailedDanceCompSingle() *DetailedDanceComp
 	GetDetailedDanceComp() []*DetailedDanceComp
+
+	GetCurrentSchedule() []*ScheduleRow
 }

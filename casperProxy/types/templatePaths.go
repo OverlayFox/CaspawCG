@@ -13,14 +13,18 @@ const (
 	TemplatePathTitle           TemplatePaths = "TITLE"
 	TemplatePathBarBlue         TemplatePaths = "BAR_BLUE"
 	TemplatePathBarRed          TemplatePaths = "BAR_RED"
+	TemplatePathSchedule        TemplatePaths = "SCHEDULE_BAR"
+	TemplatePathDanceComp       TemplatePaths = "DANCE_COMP_DETAILED"
 )
 
 var commandTemplatePathMap = map[string]TemplatePaths{
-	"COUNTDOWN":         TemplatePathCountdown,
-	"COUNTDOWN_TO_TIME": TemplatePathCountdownToTime,
-	"TITLE":             TemplatePathTitle,
-	"BAR_BLUE":          TemplatePathBarBlue,
-	"BAR_RED":           TemplatePathBarRed,
+	"COUNTDOWN":           TemplatePathCountdown,
+	"COUNTDOWN_TO_TIME":   TemplatePathCountdownToTime,
+	"TITLE":               TemplatePathTitle,
+	"BAR_BLUE":            TemplatePathBarBlue,
+	"BAR_RED":             TemplatePathBarRed,
+	"SCHEDULE_BAR":        TemplatePathSchedule,
+	"DANCE_COMP_DETAILED": TemplatePathDanceComp,
 }
 
 func TemplatePathFromString(s string) (TemplatePaths, error) {

@@ -1,36 +1,13 @@
 package types
 
-import (
-	"encoding/json"
-	"net/url"
-)
-
 type Countdown struct {
 	Title        string `json:"_title"`
 	TimerMinutes string `json:"_timerMinutes"`
 	TimerHours   string `json:"_timerHours"`
 }
 
-func (c *Countdown) Command() (string, error) {
-	jsonBytes, err := json.Marshal(c)
-	if err != nil {
-		return "", err
-	}
-	escaped := url.QueryEscape(string(jsonBytes))
-	return escaped, nil
-}
-
 type Title struct {
 	Title string `json:"_Title"`
-}
-
-func (t *Title) Command() (string, error) {
-	jsonBytes, err := json.Marshal(t)
-	if err != nil {
-		return "", err
-	}
-	escaped := url.QueryEscape(string(jsonBytes))
-	return escaped, nil
 }
 
 type Bar struct {
@@ -38,11 +15,29 @@ type Bar struct {
 	Title  string `json:"_name"`
 }
 
-func (b *Bar) Command() (string, error) {
-	jsonBytes, err := json.Marshal(b)
-	if err != nil {
-		return "", err
-	}
-	escaped := url.QueryEscape(string(jsonBytes))
-	return escaped, nil
+type ScheduleBar struct {
+	Row1 string `json:"_row1"`
+	Row2 string `json:"_row2"`
+	Row3 string `json:"_row3"`
+
+	StartTime string `json:"_startTime"`
+	EndTime   string `json:"_endTime"`
+
+	Hotel string `json:"_hotel"`
+	Room  string `json:"_room"`
+}
+
+type DetailedDanceComp struct {
+	TotalScore string `json:"_num"`
+	Name       string `json:"_name"`
+
+	AppearanceScore      string `json:"_numAppearance"`
+	ProfessionalismScore string `json:"_numProfessionalism"`
+	ConsistencyScore     string `json:"_numConsistency"`
+	ComplexityScore      string `json:"_numComplexity"`
+	DecibelsScore        string `json:"_numDecibels"`
+	OriginalityScore     string `json:"_numOriginality"`
+	QuantumScore         string `json:"_numQuantum"`
+
+	PicturePath string `json:"_image"`
 }
