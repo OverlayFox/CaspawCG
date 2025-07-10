@@ -21,7 +21,9 @@ type Handler struct {
 
 	countdown               *types.Countdown
 	countdownToTime         *types.Countdown
-	lowerThird              *types.LowerThird
+	lowerThird1             *types.LowerThird
+	lowerThird2             *types.LowerThird
+	lowerThird3             *types.LowerThird
 	detailedDanceCompSingle *types.DetailedDanceComp
 	detailedDanceComp       []*types.DetailedDanceComp
 	schedule                []*types.ScheduleRow
@@ -54,7 +56,15 @@ func NewHandler() (types.SheetsData, error) {
 			Title:         "Countdown",
 			CountdownTime: "00:00:00",
 		},
-		lowerThird: &types.LowerThird{
+		lowerThird1: &types.LowerThird{
+			Row1: "",
+			Row2: "",
+		},
+		lowerThird2: &types.LowerThird{
+			Row1: "",
+			Row2: "",
+		},
+		lowerThird3: &types.LowerThird{
 			Row1: "",
 			Row2: "",
 		},
@@ -115,16 +125,33 @@ func (h *Handler) GetCountdownToTime() *types.Countdown {
 	return &countdownToTimeCopy
 }
 
-func (h *Handler) GetLowerThird() *types.LowerThird {
+func (h *Handler) GetLowerThirdSingle() *types.LowerThird {
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
 
 	lowerThirdCopy := types.LowerThird{}
-	if h.lowerThird != nil {
-		lowerThirdCopy = *h.lowerThird
+	if h.lowerThird1 != nil {
+		lowerThirdCopy = *h.lowerThird1
 	}
 
 	return &lowerThirdCopy
+}
+
+func (h *Handler) GetLowerThirdDuo() (*types.LowerThird, *types.LowerThird) {
+	h.mtx.RLock()
+	defer h.mtx.RUnlock()
+
+	lowerThirdCopy2 := types.LowerThird{}
+	if h.lowerThird2 != nil {
+		lowerThirdCopy2 = *h.lowerThird2
+	}
+
+	lowerThirdCopy3 := types.LowerThird{}
+	if h.lowerThird3 != nil {
+		lowerThirdCopy3 = *h.lowerThird3
+	}
+
+	return &lowerThirdCopy2, &lowerThirdCopy3
 }
 
 func (h *Handler) GetDetailedDanceCompSingle() *types.DetailedDanceComp {
@@ -265,7 +292,7 @@ func (h *Handler) pullSchedule() {
 }
 
 func (h *Handler) pullCgSheet() {
-	resp, err := h.sheets.Values.BatchGet(h.cgID).Ranges("Main!B2:B3", "Main!B6:B7", "Main!F2:F3", "DanceComp!A2:F89", "Main!B10").Do()
+	resp, err := h.sheets.Values.BatchGet(h.cgID).Ranges("Main!B2:B3", "Main!B6:B7", "Main!F2:F3", "Main!F6:F7", "Main!H6:H7", "DanceComp!A2:F89", "Main!B10").Do()
 	if err != nil {
 		log.Fatalf("Unable to retrieve data from sheet: %v", err)
 	}
@@ -286,7 +313,7 @@ func (h *Handler) pullCgSheet() {
 		}
 	}
 
-	// Extract countdownToTime value (B5)
+	// Extract countdownToTime value (B6)
 	if len(resp.ValueRanges) > 1 && len(resp.ValueRanges[1].Values) > 0 {
 		values := resp.ValueRanges[1].Values
 		if len(values) >= 1 {
@@ -304,18 +331,48 @@ func (h *Handler) pullCgSheet() {
 		values := resp.ValueRanges[2].Values
 		if len(values) >= 1 {
 			if row1, ok := values[0][0].(string); ok {
-				h.lowerThird.Row1 = row1
+				h.lowerThird1.Row1 = row1
 			}
 		}
 		if len(values) >= 2 {
 			if row2, ok := values[1][0].(string); ok {
-				h.lowerThird.Row2 = row2
+				h.lowerThird1.Row2 = row2
+			}
+		}
+	}
+
+	// Extract lower third values (F6:F7)
+	if len(resp.ValueRanges) > 3 && len(resp.ValueRanges[3].Values) > 0 {
+		values := resp.ValueRanges[3].Values
+		if len(values) >= 1 {
+			if row1, ok := values[0][0].(string); ok {
+				h.lowerThird2.Row1 = row1
+			}
+		}
+		if len(values) >= 2 {
+			if row2, ok := values[1][0].(string); ok {
+				h.lowerThird2.Row2 = row2
+			}
+		}
+	}
+
+	// Extract lower third values (H6:H7)
+	if len(resp.ValueRanges) > 4 && len(resp.ValueRanges[4].Values) > 0 {
+		values := resp.ValueRanges[4].Values
+		if len(values) >= 1 {
+			if row1, ok := values[0][0].(string); ok {
+				h.lowerThird3.Row1 = row1
+			}
+		}
+		if len(values) >= 2 {
+			if row2, ok := values[1][0].(string); ok {
+				h.lowerThird3.Row2 = row2
 			}
 		}
 	}
 
 	// Extract dance comp values (DanceComp!A2:DanceComp!F89)
-	if len(resp.ValueRanges) > 3 && len(resp.ValueRanges[3].Values) > 0 {
+	if len(resp.ValueRanges) > 5 && len(resp.ValueRanges[3].Values) > 0 {
 		values := resp.ValueRanges[3].Values
 
 		// Helper function to safely extract string value from cell
@@ -381,7 +438,7 @@ func (h *Handler) pullCgSheet() {
 	}
 
 	// Extract selected dance comp participant (Main!B8)
-	if danceCompName := h.extractStringValue(resp, 4, "dance competitor"); danceCompName != "" {
+	if danceCompName := h.extractStringValue(resp, 6, "dance competitor"); danceCompName != "" {
 		for _, comp := range h.detailedDanceComp {
 			if comp.Name == danceCompName {
 				h.detailedDanceCompSingle = comp

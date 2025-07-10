@@ -199,24 +199,24 @@ func (p *Proxy) processCGTemplate(cgCommand *types.CommandCG, originalCommand st
 	}
 }
 
-func populateL3(lowerThird *gTypes.LowerThird, layer int) (*types.Bar, error) {
-	if layer < 20 || layer > 22 {
-		return nil, fmt.Errorf("invalid layer %d for lower third bar template", layer)
-	}
-
-	return &types.Bar{
-		Number: mapping[layer],
-		Title:  "Lower Third Bar " + mapping[layer],
-	}, nil
-}
-
 func (p *Proxy) processLowerThirdTemplate(cgCommand *types.CommandCG, originalCommand string) (string, error) {
 	lowerThird, ok := cgCommand.JsonData.(*types.LowerThird)
 	if !ok {
 		return originalCommand, fmt.Errorf("invalid JSON data for Lower Third template: %s", originalCommand)
 	}
 
-	lowerThirdData := p.sheetsData.GetLowerThird()
+	layer := *cgCommand.Layer
+	lowerThirdData := &gTypes.LowerThird{}
+	if layer == 20 {
+		lowerThirdData = p.sheetsData.GetLowerThirdSingle()
+	} else if layer == 21 {
+		lowerThirdData, _ = p.sheetsData.GetLowerThirdDuo()
+	} else if layer == 22 {
+		lowerThirdData = p.sheetsData.GetLowerThirdSingle()
+	} else {
+		return originalCommand, fmt.Errorf("unsupported layer %d for lower third template", layer)
+	}
+
 	if lowerThirdData == nil {
 		return originalCommand, fmt.Errorf("no lower third data available")
 	}

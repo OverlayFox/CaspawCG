@@ -6,7 +6,8 @@ type SheetsData interface {
 	GetCountdown() *Countdown
 	GetCountdownToTime() *Countdown
 
-	GetLowerThird() *LowerThird
+	GetLowerThirdSingle() *LowerThird
+	GetLowerThirdDuo() (*LowerThird, *LowerThird)
 
 	GetDetailedDanceCompSingle() *DetailedDanceComp
 	GetDetailedDanceComp() []*DetailedDanceComp
