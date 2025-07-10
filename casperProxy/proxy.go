@@ -18,7 +18,7 @@ import (
 
 const (
 	scheduleBarStartLayer = 41 // First layer for schedule bars
-	scheduleBarMaxChars   = 50 // Max characters per row in schedule bar template
+	scheduleBarMaxChars   = 22 // Max characters per row in schedule bar template
 )
 
 type Proxy struct {
@@ -191,10 +191,40 @@ func (p *Proxy) processCGTemplate(cgCommand *types.CommandCG, originalCommand st
 		return p.processScheduleTemplate(cgCommand, originalCommand)
 	case types.TemplatePathDanceComp:
 		return p.processDetailedDanceCompTemplate(cgCommand, originalCommand)
+	case types.TemplatePathLowerThird:
+		return p.processLowerThirdTemplate(cgCommand, originalCommand)
 	default:
 		log.Printf("Unsupported CG template path: %s", *cgCommand.TemplatePath)
 		return originalCommand, nil
 	}
+}
+
+func populateL3(lowerThird *gTypes.LowerThird, layer int) (*types.Bar, error) {
+	if layer < 20 || layer > 22 {
+		return nil, fmt.Errorf("invalid layer %d for lower third bar template", layer)
+	}
+
+	return &types.Bar{
+		Number: mapping[layer],
+		Title:  "Lower Third Bar " + mapping[layer],
+	}, nil
+}
+
+func (p *Proxy) processLowerThirdTemplate(cgCommand *types.CommandCG, originalCommand string) (string, error) {
+	lowerThird, ok := cgCommand.JsonData.(*types.LowerThird)
+	if !ok {
+		return originalCommand, fmt.Errorf("invalid JSON data for Lower Third template: %s", originalCommand)
+	}
+
+	lowerThirdData := p.sheetsData.GetLowerThird()
+	if lowerThirdData == nil {
+		return originalCommand, fmt.Errorf("no lower third data available")
+	}
+
+	lowerThird.Name = lowerThirdData.Row1
+	lowerThird.Info = lowerThirdData.Row2
+
+	return cgCommand.Command()
 }
 
 func (p *Proxy) processDetailedDanceCompTemplate(cgCommand *types.CommandCG, originalCommand string) (string, error) {

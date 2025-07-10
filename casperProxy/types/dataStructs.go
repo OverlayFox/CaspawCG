@@ -20,8 +20,8 @@ type ScheduleBar struct {
 	Row2 string `json:"_row2"`
 	Row3 string `json:"_row3"`
 
-	StartTime string `json:"_startTime"`
-	EndTime   string `json:"_endTime"`
+	StartTime string `json:"_timeFrom"`
+	EndTime   string `json:"_timeUntil"`
 
 	Hotel string `json:"_hotel"`
 	Room  string `json:"_room"`
@@ -40,4 +40,9 @@ type DetailedDanceComp struct {
 	QuantumScore         string `json:"_numQuantum"`
 
 	PicturePath string `json:"_image"`
+}
+
+type LowerThird struct {
+	Name string `json:"_name"`
+	Info string `json:"_info"`
 }

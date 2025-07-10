@@ -178,6 +178,12 @@ func NewCommandCG(commandParts []string) (*CommandCG, error) {
 				return nil, fmt.Errorf("failed to unmarshal dance competition data: %w", err)
 			}
 			jsonDataParsed = &danceCompData
+		case TemplatePathLowerThird:
+			var lowerThirdData LowerThird
+			if err := json.Unmarshal(jsonBytes, &lowerThirdData); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal lower third data: %w", err)
+			}
+			jsonDataParsed = &lowerThirdData
 		default:
 			return nil, fmt.Errorf("unsupported template path for JSON data: %s", *templatePath)
 		}

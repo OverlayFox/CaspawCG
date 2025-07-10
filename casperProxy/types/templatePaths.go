@@ -15,6 +15,7 @@ const (
 	TemplatePathBarRed          TemplatePaths = "BAR_RED"
 	TemplatePathSchedule        TemplatePaths = "SCHEDULE_BAR"
 	TemplatePathDanceComp       TemplatePaths = "DANCE_COMP_DETAILED"
+	TemplatePathLowerThird      TemplatePaths = "L3" // Lower Third
 )
 
 var commandTemplatePathMap = map[string]TemplatePaths{
@@ -25,6 +26,7 @@ var commandTemplatePathMap = map[string]TemplatePaths{
 	"BAR_RED":             TemplatePathBarRed,
 	"SCHEDULE_BAR":        TemplatePathSchedule,
 	"DANCE_COMP_DETAILED": TemplatePathDanceComp,
+	"L3":                  TemplatePathLowerThird,
 }
 
 func TemplatePathFromString(s string) (TemplatePaths, error) {
