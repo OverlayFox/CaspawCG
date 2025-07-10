@@ -18,7 +18,7 @@ import (
 
 const (
 	scheduleBarStartLayer = 41 // First layer for schedule bars
-	scheduleBarMaxChars   = 22 // Max characters per row in schedule bar template
+	scheduleBarMaxChars   = 35 // Max characters per row in schedule bar template
 )
 
 type Proxy struct {
@@ -281,7 +281,13 @@ func (p *Proxy) getScheduleBar(schedule []*gTypes.ScheduleRow, layer int) (*type
 	}
 
 	title := schedule[layer-scheduleBarStartLayer].Title
-	if len(title) > scheduleBarMaxChars {
+
+	if strings.Contains(title, "-") {
+		parts := strings.SplitN(title, "-", 2)
+		bar.Row1 = ""
+		bar.Row2 = strings.TrimSpace(parts[0])
+		bar.Row3 = strings.TrimSpace(parts[1])
+	} else if len(title) > scheduleBarMaxChars {
 		// Find the last whitespace before or at the maxChar character
 		splitIdx := scheduleBarMaxChars
 		for i := scheduleBarMaxChars; i >= 0; i-- {

@@ -372,8 +372,8 @@ func (h *Handler) pullCgSheet() {
 	}
 
 	// Extract dance comp values (DanceComp!A2:DanceComp!F89)
-	if len(resp.ValueRanges) > 5 && len(resp.ValueRanges[3].Values) > 0 {
-		values := resp.ValueRanges[3].Values
+	if len(resp.ValueRanges) > 5 && len(resp.ValueRanges[5].Values) > 0 {
+		values := resp.ValueRanges[5].Values
 
 		// Helper function to safely extract string value from cell
 		getValue := func(row, col int) string {

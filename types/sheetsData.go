@@ -64,6 +64,8 @@ func NewScheduleRow(title, room, weekDay, startTime, durationStr string) (*Sched
 		return nil, fmt.Errorf("invalid weekday: %s", weekDay)
 	}
 	startDate := time.Date(2025, time.July, day, 0, 0, 0, 0, loc)
+	// day = 10
+	// startDate := time.Date(2025, time.July, day, 0, 0, 0, 0, loc)
 
 	var second, minute, hour int = 0, 0, 0
 	parts := strings.Split(startTime, ":")
