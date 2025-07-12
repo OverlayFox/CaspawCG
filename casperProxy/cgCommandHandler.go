@@ -132,6 +132,7 @@ func (p *Proxy) populateDanceCompData(danceComp *types.DetailedDanceComp, finali
 	danceComp.DecibelsScore = finalist.Decibels
 	danceComp.OriginalityScore = finalist.Originality
 	danceComp.QuantumScore = finalist.Quantum
+	danceComp.Attribution = p.getPictureAttribution(finalist.Name)
 }
 
 // getDanceCompPicturePath generates and validates the picture path for a contestant
@@ -149,6 +150,20 @@ func (p *Proxy) getDanceCompPicturePath(name string) string {
 		return pictureFileName
 	} else if !os.IsNotExist(err) {
 		log.Printf("Error checking picture file '%s': %v", absPicturePath, err)
+	}
+
+	return ""
+}
+
+func (p *Proxy) getPictureAttribution(name string) string {
+	photographer, err := p.sheetsData.GetAttribution(name)
+	if err != nil {
+		log.Printf("Error getting attribution for %s: %v", name, err)
+		return ""
+	}
+
+	if photographer != "" {
+		return fmt.Sprintf("Picture by: @%s", photographer)
 	}
 
 	return ""

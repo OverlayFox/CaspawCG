@@ -71,6 +71,7 @@ func NewHandler() (types.SheetsData, error) {
 		},
 		detailedDanceComp: make([]*types.DetailedDanceComp, 0),
 		schedule:          make([]*types.ScheduleRow, 0),
+		attribution:       make(map[string]string),
 	}, nil
 }
 
@@ -459,8 +460,8 @@ func (h *Handler) pullCgSheet() {
 	}
 
 	// Extract attribution data (Lists!A2:B12)
-	if len(resp.ValueRanges) > 6 && len(resp.ValueRanges[6].Values) > 0 {
-		values := resp.ValueRanges[6].Values
+	if len(resp.ValueRanges) > 7 && len(resp.ValueRanges[7].Values) > 0 {
+		values := resp.ValueRanges[7].Values
 		h.attribution = make(map[string]string)
 
 		for _, row := range values {
