@@ -13,4 +13,6 @@ type SheetsData interface {
 	GetDetailedDanceComp() []*DetailedDanceComp
 
 	GetCurrentSchedule() []*ScheduleRow
+
+	GetAttribution(contestantsName string) (string, error)
 }

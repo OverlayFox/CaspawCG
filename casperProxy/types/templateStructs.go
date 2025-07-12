@@ -40,6 +40,7 @@ type DetailedDanceComp struct {
 	QuantumScore         string `json:"_numQuantum"`
 
 	PicturePath string `json:"_image"`
+	Attribution string `json:"_attribution"`
 }
 
 type LowerThird struct {

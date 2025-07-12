@@ -27,6 +27,7 @@ type Handler struct {
 	detailedDanceCompSingle *types.DetailedDanceComp
 	detailedDanceComp       []*types.DetailedDanceComp
 	schedule                []*types.ScheduleRow
+	attribution             map[string]string // Key is the contestants name, value is the person who needs to be credited
 
 	mtx         sync.RWMutex
 	scheduleMtx sync.RWMutex
@@ -193,6 +194,16 @@ func (h *Handler) GetCurrentSchedule() []*types.ScheduleRow {
 	return currentSchedule
 }
 
+func (h *Handler) GetAttribution(contestantsName string) (string, error) {
+	h.mtx.RLock()
+	defer h.mtx.RUnlock()
+
+	if attribution, ok := h.attribution[contestantsName]; ok {
+		return attribution, nil
+	}
+	return "", fmt.Errorf("no attribution found for contestant: %s", contestantsName)
+}
+
 func (h *Handler) extractStringValue(resp *sheets.BatchGetValuesResponse, rangeIndex int, fieldName string) string {
 	if len(resp.ValueRanges) <= rangeIndex {
 		return ""
@@ -292,7 +303,7 @@ func (h *Handler) pullSchedule() {
 }
 
 func (h *Handler) pullCgSheet() {
-	resp, err := h.sheets.Values.BatchGet(h.cgID).Ranges("Main!B2:B3", "Main!B6:B7", "Main!F2:F3", "Main!F6:F7", "Main!H6:H7", "DanceComp!A2:F89", "Main!B10").Do()
+	resp, err := h.sheets.Values.BatchGet(h.cgID).Ranges("Main!B2:B3", "Main!B6:B7", "Main!F2:F3", "Main!F6:F7", "Main!H6:H7", "DanceComp!A2:F89", "Main!B10", "Lists!A2:B12").Do()
 	if err != nil {
 		log.Fatalf("Unable to retrieve data from sheet: %v", err)
 	}
@@ -443,6 +454,23 @@ func (h *Handler) pullCgSheet() {
 			if comp.Name == danceCompName {
 				h.detailedDanceCompSingle = comp
 				break
+			}
+		}
+	}
+
+	// Extract attribution data (Lists!A2:B12)
+	if len(resp.ValueRanges) > 6 && len(resp.ValueRanges[6].Values) > 0 {
+		values := resp.ValueRanges[6].Values
+		h.attribution = make(map[string]string)
+
+		for _, row := range values {
+			if len(row) < 2 {
+				continue // Skip rows that don't have at least 2 columns
+			}
+			name, okName := row[0].(string)
+			attribution, okAttribution := row[1].(string)
+			if okName && okAttribution && name != "" && attribution != "" {
+				h.attribution[name] = attribution
 			}
 		}
 	}
