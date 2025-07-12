@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// CommandCG represents a CG command with all its parameters
 type CommandCG struct {
 	CommandStruct
 	Channel      *int           `json:"channel,omitempty"`
@@ -19,6 +20,7 @@ type CommandCG struct {
 	JsonData     any            `json:"json_data,omitempty"`
 }
 
+// Command generates the command string from the CommandCG struct
 func (c *CommandCG) Command() (string, error) {
 	if c.TemplatePath == nil {
 		return "", fmt.Errorf("template path must be specified")
@@ -33,172 +35,206 @@ func (c *CommandCG) Command() (string, error) {
 	}
 
 	if c.PlayOnLoad != nil {
+		playOnLoadValue := "0"
 		if *c.PlayOnLoad {
-			commandParts = append(commandParts, "1")
-		} else {
-			commandParts = append(commandParts, "0")
+			playOnLoadValue = "1"
 		}
+		commandParts = append(commandParts, playOnLoadValue)
 	}
 
 	if c.JsonData != nil {
-		buf := &bytes.Buffer{}
-		enc := json.NewEncoder(buf)
-		enc.SetEscapeHTML(false) // Prevent HTML escaping
-		err := enc.Encode(c.JsonData)
+		jsonString, err := c.encodeJSONData()
 		if err != nil {
 			return "", fmt.Errorf("failed to encode JSON data: %w", err)
 		}
-
-		b := buf.Bytes()
-		if len(b) > 0 && b[len(b)-1] == '\n' {
-			b = b[:len(b)-1] // Remove trailing newline
-		}
-		escaped := strings.ReplaceAll(string(b), `"`, `\"`)
-		commandParts = append(commandParts, fmt.Sprintf("\"%s\"", escaped))
+		commandParts = append(commandParts, fmt.Sprintf("\"%s\"", jsonString))
 	}
 
 	return strings.Join(commandParts, " "), nil
 }
 
+// encodeJSONData handles the JSON encoding with proper escaping
+func (c *CommandCG) encodeJSONData() (string, error) {
+	buf := &bytes.Buffer{}
+	enc := json.NewEncoder(buf)
+	enc.SetEscapeHTML(false) // Prevent HTML escaping
+
+	if err := enc.Encode(c.JsonData); err != nil {
+		return "", err
+	}
+
+	b := buf.Bytes()
+	if len(b) > 0 && b[len(b)-1] == '\n' {
+		b = b[:len(b)-1] // Remove trailing newline if present
+	}
+
+	return strings.ReplaceAll(string(b), `"`, `\"`), nil
+}
+
+// NewCommandCG creates a new CommandCG from command parts
 func NewCommandCG(commandParts []string) (*CommandCG, error) {
 	if len(commandParts) < 3 {
 		return nil, fmt.Errorf("command must have at least 3 parts")
 	}
 
-	var (
-		channel, layer *int
-		commandCall    *CommandCall
-		cgLayer        *int
-		templatePath   *TemplatePaths
-		playOnLoad     *bool
-		jsonDataParsed any
-	)
-
-	switch len(commandParts) {
-	case 7: // JSON Data
-		fallthrough
-	case 6: // PlayOnLoad
-		if commandParts[5] == "1" {
-			playOnLoad = new(bool)
-			*playOnLoad = true
-		} else if commandParts[5] == "0" {
-			playOnLoad = new(bool)
-			*playOnLoad = false
-		} else {
-			return nil, fmt.Errorf("invalid play_on_load value: %s", commandParts[5])
-		}
-		fallthrough
-	case 5: // Template Path
-		fmt.Println("Processing Template Path:", commandParts[4])
-		if commandParts[4] == "" {
-			return nil, fmt.Errorf("template path cannot be empty")
-		}
-		templatePathType, err := TemplatePathFromString(commandParts[4])
-		if err != nil {
-			return nil, fmt.Errorf("invalid template path: %s", commandParts[4])
-		}
-		templatePath = &templatePathType
-		fallthrough
-	case 4: // CG Layer
-		if commandParts[3] == "" {
-			return nil, fmt.Errorf("cg_layer cannot be empty")
-		}
-		cgLayerInt, err := strconv.Atoi(commandParts[3])
-		if err != nil {
-			return nil, fmt.Errorf("invalid cg_layer: %s", commandParts[3])
-		}
-		cgLayer = new(int)
-		*cgLayer = cgLayerInt
-		fallthrough
-	case 3: // Command Call
-		if commandParts[2] == "" {
-			return nil, fmt.Errorf("command call cannot be empty")
-		}
-		commandCallStr, err := CommandCallFromString(commandParts[2])
-		if err != nil {
-			return nil, fmt.Errorf("invalid command call: %s", commandParts[2])
-		}
-		commandCall = &commandCallStr
-		fallthrough
-	case 2: // Channel and Layer
-		channelLayer := strings.Split(commandParts[1], "-")
-		if len(channelLayer) != 2 {
-			return nil, fmt.Errorf("invalid channel-layer format: %s", commandParts[1])
-		}
-		channelInt, err := strconv.Atoi(channelLayer[0])
-		if err != nil {
-			return nil, fmt.Errorf("invalid channel: %s", channelLayer[0])
-		}
-		channel = new(int)
-		*channel = channelInt
-
-		layerInt, err := strconv.Atoi(channelLayer[1])
-		if err != nil {
-			return nil, fmt.Errorf("invalid layer: %s", channelLayer[1])
-		}
-		layer = new(int)
-		*layer = layerInt
-	}
-
-	// JSON Data
-	if len(commandParts) == 7 {
-		jsonBytes := []byte(strings.ReplaceAll(commandParts[6], `\`, ""))
-		if templatePath == nil {
-			return nil, fmt.Errorf("template path must be specified to unmarshal JSON data")
-		}
-
-		switch *templatePath {
-		case TemplatePathCountdown, TemplatePathCountdownToTime:
-			var countdownData Countdown
-			if err := json.Unmarshal(jsonBytes, &countdownData); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal countdown data: %w", err)
-			}
-			jsonDataParsed = &countdownData
-		case TemplatePathTitle:
-			var titleData Title
-			if err := json.Unmarshal(jsonBytes, &titleData); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal title data: %w", err)
-			}
-			jsonDataParsed = &titleData
-		case TemplatePathBarRed, TemplatePathBarBlue:
-			var barData Bar
-			if err := json.Unmarshal(jsonBytes, &barData); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal bar data: %w", err)
-			}
-			jsonDataParsed = &barData
-		case TemplatePathSchedule:
-			var scheduleData ScheduleBar
-			if err := json.Unmarshal(jsonBytes, &scheduleData); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal schedule bar data: %w", err)
-			}
-			jsonDataParsed = &scheduleData
-		case TemplatePathDanceComp:
-			var danceCompData DetailedDanceComp
-			if err := json.Unmarshal(jsonBytes, &danceCompData); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal dance competition data: %w", err)
-			}
-			jsonDataParsed = &danceCompData
-		case TemplatePathLowerThird:
-			var lowerThirdData LowerThird
-			if err := json.Unmarshal(jsonBytes, &lowerThirdData); err != nil {
-				return nil, fmt.Errorf("failed to unmarshal lower third data: %w", err)
-			}
-			jsonDataParsed = &lowerThirdData
-		default:
-			return nil, fmt.Errorf("unsupported template path for JSON data: %s", *templatePath)
-		}
-	}
-
-	return &CommandCG{
+	cmd := &CommandCG{
 		CommandStruct: CommandStruct{
 			CommandType: CommandTypeCG,
 		},
-		Channel:      channel,
-		Layer:        layer,
-		Call:         commandCall,
-		CgLayer:      cgLayer,
-		TemplatePath: templatePath,
-		PlayOnLoad:   playOnLoad,
-		JsonData:     jsonDataParsed,
-	}, nil
+	}
+
+	if err := cmd.parseChannelLayer(commandParts[1]); err != nil {
+		return nil, err
+	}
+
+	if err := cmd.parseCommandCall(commandParts[2]); err != nil {
+		return nil, err
+	}
+
+	if len(commandParts) >= 4 {
+		if err := cmd.parseCgLayer(commandParts[3]); err != nil {
+			return nil, err
+		}
+	}
+
+	if len(commandParts) >= 5 {
+		if err := cmd.parseTemplatePath(commandParts[4]); err != nil {
+			return nil, err
+		}
+	}
+
+	if len(commandParts) >= 6 {
+		if err := cmd.parsePlayOnLoad(commandParts[5]); err != nil {
+			return nil, err
+		}
+	}
+
+	if len(commandParts) >= 7 {
+		if err := cmd.parseJSONData(commandParts[6]); err != nil {
+			return nil, err
+		}
+	}
+
+	return cmd, nil
+}
+
+// parseChannelLayer parses the channel-layer format
+func (c *CommandCG) parseChannelLayer(channelLayerStr string) error {
+	parts := strings.Split(channelLayerStr, "-")
+	if len(parts) != 2 {
+		return fmt.Errorf("invalid channel-layer format: %s", channelLayerStr)
+	}
+
+	channel, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return fmt.Errorf("invalid channel: %s", parts[0])
+	}
+	c.Channel = &channel
+
+	layer, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return fmt.Errorf("invalid layer: %s", parts[1])
+	}
+	c.Layer = &layer
+
+	return nil
+}
+
+// parseCommandCall parses the command call
+func (c *CommandCG) parseCommandCall(callStr string) error {
+	if callStr == "" {
+		return fmt.Errorf("command call cannot be empty")
+	}
+
+	commandCall, err := CommandCallFromString(callStr)
+	if err != nil {
+		return fmt.Errorf("invalid command call: %s", callStr)
+	}
+	c.Call = &commandCall
+
+	return nil
+}
+
+// parseCgLayer parses the CG layer
+func (c *CommandCG) parseCgLayer(layerStr string) error {
+	if layerStr == "" {
+		return fmt.Errorf("cg_layer cannot be empty")
+	}
+
+	cgLayer, err := strconv.Atoi(layerStr)
+	if err != nil {
+		return fmt.Errorf("invalid cg_layer: %s", layerStr)
+	}
+	c.CgLayer = &cgLayer
+
+	return nil
+}
+
+// parseTemplatePath parses the template path
+func (c *CommandCG) parseTemplatePath(pathStr string) error {
+	if pathStr == "" {
+		return fmt.Errorf("template path cannot be empty")
+	}
+
+	templatePath, err := TemplatePathFromString(pathStr)
+	if err != nil {
+		return fmt.Errorf("invalid template path: %s", pathStr)
+	}
+	c.TemplatePath = &templatePath
+
+	return nil
+}
+
+// parsePlayOnLoad parses the play on load flag
+func (c *CommandCG) parsePlayOnLoad(playOnLoadStr string) error {
+	switch playOnLoadStr {
+	case "1":
+		c.PlayOnLoad = new(bool)
+		*c.PlayOnLoad = true
+	case "0":
+		c.PlayOnLoad = new(bool)
+		*c.PlayOnLoad = false
+	default:
+		return fmt.Errorf("invalid play_on_load value: %s", playOnLoadStr)
+	}
+
+	return nil
+}
+
+// parseJSONData parses the JSON data based on template path
+func (c *CommandCG) parseJSONData(jsonDataStr string) error {
+	if c.TemplatePath == nil {
+		return fmt.Errorf("template path must be specified to unmarshal JSON data")
+	}
+
+	jsonBytes := []byte(strings.ReplaceAll(jsonDataStr, `\`, ""))
+
+	var err error
+	switch *c.TemplatePath {
+	case TemplatePathCountdown, TemplatePathCountdownToTime:
+		c.JsonData, err = unmarshalJSON[Countdown](jsonBytes)
+	case TemplatePathTitle:
+		c.JsonData, err = unmarshalJSON[Title](jsonBytes)
+	case TemplatePathBarRed, TemplatePathBarBlue:
+		c.JsonData, err = unmarshalJSON[Bar](jsonBytes)
+	case TemplatePathSchedule:
+		c.JsonData, err = unmarshalJSON[ScheduleBar](jsonBytes)
+	case TemplatePathDanceComp:
+		c.JsonData, err = unmarshalJSON[DetailedDanceComp](jsonBytes)
+	case TemplatePathLowerThird:
+		c.JsonData, err = unmarshalJSON[LowerThird](jsonBytes)
+	default:
+		return fmt.Errorf("unsupported template path for JSON data: %s", *c.TemplatePath)
+	}
+
+	return err
+}
+
+// unmarshalJSON is a generic helper for unmarshaling JSON data
+func unmarshalJSON[T any](data []byte) (*T, error) {
+	var result T
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal JSON data: %w", err)
+	}
+	return &result, nil
 }

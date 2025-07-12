@@ -15,7 +15,7 @@ const (
 	TemplatePathBarRed          TemplatePaths = "BAR_RED"
 	TemplatePathSchedule        TemplatePaths = "SCHEDULE_BAR"
 	TemplatePathDanceComp       TemplatePaths = "DANCE_COMP_DETAILED"
-	TemplatePathLowerThird      TemplatePaths = "L3" // Lower Third
+	TemplatePathLowerThird      TemplatePaths = "L3"
 )
 
 var commandTemplatePathMap = map[string]TemplatePaths{

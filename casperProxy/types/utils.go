@@ -6,14 +6,17 @@ import (
 	"unicode"
 )
 
-// ParseCommandLine splits a string into arguments, handling quoted parts.
+// ParseCommandLine splits a command line string into arguments, handling quoted sections
+// and escape characters. It supports both single and double quotes.
 func ParseCommandLine(line string) ([]string, error) {
-	var (
-		parts       []string
-		currentPart strings.Builder
-		inQuote     rune // Stores the quote character (', ", or 0 if not in a quote)
-		escaped     bool // True if the last character was an escape character
-	)
+	if line == "" {
+		return []string{}, nil
+	}
+
+	var parts []string
+	currentPart := &strings.Builder{}
+	inQuote := rune(0) // Stores the quote character (', ", or 0 if not in a quote)
+	escaped := false   // True if the last character was an escape character
 
 	for _, r := range line {
 		if escaped {
@@ -23,37 +26,33 @@ func ParseCommandLine(line string) ([]string, error) {
 		}
 
 		switch {
-		case r == '\\': // Escape character
+		case r == '\\':
+			if err := handleEscapeCharacter(currentPart, inQuote); err != nil {
+				return nil, err
+			}
 			escaped = true
-			if inQuote != 0 {
-				currentPart.WriteRune(r)
+		case inQuote != 0:
+			if err := handleQuotedCharacter(currentPart, r, &inQuote); err != nil {
+				return nil, err
 			}
-
-		case inQuote != 0: // Inside a quoted section
-			if r == inQuote { // Found the closing quote
-				inQuote = 0 // Exit quoted state
-			} else {
-				currentPart.WriteRune(r) // Add character to the current part
-			}
-
 		case unicode.IsSpace(r):
 			if currentPart.Len() > 0 {
 				parts = append(parts, currentPart.String())
 				currentPart.Reset()
 			}
-
-		case r == '"' || r == '\'': // Start of a quoted section
+		case r == '"' || r == '\'':
 			inQuote = r
-
-		default: // Regular character outside quotes
+		default:
 			currentPart.WriteRune(r)
 		}
 	}
 
+	// Add the last part if it exists
 	if currentPart.Len() > 0 {
 		parts = append(parts, currentPart.String())
 	}
 
+	//Validate final state
 	if inQuote != 0 {
 		return nil, fmt.Errorf("unmatched quote: %q", inQuote)
 	}
@@ -62,4 +61,22 @@ func ParseCommandLine(line string) ([]string, error) {
 	}
 
 	return parts, nil
+}
+
+// handleEscapeCharacter processes escape characters based on quote context
+func handleEscapeCharacter(currentPart *strings.Builder, inQuote rune) error {
+	if inQuote == 0 {
+		currentPart.WriteRune('\\')
+	}
+	return nil
+}
+
+// handleQuotedCharacter processes characters within quoted sections
+func handleQuotedCharacter(currentPart *strings.Builder, r rune, inQuote *rune) error {
+	if r == *inQuote {
+		*inQuote = 0 // End of quoted section
+	} else {
+		currentPart.WriteRune(r)
+	}
+	return nil
 }
