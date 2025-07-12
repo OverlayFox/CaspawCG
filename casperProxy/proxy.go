@@ -212,7 +212,7 @@ func (p *Proxy) processLowerThirdTemplate(cgCommand *types.CommandCG, originalCo
 	} else if layer == 21 {
 		lowerThirdData, _ = p.sheetsData.GetLowerThirdDuo()
 	} else if layer == 22 {
-		lowerThirdData = p.sheetsData.GetLowerThirdSingle()
+		_, lowerThirdData = p.sheetsData.GetLowerThirdDuo()
 	} else {
 		return originalCommand, fmt.Errorf("unsupported layer %d for lower third template", layer)
 	}
