@@ -176,7 +176,7 @@ func (p *Proxy) processClientCommands(clientConn net.Conn) error {
 
 // interceptCommand parses and processes supported commands
 func (p *Proxy) interceptCommand(commandStr string) (string, error) {
-	command, err := types.NewCommand(commandStr)
+	command, err := types.NewCommandFromString(commandStr)
 	if err != nil {
 		if errors.Is(err, types.ErrUnsupportedCommandType) {
 			return commandStr, nil // Not an error, just unsupported
