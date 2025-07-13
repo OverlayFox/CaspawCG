@@ -27,7 +27,7 @@ func main() {
 		Str("proxyPort", proxyPort).
 		Str("casparCGHost", casparCGHost).
 		Str("casparCGPort", casparCGPort).
-		Msg("Starting CasparCG AMCP Proxy")
+		Msg("Starting CaspawCG application")
 
 	// Initialize Google Workspace handler
 	gw, err := googleworkspace.NewHandler(log.With().Str("component", "googleWorkspace").Logger())

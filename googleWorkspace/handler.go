@@ -89,6 +89,7 @@ func (h *Handler) Start() {
 	go func() {
 		defer h.wg.Done()
 
+		h.logger.Debug().Msg("Pulling initial data from Google Sheets")
 		h.pullCgSheet()
 		h.pullSchedule()
 
@@ -103,6 +104,7 @@ func (h *Handler) Start() {
 			case <-ticker5sec.C:
 				h.pullCgSheet()
 			case <-ticker5min.C:
+				h.logger.Trace().Msg("Pulling schedule data")
 				h.pullSchedule()
 			case <-h.ctx.Done():
 				h.logger.Debug().Msg("Google Sheets handler context cancelled, stopping pull loops")

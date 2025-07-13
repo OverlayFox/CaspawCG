@@ -33,7 +33,7 @@ const (
 
 	// Network timeouts
 	connectionTimeout = 30 * time.Second
-	readTimeout       = 5 * time.Minute
+	readTimeout       = 5 * time.Second
 )
 
 // layerMapping maps layers to array indices for bar templates
@@ -69,6 +69,7 @@ func NewProxy(proxyPort, casparCGHost, casparCGPort string, sheetsData gTypes.Sh
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to CasparCG server at %s: %w", serverAddr, err)
 	}
+	logger.Debug().Str("server_address", serverAddr).Msg("Successfully connected to the CasparCG server")
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -85,7 +86,7 @@ func NewProxy(proxyPort, casparCGHost, casparCGPort string, sheetsData gTypes.Sh
 
 // Start begins listening for client connections
 func (p *Proxy) Start() error {
-	p.logger.Info().Str("listen_port", p.proxyPort).Str("server_address", p.serverAddr).Msg("Starting CasparCG AMCP Proxy.")
+	p.logger.Info().Str("listen_port", p.proxyPort).Str("server_address", p.serverAddr).Msg("Starting CasparCG AMCP Proxy listener.")
 	listener, err := net.Listen("tcp", ":"+p.proxyPort)
 	if err != nil {
 		return fmt.Errorf("failed to listen on port %s: %w", p.proxyPort, err)
@@ -122,10 +123,6 @@ func (p *Proxy) handleClient(clientConn net.Conn) {
 	p.logger.Info().Str("client_address", clientAddr).Msg("New client connection")
 	defer p.logger.Info().Str("client_address", clientAddr).Msg("Client connection closed")
 
-	if err := clientConn.SetReadDeadline(time.Now().Add(readTimeout)); err != nil {
-		p.logger.Error().Err(err).Str("client_address", clientAddr).Msg("Failed to set read timeout for client")
-	}
-
 	go p.forwardServerResponses(clientConn)
 
 	if err := p.processClientCommands(clientConn); err != nil && err != io.EOF {
@@ -158,6 +155,10 @@ func (p *Proxy) processClientCommands(clientConn net.Conn) error {
 		case <-p.ctx.Done():
 			return nil
 		default:
+			if err := clientConn.SetReadDeadline(time.Now().Add(readTimeout)); err != nil {
+				p.logger.Error().Err(err).Str("client_address", clientConn.RemoteAddr().String()).Msg("Failed to set read timeout for client")
+			}
+
 			message, err := reader.ReadString('\n') // Read AMCP command (terminated by \r\n)
 			if err != nil {
 				return err
