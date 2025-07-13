@@ -33,7 +33,6 @@ const (
 
 	// Network timeouts
 	connectionTimeout = 30 * time.Second
-	readTimeout       = 5 * time.Second
 )
 
 // layerMapping maps layers to array indices for bar templates
@@ -155,10 +154,6 @@ func (p *Proxy) processClientCommands(clientConn net.Conn) error {
 		case <-p.ctx.Done():
 			return nil
 		default:
-			if err := clientConn.SetReadDeadline(time.Now().Add(readTimeout)); err != nil {
-				p.logger.Error().Err(err).Str("client_address", clientConn.RemoteAddr().String()).Msg("Failed to set read timeout for client")
-			}
-
 			message, err := reader.ReadString('\n') // Read AMCP command (terminated by \r\n)
 			if err != nil {
 				return err
