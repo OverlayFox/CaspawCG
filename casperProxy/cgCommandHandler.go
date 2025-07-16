@@ -135,8 +135,14 @@ func (p *Proxy) populateDanceCompData(danceComp *types.DetailedDanceComp, finali
 
 // getDanceCompPicturePath generates and validates the picture path for a contestant
 func (p *Proxy) getDanceCompPicturePath(name string) string {
-	cleanName := strings.NewReplacer(" ", "_", "&", "_").Replace(name)
+	if strings.Contains(name, "&") {
+		splitName := strings.SplitN(name, "&", 2)
+		name = fmt.Sprintf("%s_%s", strings.TrimSpace(splitName[0]), strings.TrimSpace(splitName[1]))
+	}
+	cleanName := strings.NewReplacer(" ", "_").Replace(name)
 	pictureFileName := "danceComp/contestant_" + strings.ToLower(cleanName) + ".png"
+
+	p.logger.Debug().Str("contestant_name", name).Msgf("Looking for picture file: '%s'", pictureFileName)
 
 	absPicturePath, err := filepath.Abs("../casparCG/template/images/" + pictureFileName)
 	if err != nil {
@@ -156,7 +162,7 @@ func (p *Proxy) getDanceCompPicturePath(name string) string {
 func (p *Proxy) getPictureAttribution(name string) string {
 	photographer, err := p.sheetsData.GetAttribution(name)
 	if err != nil {
-		p.logger.Error().Err(err).Str("contestant", name).Msg("Error retrieving picture attribution for dance contestants picture")
+		p.logger.Warn().Err(err).Str("contestant", name).Msg("Could not retrieve picture attribution for dance contestants picture")
 		return ""
 	}
 
