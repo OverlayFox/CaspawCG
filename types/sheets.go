@@ -2,6 +2,7 @@ package types
 
 type SheetsData interface {
 	Start()
+	Close()
 
 	GetCountdown() *Countdown
 	GetCountdownToTime() *Countdown

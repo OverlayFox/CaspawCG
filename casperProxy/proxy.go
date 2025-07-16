@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 	"strings"
 	"sync"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/OverlayFox/CaspawCG/casperProxy/types"
 	gTypes "github.com/OverlayFox/CaspawCG/types"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -33,7 +33,6 @@ const (
 
 	// Network timeouts
 	connectionTimeout = 30 * time.Second
-	readTimeout       = 5 * time.Minute
 )
 
 // layerMapping maps layers to array indices for bar templates
@@ -44,17 +43,22 @@ var layerMapping = map[int]int{
 
 // Proxy represents a CasparCG AMCP proxy server
 type Proxy struct {
+	logger zerolog.Logger
+
 	proxyPort  string
 	serverAddr string
 	serverConn net.Conn
+
 	sheetsData gTypes.SheetsData
-	mu         sync.RWMutex
-	ctx        context.Context
-	cancel     context.CancelFunc
+
+	wg     sync.WaitGroup
+	mu     sync.RWMutex
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // NewProxy creates a new CasparCG AMCP Proxy instance
-func NewProxy(proxyPort, casparCGHost, casparCGPort string, sheetsData gTypes.SheetsData) (*Proxy, error) {
+func NewProxy(proxyPort, casparCGHost, casparCGPort string, sheetsData gTypes.SheetsData, logger zerolog.Logger) (*Proxy, error) {
 	if proxyPort == "" || casparCGHost == "" || casparCGPort == "" {
 		return nil, errors.New("proxy port, CasparCG host, and port must be specified")
 	}
@@ -64,10 +68,12 @@ func NewProxy(proxyPort, casparCGHost, casparCGPort string, sheetsData gTypes.Sh
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to CasparCG server at %s: %w", serverAddr, err)
 	}
+	logger.Debug().Str("server_address", serverAddr).Msg("Successfully connected to the CasparCG server")
 
 	ctx, cancel := context.WithCancel(context.Background())
 
 	return &Proxy{
+		logger:     logger,
 		proxyPort:  proxyPort,
 		serverAddr: serverAddr,
 		serverConn: serverConn,
@@ -79,27 +85,33 @@ func NewProxy(proxyPort, casparCGHost, casparCGPort string, sheetsData gTypes.Sh
 
 // Start begins listening for client connections
 func (p *Proxy) Start() error {
+	p.logger.Info().Str("listen_port", p.proxyPort).Str("server_address", p.serverAddr).Msg("Starting CasparCG AMCP Proxy listener.")
 	listener, err := net.Listen("tcp", ":"+p.proxyPort)
 	if err != nil {
 		return fmt.Errorf("failed to listen on port %s: %w", p.proxyPort, err)
 	}
-	defer listener.Close()
 
-	log.Printf("CasparCG AMCP Proxy listening on port '%s', forwarding to '%s'", p.proxyPort, p.serverAddr)
+	p.wg.Add(1)
+	go func() {
+		defer p.wg.Done()
+		defer listener.Close()
 
-	for {
-		select {
-		case <-p.ctx.Done():
-			return nil
-		default:
-			conn, err := listener.Accept()
-			if err != nil {
-				log.Printf("Error accepting client connection: %v", err)
-				continue
+		for {
+			select {
+			case <-p.ctx.Done():
+				return
+			default:
+				conn, err := listener.Accept()
+				if err != nil {
+					p.logger.Error().Err(err).Msg("Error accepting client connection")
+					continue
+				}
+				go p.handleClient(conn)
 			}
-			go p.handleClient(conn)
 		}
-	}
+	}()
+
+	return nil
 }
 
 // handleClient manages a single client connection
@@ -107,17 +119,13 @@ func (p *Proxy) handleClient(clientConn net.Conn) {
 	defer clientConn.Close()
 
 	clientAddr := clientConn.RemoteAddr().String()
-	log.Printf("Client connected from '%s'", clientAddr)
-	defer log.Printf("Client '%s' disconnected", clientAddr)
-
-	if err := clientConn.SetReadDeadline(time.Now().Add(readTimeout)); err != nil {
-		log.Printf("Failed to set read timeout for client '%s': %v", clientAddr, err)
-	}
+	p.logger.Info().Str("client_address", clientAddr).Msg("New client connection")
+	defer p.logger.Info().Str("client_address", clientAddr).Msg("Client connection closed")
 
 	go p.forwardServerResponses(clientConn)
 
 	if err := p.processClientCommands(clientConn); err != nil && err != io.EOF {
-		log.Printf("Error processing commands from client '%s': %v", clientAddr, err)
+		p.logger.Error().Err(err).Str("client_address", clientAddr).Msg("Error processing commands from client")
 	}
 }
 
@@ -128,13 +136,12 @@ func (p *Proxy) forwardServerResponses(clientConn net.Conn) {
 	p.mu.RUnlock()
 
 	if serverConn == nil {
-		log.Printf("No server connection available for client '%s'", clientConn.RemoteAddr())
+		p.logger.Error().Str("client_address", clientConn.RemoteAddr().String()).Msg("No server connection available for client to forward responses")
 		return
 	}
 
 	if _, err := io.Copy(clientConn, serverConn); err != nil {
-		log.Printf("Error forwarding server response to client %s: %v",
-			clientConn.RemoteAddr(), err)
+		p.logger.Error().Err(err).Str("client_address", clientConn.RemoteAddr().String()).Msg("Error forwarding server response to client")
 	}
 }
 
@@ -157,15 +164,15 @@ func (p *Proxy) processClientCommands(clientConn net.Conn) error {
 				continue
 			}
 
-			log.Printf("Received from client '%s': %s", clientConn.RemoteAddr(), commandStr)
+			p.logger.Debug().Str("client_address", clientConn.RemoteAddr().String()).Str("command", commandStr).Msg("Received AMCP command from client")
 
 			processedCommand, err := p.interceptCommand(commandStr)
 			if err != nil {
-				log.Printf("Error intercepting command '%s': %v", commandStr, err)
+				p.logger.Error().Err(err).Str("command", commandStr).Msg("Error intercepting command")
 				processedCommand = commandStr // Use original command on error
 			}
 
-			log.Printf("Forwarding command to server: %s", processedCommand)
+			p.logger.Debug().Str("client_address", clientConn.RemoteAddr().String()).Str("processed_command", processedCommand).Msg("Processed command from client, forwarding it to server")
 
 			if err := p.forwardToServer(processedCommand); err != nil {
 				return fmt.Errorf("failed to forward command to server: %w", err)

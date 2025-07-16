@@ -3,18 +3,20 @@ package googleworkspace
 import (
 	"context"
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/OverlayFox/CaspawCG/types"
+	"github.com/rs/zerolog"
 	"google.golang.org/api/option"
 	"google.golang.org/api/sheets/v4"
 )
 
 type Handler struct {
+	logger zerolog.Logger
+
 	sheets     *sheets.SpreadsheetsService
 	cgID       string
 	scheduleID string
@@ -32,22 +34,27 @@ type Handler struct {
 	mtx         sync.RWMutex
 	scheduleMtx sync.RWMutex
 
-	ctx context.Context
-	wg  sync.WaitGroup
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 }
 
-func NewHandler() (types.SheetsData, error) {
-	ctx := context.Background()
+func NewHandler(logger zerolog.Logger) (types.SheetsData, error) {
+	ctx, cancel := context.WithCancel(context.Background())
 	srv, err := sheets.NewService(ctx, option.WithCredentialsFile("service-account.json"))
 	if err != nil {
+		cancel()
 		return nil, fmt.Errorf("failed to create Sheets service: %w", err)
 	}
 
 	return &Handler{
+		logger: logger,
+
 		sheets:     srv.Spreadsheets,
 		cgID:       "1ag__aae56azH_D4yqQpXXf4GXpsMespSlju_ed20vVo",
 		scheduleID: "1NZbShItG_jQRS48_PXtE0dRnQp0NqOrn__I6fxRpiws",
 		ctx:        ctx,
+		cancel:     cancel,
 
 		countdown: &types.Countdown{
 			Title:         "Countdown",
@@ -76,10 +83,13 @@ func NewHandler() (types.SheetsData, error) {
 }
 
 func (h *Handler) Start() {
+	h.logger.Info().Msg("Starting Google Sheets handler")
+
 	h.wg.Add(1)
 	go func() {
 		defer h.wg.Done()
 
+		h.logger.Debug().Msg("Pulling initial data from Google Sheets")
 		h.pullCgSheet()
 		h.pullSchedule()
 
@@ -94,9 +104,10 @@ func (h *Handler) Start() {
 			case <-ticker5sec.C:
 				h.pullCgSheet()
 			case <-ticker5min.C:
+				h.logger.Trace().Msg("Pulling schedule data")
 				h.pullSchedule()
 			case <-h.ctx.Done():
-				log.Println("Stopping Google Sheets handler")
+				h.logger.Debug().Msg("Google Sheets handler context cancelled, stopping pull loops")
 				return
 			}
 		}
@@ -219,18 +230,19 @@ func (h *Handler) extractStringValue(resp *sheets.BatchGetValuesResponse, rangeI
 		return val
 	}
 
-	log.Printf("Expected string value for %s, got: %v", fieldName, valueRange.Values[0][0])
+	h.logger.Warn().Msgf("Expected string value for '%s', got: '%v'", fieldName, valueRange.Values[0][0])
 	return ""
 }
 
 func (h *Handler) pullSchedule() {
 	resp, err := h.sheets.Values.BatchGet(h.scheduleID).Ranges("B2:B77", "E2:E77", "F2:H77").Do()
 	if err != nil {
-		log.Fatalf("Unable to retrieve data from sheet: %v", err)
+		h.logger.Error().Err(err).Msg("Unable to retrieve data from schedule sheet")
+		return
 	}
 
 	if len(resp.ValueRanges) < 3 {
-		log.Println("Not enough data ranges returned from the schedule sheet")
+		h.logger.Warn().Msg("Not enough data ranges returned from the schedule sheet")
 		return
 	}
 
@@ -281,7 +293,7 @@ func (h *Handler) pullSchedule() {
 
 		schedule, err := types.NewScheduleRow(title, room, weekDay, startTime, duration)
 		if err != nil {
-			log.Printf("Error creating schedule row for index %d: %v", i, err)
+			h.logger.Error().Err(err).Msgf("Error creating schedule row for index '%d'", i)
 			continue
 		}
 		scheduleList = append(scheduleList, schedule)
@@ -306,7 +318,8 @@ func (h *Handler) pullSchedule() {
 func (h *Handler) pullCgSheet() {
 	resp, err := h.sheets.Values.BatchGet(h.cgID).Ranges("Main!B2:B3", "Main!B6:B7", "Main!F2:F3", "Main!F6:F7", "Main!H6:H7", "DanceComp!A2:F89", "Main!B10", "Lists!A2:B12").Do()
 	if err != nil {
-		log.Fatalf("Unable to retrieve data from sheet: %v", err)
+		h.logger.Error().Err(err).Msg("Unable to retrieve data from CG sheet")
+		return
 	}
 
 	h.mtx.Lock()
@@ -475,4 +488,11 @@ func (h *Handler) pullCgSheet() {
 			}
 		}
 	}
+}
+
+func (h *Handler) Close() {
+	h.logger.Info().Msg("Stopping Google Sheets handler")
+
+	h.cancel()
+	h.wg.Wait()
 }

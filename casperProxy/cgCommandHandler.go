@@ -27,8 +27,6 @@ func (p *Proxy) handleCGCommand(command types.Command, originalCommand string) (
 		return "", fmt.Errorf("CG command missing template path: %s", originalCommand)
 	}
 
-	log.Printf("Processing CG command: %s", originalCommand)
-
 	return p.processCGTemplate(cgCommand, originalCommand)
 }
 
@@ -137,19 +135,25 @@ func (p *Proxy) populateDanceCompData(danceComp *types.DetailedDanceComp, finali
 
 // getDanceCompPicturePath generates and validates the picture path for a contestant
 func (p *Proxy) getDanceCompPicturePath(name string) string {
-	cleanName := strings.NewReplacer(" ", "_", "&", "_").Replace(name)
+	if strings.Contains(name, "&") {
+		splitName := strings.SplitN(name, "&", 2)
+		name = fmt.Sprintf("%s_%s", strings.TrimSpace(splitName[0]), strings.TrimSpace(splitName[1]))
+	}
+	cleanName := strings.NewReplacer(" ", "_").Replace(name)
 	pictureFileName := "danceComp/contestant_" + strings.ToLower(cleanName) + ".png"
+
+	p.logger.Debug().Str("contestant_name", name).Msgf("Looking for picture file: '%s'", pictureFileName)
 
 	absPicturePath, err := filepath.Abs("../casparCG/template/images/" + pictureFileName)
 	if err != nil {
-		log.Printf("Error resolving absolute path for %s: %v", pictureFileName, err)
+		p.logger.Warn().Str("picture_file", pictureFileName).Msg("Error resolving absolute path for picture file")
 		return ""
 	}
 
 	if _, err := os.Stat(absPicturePath); err == nil {
 		return pictureFileName
 	} else if !os.IsNotExist(err) {
-		log.Printf("Error checking picture file '%s': %v", absPicturePath, err)
+		p.logger.Error().Err(err).Str("picture_file", absPicturePath).Msgf("Error checking picture files existence")
 	}
 
 	return ""
@@ -158,7 +162,7 @@ func (p *Proxy) getDanceCompPicturePath(name string) string {
 func (p *Proxy) getPictureAttribution(name string) string {
 	photographer, err := p.sheetsData.GetAttribution(name)
 	if err != nil {
-		log.Printf("Error getting attribution for %s: %v", name, err)
+		p.logger.Warn().Err(err).Str("contestant", name).Msg("Could not retrieve picture attribution for dance contestants picture")
 		return ""
 	}
 
@@ -279,8 +283,6 @@ func (p *Proxy) processCountdownTemplate(cgCommand *types.CommandCG, originalCom
 	countdownData := p.sheetsData.GetCountdown()
 	countdown.Title = countdownData.Title
 	countdown.TimerHours = countdownData.CountdownTime
-
-	log.Printf("Processing Countdown: Title=%s,  TimerHours=%s TimerMinutes=%s", countdown.Title, countdown.TimerHours, countdown.TimerMinutes)
 
 	return cgCommand.Command()
 }
