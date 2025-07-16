@@ -168,7 +168,9 @@ func (p *Proxy) processClientCommands(clientConn net.Conn) error {
 
 			processedCommand, err := p.interceptCommand(commandStr)
 			if err != nil {
-				p.logger.Error().Err(err).Str("command", commandStr).Msg("Error intercepting command")
+				if !errors.Is(err, ErrNotCGAddCall) {
+					p.logger.Error().Err(err).Str("command", commandStr).Msg("Error intercepting command")
+				}
 				processedCommand = commandStr // Use original command on error
 			}
 

@@ -1,6 +1,7 @@
 package casperproxy
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -9,6 +10,10 @@ import (
 
 	"github.com/OverlayFox/CaspawCG/casperProxy/types"
 	gTypes "github.com/OverlayFox/CaspawCG/types"
+)
+
+var (
+	ErrNotCGAddCall = errors.New("CG command is not an ADD call")
 )
 
 // handleCGCommand processes CG (Character Generator) commands
@@ -20,7 +25,7 @@ func (p *Proxy) handleCGCommand(command types.Command, originalCommand string) (
 
 	// Only process ADD calls
 	if cgCommand.Call == nil || *cgCommand.Call != types.CommandCallADD {
-		return "", fmt.Errorf("CG command is not an ADD call: %s", *cgCommand.Call)
+		return "", fmt.Errorf("%w: %s", ErrNotCGAddCall, *cgCommand.Call)
 	}
 
 	if cgCommand.TemplatePath == nil {

@@ -18,6 +18,8 @@ const (
 	CommandTypeMIXER   CommandType = "MIXER"
 	CommandTypeFILL    CommandType = "FILL"
 	CommandTypeClear   CommandType = "CLEAR"
+	CommandTypePlay    CommandType = "PLAY"
+	CommandTypeStop    CommandType = "STOP"
 )
 
 var commandTypeMap = map[string]CommandType{
@@ -31,6 +33,8 @@ var commandTypeMap = map[string]CommandType{
 	"MIXER":     CommandTypeMIXER,
 	"FILL":      CommandTypeFILL,
 	"CLEAR":     CommandTypeClear,
+	"PLAY":      CommandTypePlay,
+	"STOP":      CommandTypeStop,
 }
 
 func CommandTypeFromString(s string) (CommandType, error) {
