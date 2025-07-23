@@ -21,6 +21,7 @@ type Handler struct {
 	cgID       string
 	scheduleID string
 
+	freeStandings           []*types.FreeStandings
 	countdown               *types.Countdown
 	countdownToTime         *types.Countdown
 	lowerThird1             *types.LowerThird
@@ -216,6 +217,16 @@ func (h *Handler) GetAttribution(contestantsName string) (string, error) {
 	return "", fmt.Errorf("no attribution found for contestant: %s", contestantsName)
 }
 
+func (h *Handler) GetFreeStandings() []*types.FreeStandings {
+	h.mtx.RLock()
+	defer h.mtx.RUnlock()
+
+	freeStandingsCopy := make([]*types.FreeStandings, len(h.freeStandings))
+	copy(freeStandingsCopy, h.freeStandings)
+
+	return freeStandingsCopy
+}
+
 func (h *Handler) extractStringValue(resp *sheets.BatchGetValuesResponse, rangeIndex int, fieldName string) string {
 	if len(resp.ValueRanges) <= rangeIndex {
 		return ""
@@ -316,7 +327,7 @@ func (h *Handler) pullSchedule() {
 }
 
 func (h *Handler) pullCgSheet() {
-	resp, err := h.sheets.Values.BatchGet(h.cgID).Ranges("Main!B2:B3", "Main!B6:B7", "Main!F2:F3", "Main!F6:F7", "Main!H6:H7", "DanceComp!A2:F89", "Main!B10", "Lists!A2:B12").Do()
+	resp, err := h.sheets.Values.BatchGet(h.cgID).Ranges("Main!B2:B3", "Main!B6:B7", "Main!F2:F3", "Main!F6:F7", "Main!H6:H7", "DanceComp!A2:F89", "Main!B10", "Lists!A2:B12", "Standings!A2:B13").Do()
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Unable to retrieve data from CG sheet")
 		return
@@ -485,6 +496,33 @@ func (h *Handler) pullCgSheet() {
 			attribution, okAttribution := row[1].(string)
 			if okName && okAttribution && name != "" && attribution != "" {
 				h.attribution[name] = attribution
+			}
+		}
+	}
+
+	// Extract free standings data (Standings!A2:B13)
+	if len(resp.ValueRanges) > 8 && len(resp.ValueRanges[8].Values) > 0 {
+		values := resp.ValueRanges[8].Values
+		h.freeStandings = make([]*types.FreeStandings, 0)
+
+		for _, row := range values {
+			if len(row) < 2 {
+				continue // Skip rows that don't have at least 2 columns
+			}
+			points := "0"
+			pointsStr, okPoints := row[0].(string)
+			if okPoints {
+				points = strings.TrimSpace(pointsStr)
+			} else {
+				h.logger.Error().Err(err).Msgf("Invalid points value: %s", pointsStr)
+			}
+
+			nameStr, okName := row[1].(string)
+			if okName && nameStr != "" {
+				h.freeStandings = append(h.freeStandings, &types.FreeStandings{
+					ContestantName: strings.TrimSpace(nameStr),
+					Points:         points,
+				})
 			}
 		}
 	}

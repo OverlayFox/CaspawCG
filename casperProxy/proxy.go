@@ -31,15 +31,28 @@ const (
 	barTemplateStartLayer = 51
 	barTemplateEndLayer   = 61
 
+	barFreeStandingsStartLayer = 101
+	barFreeStandingsEndLayer   = 113
+
 	// Network timeouts
 	connectionTimeout = 30 * time.Second
 )
 
 // layerMapping maps layers to array indices for bar templates
 var layerMapping = map[int]int{
+	// Dance Comp
 	51: 0, 52: 1, 53: 2, 54: 3, 55: 4,
 	56: 5, 57: 6, 58: 7, 59: 8, 60: 9, 61: 10,
+
+	// Free Standings
+	101: 0, 102: 1, 103: 2, 104: 3, 105: 4, 106: 5,
+	107: 6, 108: 7, 109: 8, 110: 9, 111: 10, 112: 11,
+	113: 12,
 }
+
+var (
+	ErrFailedToGetBarData = errors.New("failed to get bar data")
+)
 
 // Proxy represents a CasparCG AMCP proxy server
 type Proxy struct {
@@ -170,6 +183,9 @@ func (p *Proxy) processClientCommands(clientConn net.Conn) error {
 			if err != nil {
 				if !errors.Is(err, ErrNotCGAddCall) {
 					p.logger.Error().Err(err).Str("command", commandStr).Msg("Error intercepting command")
+				}
+				if errors.Is(err, ErrFailedToGetBarData) {
+					continue // Skip Bars that don't have data to not send them live
 				}
 				processedCommand = commandStr // Use original command on error
 			}

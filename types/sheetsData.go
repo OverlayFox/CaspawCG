@@ -7,6 +7,11 @@ import (
 	"time"
 )
 
+type FreeStandings struct {
+	ContestantName string `json:"contestantName"`
+	Points         string `json:"points"`
+}
+
 type Countdown struct {
 	Title         string `json:"title"`
 	CountdownTime string `json:"countdownTime"`
