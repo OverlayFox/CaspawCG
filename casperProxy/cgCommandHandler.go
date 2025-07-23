@@ -332,8 +332,6 @@ func (p *Proxy) processBarTemplate(cgCommand *types.CommandCG, originalCommand s
 
 // getBarDanceCompData retrieves bar data for dance competition standings
 func (p *Proxy) getBarDanceCompData(layer int) (*types.Bar, error) {
-	p.logger.Debug().Int("layer", layer).Msg("Getting bar data for layer")
-
 	if layer >= barTemplateStartLayer && layer <= barTemplateEndLayer {
 		standings := p.sheetsData.GetDetailedDanceComp()
 		standingIndex, exists := layerMapping[layer]
