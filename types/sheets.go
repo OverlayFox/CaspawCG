@@ -16,4 +16,6 @@ type SheetsData interface {
 	GetCurrentSchedule() []*ScheduleRow
 
 	GetAttribution(contestantsName string) (string, error)
+
+	GetFreeStandings() []*FreeStandings
 }

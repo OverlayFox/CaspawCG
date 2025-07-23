@@ -321,7 +321,7 @@ func (p *Proxy) processBarTemplate(cgCommand *types.CommandCG, originalCommand s
 
 	barData, err := p.getBarDanceCompData(*cgCommand.Layer)
 	if err != nil {
-		return originalCommand, fmt.Errorf("failed to get bar data: %w", err)
+		return originalCommand, fmt.Errorf("%w: %w", ErrFailedToGetBarData, err)
 	}
 
 	bar.Number = barData.Number
@@ -332,23 +332,43 @@ func (p *Proxy) processBarTemplate(cgCommand *types.CommandCG, originalCommand s
 
 // getBarDanceCompData retrieves bar data for dance competition standings
 func (p *Proxy) getBarDanceCompData(layer int) (*types.Bar, error) {
-	if layer < barTemplateStartLayer || layer > barTemplateEndLayer {
-		return nil, fmt.Errorf("invalid layer %d for bar template", layer)
+	p.logger.Debug().Int("layer", layer).Msg("Getting bar data for layer")
+
+	if layer >= barTemplateStartLayer && layer <= barTemplateEndLayer {
+		standings := p.sheetsData.GetDetailedDanceComp()
+		standingIndex, exists := layerMapping[layer]
+		if !exists {
+			return nil, fmt.Errorf("invalid layer %d for bar template", layer)
+		}
+
+		if len(standings) <= standingIndex {
+			return nil, fmt.Errorf("not enough dance competition standings for layer %d", layer)
+		}
+
+		standing := standings[standingIndex]
+		return &types.Bar{
+			Number: standing.TotalScore,
+			Title:  standing.Name,
+		}, nil
 	}
 
-	standings := p.sheetsData.GetDetailedDanceComp()
-	standingIndex, exists := layerMapping[layer]
-	if !exists {
-		return nil, fmt.Errorf("invalid layer %d for bar template", layer)
+	if layer >= barFreeStandingsStartLayer && layer <= barFreeStandingsEndLayer {
+		standings := p.sheetsData.GetFreeStandings()
+		standingIndex, exists := layerMapping[layer]
+		if !exists {
+			return nil, fmt.Errorf("invalid layer %d for bar template", layer)
+		}
+
+		if len(standings) <= standingIndex {
+			return nil, fmt.Errorf("not enough dance competition standings for layer %d", layer)
+		}
+
+		standing := standings[standingIndex]
+		return &types.Bar{
+			Number: standing.Points,
+			Title:  standing.ContestantName,
+		}, nil
 	}
 
-	if len(standings) <= standingIndex {
-		return nil, fmt.Errorf("not enough dance competition standings for layer %d", layer)
-	}
-
-	standing := standings[standingIndex]
-	return &types.Bar{
-		Number: standing.TotalScore,
-		Title:  standing.Name,
-	}, nil
+	return nil, fmt.Errorf("invalid layer %d for bar template", layer)
 }
