@@ -4,16 +4,14 @@ type SheetsData interface {
 	Start()
 	Close()
 
-	GetCountdown() *Countdown
-	GetCountdownToTime() *Countdown
+	GetCountdown() *SimpleCountdown
+	GetCountdownDuration() *SimpleCountdown
+	GetDJCountdown() *DJCountdown
+	GetDJCountdownDuration() *DJCountdown
 
-	GetLowerThirdSingle() *LowerThird
-	GetLowerThirdDuo() (*LowerThird, *LowerThird)
-
-	GetDetailedDanceCompSingle() *DetailedDanceComp
-	GetDetailedDanceComp() []*DetailedDanceComp
+	GetLowerThird01() *LowerThird
+	GetLowerThird02() *LowerThird
+	GetLowerThirdDJ() *LowerThird
 
 	GetCurrentSchedule() []*ScheduleRow
-
-	GetAttribution(contestantsName string) (string, error)
 }

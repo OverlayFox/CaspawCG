@@ -6,7 +6,6 @@ import (
 	"runtime"
 	"time"
 
-	cp "github.com/OverlayFox/CaspawCG/casperProxy"
 	googleworkspace "github.com/OverlayFox/CaspawCG/googleWorkspace"
 	"github.com/rs/zerolog"
 )
@@ -38,13 +37,13 @@ func main() {
 	defer gw.Close()
 
 	// Initialize and start the CasparCG AMCP Proxy
-	proxy, err := cp.NewProxy(proxyPort, casparCGHost, casparCGPort, gw, log.With().Str("component", "casperProxy").Logger())
-	if err != nil {
-		log.Fatal().Err(err).Msgf("Failed to create proxy")
-	}
-	if err := proxy.Start(); err != nil {
-		log.Fatal().Err(err).Msgf("Error starting proxy")
-	}
+	// proxy, err := cp.NewProxy(proxyPort, casparCGHost, casparCGPort, gw, log.With().Str("component", "casperProxy").Logger())
+	// if err != nil {
+	// 	log.Fatal().Err(err).Msgf("Failed to create proxy")
+	// }
+	// if err := proxy.Start(); err != nil {
+	// 	log.Fatal().Err(err).Msgf("Error starting proxy")
+	// }
 
 	// Wait for interrupt signal (Ctrl+C) to gracefully shutdown
 	c := make(chan os.Signal, 1)

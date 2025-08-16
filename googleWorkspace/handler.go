@@ -3,8 +3,7 @@ package googleworkspace
 import (
 	"context"
 	"fmt"
-	"sort"
-	"strings"
+	"math"
 	"sync"
 	"time"
 
@@ -17,19 +16,17 @@ import (
 type Handler struct {
 	logger zerolog.Logger
 
-	sheets     *sheets.SpreadsheetsService
-	cgID       string
-	scheduleID string
+	sheets *sheets.SpreadsheetsService
+	cgID   string
 
-	countdown               *types.Countdown
-	countdownToTime         *types.Countdown
-	lowerThird1             *types.LowerThird
-	lowerThird2             *types.LowerThird
-	lowerThird3             *types.LowerThird
-	detailedDanceCompSingle *types.DetailedDanceComp
-	detailedDanceComp       []*types.DetailedDanceComp
-	schedule                []*types.ScheduleRow
-	attribution             map[string]string // Key is the contestants name, value is the person who needs to be credited
+	countdown           *types.SimpleCountdown
+	countdownDuration   *types.SimpleCountdown
+	djCountdown         *types.DJCountdown
+	djCountdownDuration *types.DJCountdown
+	lowerThird1         *types.LowerThird
+	lowerThird2         *types.LowerThird
+	lowerThirdDJ        *types.LowerThird
+	schedule            []*types.ScheduleRow
 
 	mtx         sync.RWMutex
 	scheduleMtx sync.RWMutex
@@ -50,19 +47,38 @@ func NewHandler(logger zerolog.Logger) (types.SheetsData, error) {
 	return &Handler{
 		logger: logger,
 
-		sheets:     srv.Spreadsheets,
-		cgID:       "1ag__aae56azH_D4yqQpXXf4GXpsMespSlju_ed20vVo",
-		scheduleID: "1NZbShItG_jQRS48_PXtE0dRnQp0NqOrn__I6fxRpiws",
-		ctx:        ctx,
-		cancel:     cancel,
+		sheets: srv.Spreadsheets,
+		cgID:   "1FneiBwBkRFOWzGvuMkOuJgV3aaBDaDNS5Lp-IsCsugA",
+		ctx:    ctx,
+		cancel: cancel,
 
-		countdown: &types.Countdown{
-			Title:         "Countdown",
+		countdownDuration: &types.SimpleCountdown{
+			CountdownType: types.CountdownTypeDuration,
+			Text:          "Countdown",
 			CountdownTime: "00:00:00",
 		},
-		countdownToTime: &types.Countdown{
-			Title:         "Countdown",
+		countdown: &types.SimpleCountdown{
+			CountdownType: types.CountdownTypeToTime,
+			Text:          "Countdown",
 			CountdownTime: "00:00:00",
+		},
+		djCountdownDuration: &types.DJCountdown{
+			SimpleCountdown: &types.SimpleCountdown{
+				CountdownType: types.CountdownTypeDuration,
+				Text:          "DJ Countdown",
+				CountdownTime: "00:00:00",
+			},
+			FirstDJ:  "<First DJ>",
+			SecondDJ: "<Second DJ>",
+		},
+		djCountdown: &types.DJCountdown{
+			SimpleCountdown: &types.SimpleCountdown{
+				CountdownType: types.CountdownTypeToTime,
+				Text:          "DJ Countdown",
+				CountdownTime: "00:00:00",
+			},
+			FirstDJ:  "<First DJ>",
+			SecondDJ: "<Second DJ>",
 		},
 		lowerThird1: &types.LowerThird{
 			Row1: "",
@@ -72,13 +88,7 @@ func NewHandler(logger zerolog.Logger) (types.SheetsData, error) {
 			Row1: "",
 			Row2: "",
 		},
-		lowerThird3: &types.LowerThird{
-			Row1: "",
-			Row2: "",
-		},
-		detailedDanceComp: make([]*types.DetailedDanceComp, 0),
-		schedule:          make([]*types.ScheduleRow, 0),
-		attribution:       make(map[string]string),
+		schedule: make([]*types.ScheduleRow, 0),
 	}, nil
 }
 
@@ -91,21 +101,14 @@ func (h *Handler) Start() {
 
 		h.logger.Debug().Msg("Pulling initial data from Google Sheets")
 		h.pullCgSheet()
-		h.pullSchedule()
 
 		ticker5sec := time.NewTicker(5 * time.Second)
 		defer ticker5sec.Stop()
-
-		ticker5min := time.NewTicker(5 * time.Minute)
-		defer ticker5min.Stop()
 
 		for {
 			select {
 			case <-ticker5sec.C:
 				h.pullCgSheet()
-			case <-ticker5min.C:
-				h.logger.Trace().Msg("Pulling schedule data")
-				h.pullSchedule()
 			case <-h.ctx.Done():
 				h.logger.Debug().Msg("Google Sheets handler context cancelled, stopping pull loops")
 				return
@@ -114,11 +117,11 @@ func (h *Handler) Start() {
 	}()
 }
 
-func (h *Handler) GetCountdown() *types.Countdown {
+func (h *Handler) GetCountdown() *types.SimpleCountdown {
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
 
-	countdownCopy := types.Countdown{}
+	countdownCopy := types.SimpleCountdown{}
 	if h.countdown != nil {
 		countdownCopy = *h.countdown
 	}
@@ -126,19 +129,43 @@ func (h *Handler) GetCountdown() *types.Countdown {
 	return &countdownCopy
 }
 
-func (h *Handler) GetCountdownToTime() *types.Countdown {
+func (h *Handler) GetCountdownDuration() *types.SimpleCountdown {
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
 
-	countdownToTimeCopy := types.Countdown{}
-	if h.countdownToTime != nil {
-		countdownToTimeCopy = *h.countdownToTime
+	countdownDurationCopy := types.SimpleCountdown{}
+	if h.countdownDuration != nil {
+		countdownDurationCopy = *h.countdownDuration
 	}
 
-	return &countdownToTimeCopy
+	return &countdownDurationCopy
 }
 
-func (h *Handler) GetLowerThirdSingle() *types.LowerThird {
+func (h *Handler) GetDJCountdown() *types.DJCountdown {
+	h.mtx.RLock()
+	defer h.mtx.RUnlock()
+
+	djCountdownCopy := types.DJCountdown{}
+	if h.djCountdown != nil {
+		djCountdownCopy = *h.djCountdown
+	}
+
+	return &djCountdownCopy
+}
+
+func (h *Handler) GetDJCountdownDuration() *types.DJCountdown {
+	h.mtx.RLock()
+	defer h.mtx.RUnlock()
+
+	djCountdownDurationCopy := types.DJCountdown{}
+	if h.djCountdownDuration != nil {
+		djCountdownDurationCopy = *h.djCountdownDuration
+	}
+
+	return &djCountdownDurationCopy
+}
+
+func (h *Handler) GetLowerThird01() *types.LowerThird {
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
 
@@ -150,43 +177,28 @@ func (h *Handler) GetLowerThirdSingle() *types.LowerThird {
 	return &lowerThirdCopy
 }
 
-func (h *Handler) GetLowerThirdDuo() (*types.LowerThird, *types.LowerThird) {
+func (h *Handler) GetLowerThird02() *types.LowerThird {
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
 
-	lowerThirdCopy2 := types.LowerThird{}
+	lowerThirdCopy := types.LowerThird{}
 	if h.lowerThird2 != nil {
-		lowerThirdCopy2 = *h.lowerThird2
+		lowerThirdCopy = *h.lowerThird2
 	}
 
-	lowerThirdCopy3 := types.LowerThird{}
-	if h.lowerThird3 != nil {
-		lowerThirdCopy3 = *h.lowerThird3
-	}
-
-	return &lowerThirdCopy2, &lowerThirdCopy3
+	return &lowerThirdCopy
 }
 
-func (h *Handler) GetDetailedDanceCompSingle() *types.DetailedDanceComp {
+func (h *Handler) GetLowerThirdDJ() *types.LowerThird {
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
 
-	detailedDanceCompCopy := types.DetailedDanceComp{}
-	if h.detailedDanceCompSingle != nil {
-		detailedDanceCompCopy = *h.detailedDanceCompSingle
+	lowerThirdCopy := types.LowerThird{}
+	if h.lowerThirdDJ != nil {
+		lowerThirdCopy = *h.lowerThirdDJ
 	}
 
-	return &detailedDanceCompCopy
-}
-
-func (h *Handler) GetDetailedDanceComp() []*types.DetailedDanceComp {
-	h.mtx.RLock()
-	defer h.mtx.RUnlock()
-
-	detailedDanceCompCopy := make([]*types.DetailedDanceComp, len(h.detailedDanceComp))
-	copy(detailedDanceCompCopy, h.detailedDanceComp)
-
-	return detailedDanceCompCopy
+	return &lowerThirdCopy
 }
 
 func (h *Handler) GetCurrentSchedule() []*types.ScheduleRow {
@@ -195,128 +207,24 @@ func (h *Handler) GetCurrentSchedule() []*types.ScheduleRow {
 	copy(scheduleCopy, h.schedule)
 	h.scheduleMtx.RUnlock()
 
-	currentSchedule := make([]*types.ScheduleRow, 0)
-	now := time.Now().Add(10 * time.Minute) // Only show events that aren't about to be over
-	for _, row := range scheduleCopy {
-		if now.After(row.EndTime) {
-			continue
-		}
-		currentSchedule = append(currentSchedule, row)
-	}
-	return currentSchedule
-}
-
-func (h *Handler) GetAttribution(contestantsName string) (string, error) {
-	h.mtx.RLock()
-	defer h.mtx.RUnlock()
-
-	if attribution, ok := h.attribution[contestantsName]; ok {
-		return attribution, nil
-	}
-	return "", fmt.Errorf("no attribution found for contestant: %s", contestantsName)
-}
-
-func (h *Handler) extractStringValue(resp *sheets.BatchGetValuesResponse, rangeIndex int, fieldName string) string {
-	if len(resp.ValueRanges) <= rangeIndex {
-		return ""
-	}
-
-	valueRange := resp.ValueRanges[rangeIndex]
-	if len(valueRange.Values) == 0 || len(valueRange.Values[0]) == 0 {
-		return ""
-	}
-
-	if val, ok := valueRange.Values[0][0].(string); ok {
-		return val
-	}
-
-	h.logger.Warn().Msgf("Expected string value for '%s', got: '%v'", fieldName, valueRange.Values[0][0])
-	return ""
-}
-
-func (h *Handler) pullSchedule() {
-	resp, err := h.sheets.Values.BatchGet(h.scheduleID).Ranges("B2:B77", "E2:E77", "F2:H77").Do()
-	if err != nil {
-		h.logger.Error().Err(err).Msg("Unable to retrieve data from schedule sheet")
-		return
-	}
-
-	if len(resp.ValueRanges) < 3 {
-		h.logger.Warn().Msg("Not enough data ranges returned from the schedule sheet")
-		return
-	}
-
-	titles := resp.ValueRanges[0].Values
-	rooms := resp.ValueRanges[1].Values
-	times := resp.ValueRanges[2].Values
-	scheduleList := make([]*types.ScheduleRow, 0, len(titles))
-
-	blacklist := []string{"Pickup Payment", "Crew", "[STREAMING]"}
-
-	for i := 0; i < len(titles); i++ {
-		var title, room, weekDay, startTime, duration string
-
-		if len(titles) > i && len(titles[i]) > 0 {
-			if val, ok := titles[i][0].(string); ok {
-				title = strings.TrimSpace(val)
-				lowerTitle := strings.ToLower(title)
-				blacklisted := false
-				for _, word := range blacklist {
-					if strings.Contains(lowerTitle, strings.ToLower(word)) {
-						blacklisted = true
-						break
-					}
-				}
-				if blacklisted {
-					continue // Skip this row if blacklisted
-				}
-			}
-		}
-
-		if len(rooms) > i && len(rooms[i]) > 0 {
-			if val, ok := rooms[i][0].(string); ok {
-				room = strings.TrimSpace(val)
-			}
-		}
-
-		if len(times) > i && len(times[i]) > 2 {
-			if val, ok := times[i][0].(string); ok {
-				weekDay = strings.TrimSpace(val)
-			}
-			if val, ok := times[i][1].(string); ok {
-				startTime = strings.TrimSpace(val)
-			}
-			if val, ok := times[i][2].(string); ok {
-				duration = strings.TrimSpace(val)
-			}
-		}
-
-		schedule, err := types.NewScheduleRow(title, room, weekDay, startTime, duration)
-		if err != nil {
-			h.logger.Error().Err(err).Msgf("Error creating schedule row for index '%d'", i)
-			continue
-		}
-		scheduleList = append(scheduleList, schedule)
-	}
-
-	// Sort scheduleList by StartTime ascending (earliest first)
-	sort.Slice(scheduleList, func(i, j int) bool {
-		if scheduleList[i].StartTime.Before(scheduleList[j].StartTime) {
-			return true
-		}
-		if scheduleList[j].StartTime.Before(scheduleList[i].StartTime) {
-			return false
-		}
-		return scheduleList[i].EndTime.Before(scheduleList[j].EndTime) // If start times are equal, compare by end time
-	})
-
-	h.scheduleMtx.Lock()
-	h.schedule = scheduleList
-	h.scheduleMtx.Unlock()
+	return scheduleCopy
 }
 
 func (h *Handler) pullCgSheet() {
-	resp, err := h.sheets.Values.BatchGet(h.cgID).Ranges("Main!B2:B3", "Main!B6:B7", "Main!F2:F3", "Main!F6:F7", "Main!H6:H7", "DanceComp!A2:F89", "Main!B10", "Lists!A2:B12").Do()
+	ranges := []string{
+		"Main!A3:B3",       // L3 01
+		"Main!A7:B7",       // L3 02
+		"Main!A11:B11",     // L3 DJ
+		"Main!D3:E3",       // General Countdown
+		"Main!D7:E7",       // General Countdown from Duration
+		"Main!D11:G11",     // DJ Countdown
+		"Main!D15:G15",     // DJ Countdown from Duration
+		"Schedule!A2:C100", // Schedule
+	}
+
+	call := h.sheets.Values.BatchGet(h.cgID).Ranges(ranges...)
+	call.DateTimeRenderOption("SERIAL_NUMBER")
+	resp, err := call.Do()
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Unable to retrieve data from CG sheet")
 		return
@@ -325,169 +233,208 @@ func (h *Handler) pullCgSheet() {
 	h.mtx.Lock()
 	defer h.mtx.Unlock()
 
-	// Extract countdown value (B2)
+	// Extract L3 01
 	if len(resp.ValueRanges) > 0 && len(resp.ValueRanges[0].Values) > 0 {
 		values := resp.ValueRanges[0].Values
 		if len(values) >= 1 {
-			if title, ok := values[0][0].(string); ok && title != "" {
-				h.countdown.Title = title
+			if mainInfo, ok := values[0][0].(string); ok && mainInfo != "" {
+				h.lowerThird1.Row1 = mainInfo
 			}
-			if timer, ok := values[1][0].(string); ok && timer != "" {
-				h.countdown.CountdownTime = timer
+			if sideInfo, ok := values[1][0].(string); ok && sideInfo != "" {
+				h.lowerThird1.Row2 = sideInfo
 			}
 		}
 	}
 
-	// Extract countdownToTime value (B6)
+	// Extract L3 02
 	if len(resp.ValueRanges) > 1 && len(resp.ValueRanges[1].Values) > 0 {
 		values := resp.ValueRanges[1].Values
 		if len(values) >= 1 {
-			if title, ok := values[0][0].(string); ok && title != "" {
-				h.countdownToTime.Title = title
+			if mainInfo, ok := values[0][0].(string); ok && mainInfo != "" {
+				h.lowerThird1.Row1 = mainInfo
 			}
-			if timer, ok := values[1][0].(string); ok && timer != "" {
-				h.countdownToTime.CountdownTime = timer
+			if sideInfo, ok := values[1][0].(string); ok && sideInfo != "" {
+				h.lowerThird1.Row2 = sideInfo
 			}
 		}
 	}
 
-	// Extract lower third values (F2:F3)
+	// Extract L3 DJ
 	if len(resp.ValueRanges) > 2 && len(resp.ValueRanges[2].Values) > 0 {
 		values := resp.ValueRanges[2].Values
 		if len(values) >= 1 {
-			if row1, ok := values[0][0].(string); ok {
-				h.lowerThird1.Row1 = row1
+			if mainInfo, ok := values[0][0].(string); ok && mainInfo != "" {
+				h.lowerThird1.Row1 = mainInfo
 			}
-		}
-		if len(values) >= 2 {
-			if row2, ok := values[1][0].(string); ok {
-				h.lowerThird1.Row2 = row2
+			if sideInfo, ok := values[1][0].(string); ok && sideInfo != "" {
+				h.lowerThird1.Row2 = sideInfo
 			}
 		}
 	}
 
-	// Extract lower third values (F6:F7)
+	// Extract General Countdown
 	if len(resp.ValueRanges) > 3 && len(resp.ValueRanges[3].Values) > 0 {
-		values := resp.ValueRanges[3].Values
-		if len(values) >= 1 {
-			if row1, ok := values[0][0].(string); ok {
-				h.lowerThird2.Row1 = row1
-			}
+		countdown, err := extractCountdown(resp.ValueRanges[3].Values, types.CountdownTypeToTime)
+		if err != nil {
+			h.logger.Error().Err(err).Msg("Unable to extract General Countdown")
 		}
-		if len(values) >= 2 {
-			if row2, ok := values[1][0].(string); ok {
-				h.lowerThird2.Row2 = row2
-			}
-		}
+		h.countdown = countdown
 	}
 
-	// Extract lower third values (H6:H7)
+	// Extract General Countdown Duration
 	if len(resp.ValueRanges) > 4 && len(resp.ValueRanges[4].Values) > 0 {
-		values := resp.ValueRanges[4].Values
-		if len(values) >= 1 {
-			if row1, ok := values[0][0].(string); ok {
-				h.lowerThird3.Row1 = row1
-			}
+		countdownDuration, err := extractCountdown(resp.ValueRanges[4].Values, types.CountdownTypeDuration)
+		if err != nil {
+			h.logger.Error().Err(err).Msg("Unable to extract General Countdown Duration")
 		}
-		if len(values) >= 2 {
-			if row2, ok := values[1][0].(string); ok {
-				h.lowerThird3.Row2 = row2
-			}
-		}
+		h.countdownDuration = countdownDuration
 	}
 
-	// Extract dance comp values (DanceComp!A2:DanceComp!F89)
+	// Extract DJ Countdown
 	if len(resp.ValueRanges) > 5 && len(resp.ValueRanges[5].Values) > 0 {
-		values := resp.ValueRanges[5].Values
-
-		// Helper function to safely extract string value from cell
-		getValue := func(row, col int) string {
-			if row < len(values) && col < len(values[row]) && col < len(values[row]) {
-				if val, ok := values[row][col].(string); ok && val != "" {
-					return val
-				}
-			}
-			return "0"
+		djCountdown, err := extractDJCountdown(resp.ValueRanges[5].Values, types.CountdownTypeToTime)
+		if err != nil {
+			h.logger.Error().Err(err).Msg("Unable to extract DJ Countdown")
 		}
-
-		detailedDanceComp := make([]*types.DetailedDanceComp, 0)
-
-		// Process data in chunks of 8 rows per participant
-		for i := 0; i < len(values)-7; i += 8 {
-			name := getValue(i, 0)
-			if name == "0" {
-				name = "Unknown"
-			}
-
-			detailedDanceComp = append(detailedDanceComp, &types.DetailedDanceComp{
-				Name:            name,
-				TotalScore:      getValue(i, 5),
-				Appearance:      getValue(i+1, 5),
-				Professionalism: getValue(i+2, 5),
-				Consistency:     getValue(i+3, 5),
-				Complexity:      getValue(i+4, 5),
-				Decibels:        getValue(i+5, 5),
-				Originality:     getValue(i+6, 5),
-				Quantum:         getValue(i+7, 5),
-			})
-		}
-
-		// Sort h.detailedDanceComp by TotalScore descending
-		if len(detailedDanceComp) > 0 {
-			sort.Slice(detailedDanceComp, func(i, j int) bool {
-				if detailedDanceComp[i] == nil {
-					return false // nil goes to the back
-				}
-				if detailedDanceComp[j] == nil {
-					return true // non-nil comes before nil
-				}
-
-				// Handle nil or empty TotalScore
-				if detailedDanceComp[i].TotalScore == "" || detailedDanceComp[i].TotalScore == "0" {
-					if detailedDanceComp[j].TotalScore == "" || detailedDanceComp[j].TotalScore == "0" {
-						return false // both are empty/zero, keep order
-					}
-					return false // i goes after j
-				}
-				if detailedDanceComp[j].TotalScore == "" || detailedDanceComp[j].TotalScore == "0" {
-					return true // i goes before j
-				}
-
-				var scoreI, scoreJ float64
-				fmt.Sscanf(detailedDanceComp[i].TotalScore, "%f", &scoreI)
-				fmt.Sscanf(detailedDanceComp[j].TotalScore, "%f", &scoreJ)
-				return scoreI > scoreJ
-			})
-		}
-		h.detailedDanceComp = detailedDanceComp
+		h.djCountdown = djCountdown
 	}
 
-	// Extract selected dance comp participant (Main!B8)
-	if danceCompName := h.extractStringValue(resp, 6, "dance competitor"); danceCompName != "" {
-		for _, comp := range h.detailedDanceComp {
-			if comp.Name == danceCompName {
-				h.detailedDanceCompSingle = comp
-				break
-			}
+	// Extract DJ Countdown Duration
+	if len(resp.ValueRanges) > 6 && len(resp.ValueRanges[6].Values) > 0 {
+		djCountdownDuration, err := extractDJCountdown(resp.ValueRanges[6].Values, types.CountdownTypeDuration)
+		if err != nil {
+			h.logger.Error().Err(err).Msg("Unable to extract DJ Countdown Duration")
 		}
+		h.djCountdownDuration = djCountdownDuration
 	}
 
-	// Extract attribution data (Lists!A2:B12)
+	// Extract Schedule
 	if len(resp.ValueRanges) > 7 && len(resp.ValueRanges[7].Values) > 0 {
-		values := resp.ValueRanges[7].Values
-		h.attribution = make(map[string]string)
+		h.schedule = make([]*types.ScheduleRow, 0)
+		for i, row := range resp.ValueRanges[7].Values {
+			if len(row) < 4 {
+				h.logger.Warn().Msgf("Skipping row %d in schedule: expected at least 4 columns, but got %d", i+1, len(row))
+				continue
+			}
 
-		for _, row := range values {
-			if len(row) < 2 {
-				continue // Skip rows that don't have at least 2 columns
+			startTimeSerial, ok1 := row[0].(float64)
+			endTimeSerial, ok2 := row[1].(float64)
+			title, ok3 := row[2].(string)
+			genre, ok4 := row[3].(string)
+
+			if !ok1 || !ok2 || !ok3 || !ok4 {
+				h.logger.Warn().Msgf("Skipping row %d in schedule: data has incorrect type", i+1)
+				continue
 			}
-			name, okName := row[0].(string)
-			attribution, okAttribution := row[1].(string)
-			if okName && okAttribution && name != "" && attribution != "" {
-				h.attribution[name] = attribution
-			}
+
+			startTime := parseSerialDateTime(startTimeSerial)
+			endTime := parseSerialDateTime(endTimeSerial)
+
+			h.schedule = append(h.schedule, &types.ScheduleRow{
+				Title:     title,
+				Genre:     genre,
+				StartTime: startTime,
+				EndTime:   endTime,
+			})
+
 		}
 	}
+}
+
+//
+// Helper functions
+//
+
+func parseSerialDateTime(serialDate float64) time.Time {
+	// Google Sheets' epoch starts on 1899-12-30.
+	excelEpoch := time.Date(1899, 12, 30, 0, 0, 0, 0, time.UTC)
+
+	// Separate the integer part (days) from the fractional part (time).
+	days := math.Floor(serialDate)
+	fraction := serialDate - days
+
+	// The 1900 leap year bug in Excel/Sheets: They incorrectly believe
+	// 1900 was a leap year. Serial dates >= 61 (representing March 1, 1900)
+	// are off by one. We must subtract a day to compensate.
+	if days >= 61 {
+		days--
+	}
+
+	datePart := excelEpoch.AddDate(0, 0, int(days))
+	dayDuration := time.Duration(24 * time.Hour)
+	timeFraction := time.Duration(fraction * float64(dayDuration))
+
+	return datePart.Add(timeFraction)
+}
+
+func extractCountdown(values [][]interface{}, countdownType types.CountdownType) (*types.SimpleCountdown, error) {
+	if len(values) >= 1 {
+		var info, countdownTime string = "Countdown", "00:00:00"
+
+		if len(values) > 0 && len(values[0]) > 0 {
+			if mainInfo, ok := values[0][0].(string); ok && mainInfo != "" {
+				info = mainInfo
+			}
+		}
+		if len(values) > 1 && len(values[1]) > 0 {
+			if countdownInfo, ok := values[1][0].(string); ok && countdownInfo != "" {
+				countdownTime = countdownInfo
+			}
+		}
+
+		return &types.SimpleCountdown{
+			CountdownType: countdownType,
+			Text:          info,
+			CountdownTime: countdownTime,
+		}, nil
+	}
+
+	return nil, fmt.Errorf("not enough data to extract Countdown")
+}
+
+func extractDJCountdown(values [][]interface{}, countdownType types.CountdownType) (*types.DJCountdown, error) {
+	if len(values) >= 1 {
+		var info, countdownTime, dj1, dj2, genre string = "Countdown", "00:00:00", "", "", ""
+
+		if len(values) > 0 && len(values[0]) > 0 {
+			if mainInfo, ok := values[0][0].(string); ok && mainInfo != "" {
+				info = mainInfo
+			}
+		}
+		if len(values) > 1 && len(values[1]) > 0 {
+			if countdownInfo, ok := values[1][0].(string); ok && countdownInfo != "" {
+				countdownTime = countdownInfo
+			}
+		}
+		if len(values) > 2 && len(values[2]) > 0 {
+			if dj1Info, ok := values[2][0].(string); ok && dj1Info != "" {
+				dj1 = dj1Info
+			}
+		}
+		if len(values) > 3 && len(values[3]) > 0 {
+			if dj2Info, ok := values[3][0].(string); ok && dj2Info != "" {
+				dj2 = dj2Info
+			}
+		}
+		if len(values) > 4 && len(values[4]) > 0 {
+			if genreInfo, ok := values[4][0].(string); ok && genreInfo != "" {
+				genre = genreInfo
+			}
+		}
+
+		return &types.DJCountdown{
+			SimpleCountdown: &types.SimpleCountdown{
+				CountdownType: countdownType,
+				Text:          info,
+				CountdownTime: countdownTime,
+			},
+			FirstDJ:  dj1,
+			SecondDJ: dj2,
+			Genre:    genre,
+		}, nil
+	}
+
+	return nil, fmt.Errorf("not enough data to extract DJ Countdown")
 }
 
 func (h *Handler) Close() {
