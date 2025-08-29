@@ -6,41 +6,33 @@ type Countdown struct {
 	TimerHours   string `json:"_timerHours"`
 }
 
+type DJCountdown struct {
+	Name         string `json:"_name"`
+	Genre        string `json:"_genre"`
+	Logo         string `json:"_logo"`
+	TimerMinutes string `json:"_timerMinutes"`
+	TimerHours   string `json:"_timerHours"`
+}
+
 type Title struct {
-	Title string `json:"_Title"`
+	Title string `json:"_title"`
 }
 
-type Bar struct {
-	Number string `json:"_num"`
-	Title  string `json:"_name"`
-}
+type Schedule struct {
+	Name01  string `json:"_name01"`
+	Genre01 string `json:"_genre01"`
+	Time01  string `json:"_time01"`
+	Logo01  string `json:"_logo01"`
 
-type ScheduleBar struct {
-	Row1 string `json:"_row1"`
-	Row2 string `json:"_row2"`
-	Row3 string `json:"_row3"`
+	Name02  string `json:"_name02"`
+	Genre02 string `json:"_genre02"`
+	Time02  string `json:"_time02"`
+	Logo02  string `json:"_logo02"`
 
-	StartTime string `json:"_timeFrom"`
-	EndTime   string `json:"_timeUntil"`
-
-	Hotel string `json:"_hotel"`
-	Room  string `json:"_room"`
-}
-
-type DetailedDanceComp struct {
-	TotalScore string `json:"_num"`
-	Name       string `json:"_name"`
-
-	AppearanceScore      string `json:"_numAppearance"`
-	ProfessionalismScore string `json:"_numProfessionalism"`
-	ConsistencyScore     string `json:"_numConsistency"`
-	ComplexityScore      string `json:"_numComplexity"`
-	DecibelsScore        string `json:"_numDecibels"`
-	OriginalityScore     string `json:"_numOriginality"`
-	QuantumScore         string `json:"_numQuantum"`
-
-	PicturePath string `json:"_image"`
-	Attribution string `json:"_attribution"`
+	Name03  string `json:"_name03"`
+	Genre03 string `json:"_genre03"`
+	Time03  string `json:"_time03"`
+	Logo03  string `json:"_logo03"`
 }
 
 type LowerThird struct {

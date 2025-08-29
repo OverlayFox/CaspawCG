@@ -63,22 +63,16 @@ func NewHandler(logger zerolog.Logger) (types.SheetsData, error) {
 			CountdownTime: "00:00:00",
 		},
 		djCountdownDuration: &types.DJCountdown{
-			SimpleCountdown: &types.SimpleCountdown{
-				CountdownType: types.CountdownTypeDuration,
-				Text:          "DJ Countdown",
-				CountdownTime: "00:00:00",
-			},
-			FirstDJ:  "<First DJ>",
-			SecondDJ: "<Second DJ>",
+			CountdownType: types.CountdownTypeDuration,
+			Name:          "DJ Countdown",
+			Genre:         "<DJ Genre>",
+			CountdownTime: "00:00:00",
 		},
 		djCountdown: &types.DJCountdown{
-			SimpleCountdown: &types.SimpleCountdown{
-				CountdownType: types.CountdownTypeToTime,
-				Text:          "DJ Countdown",
-				CountdownTime: "00:00:00",
-			},
-			FirstDJ:  "<First DJ>",
-			SecondDJ: "<Second DJ>",
+			CountdownType: types.CountdownTypeToTime,
+			Name:          "DJ Countdown",
+			Genre:         "<DJ Genre>",
+			CountdownTime: "00:00:00",
 		},
 		lowerThird1: &types.LowerThird{
 			Row1: "",
@@ -217,13 +211,12 @@ func (h *Handler) pullCgSheet() {
 		"Main!A11:B11",     // L3 DJ
 		"Main!D3:E3",       // General Countdown
 		"Main!D7:E7",       // General Countdown from Duration
-		"Main!D11:G11",     // DJ Countdown
-		"Main!D15:G15",     // DJ Countdown from Duration
+		"Main!D11:F11",     // DJ Countdown
+		"Main!D15:F15",     // DJ Countdown from Duration
 		"Schedule!A2:C100", // Schedule
 	}
 
-	call := h.sheets.Values.BatchGet(h.cgID).Ranges(ranges...)
-	call.DateTimeRenderOption("SERIAL_NUMBER")
+	call := h.sheets.Values.BatchGet(h.cgID).Ranges(ranges...).ValueRenderOption("UNFORMATTED_VALUE").DateTimeRenderOption("SERIAL_NUMBER")
 	resp, err := call.Do()
 	if err != nil {
 		h.logger.Error().Err(err).Msg("Unable to retrieve data from CG sheet")
@@ -236,7 +229,7 @@ func (h *Handler) pullCgSheet() {
 	// Extract L3 01
 	if len(resp.ValueRanges) > 0 && len(resp.ValueRanges[0].Values) > 0 {
 		values := resp.ValueRanges[0].Values
-		if len(values) >= 1 {
+		if len(values) >= 2 {
 			if mainInfo, ok := values[0][0].(string); ok && mainInfo != "" {
 				h.lowerThird1.Row1 = mainInfo
 			}
@@ -249,7 +242,7 @@ func (h *Handler) pullCgSheet() {
 	// Extract L3 02
 	if len(resp.ValueRanges) > 1 && len(resp.ValueRanges[1].Values) > 0 {
 		values := resp.ValueRanges[1].Values
-		if len(values) >= 1 {
+		if len(values) >= 2 {
 			if mainInfo, ok := values[0][0].(string); ok && mainInfo != "" {
 				h.lowerThird1.Row1 = mainInfo
 			}
@@ -262,7 +255,7 @@ func (h *Handler) pullCgSheet() {
 	// Extract L3 DJ
 	if len(resp.ValueRanges) > 2 && len(resp.ValueRanges[2].Values) > 0 {
 		values := resp.ValueRanges[2].Values
-		if len(values) >= 1 {
+		if len(values) >= 2 {
 			if mainInfo, ok := values[0][0].(string); ok && mainInfo != "" {
 				h.lowerThird1.Row1 = mainInfo
 			}
@@ -312,29 +305,32 @@ func (h *Handler) pullCgSheet() {
 	if len(resp.ValueRanges) > 7 && len(resp.ValueRanges[7].Values) > 0 {
 		h.schedule = make([]*types.ScheduleRow, 0)
 		for i, row := range resp.ValueRanges[7].Values {
-			if len(row) < 4 {
+			if len(row) < 3 {
 				h.logger.Warn().Msgf("Skipping row %d in schedule: expected at least 4 columns, but got %d", i+1, len(row))
 				continue
 			}
 
 			startTimeSerial, ok1 := row[0].(float64)
-			endTimeSerial, ok2 := row[1].(float64)
-			title, ok3 := row[2].(string)
-			genre, ok4 := row[3].(string)
+			name, ok2 := row[1].(string)
+			genre, ok3 := row[2].(string)
 
-			if !ok1 || !ok2 || !ok3 || !ok4 {
+			if !ok1 || !ok2 || !ok3 {
 				h.logger.Warn().Msgf("Skipping row %d in schedule: data has incorrect type", i+1)
 				continue
 			}
 
-			startTime := parseSerialDateTime(startTimeSerial)
-			endTime := parseSerialDateTime(endTimeSerial)
+			startTime, err := parseSerialDateTime(startTimeSerial)
+			if err != nil {
+				h.logger.Warn().Err(err).Msgf("Skipping row %d in schedule: invalid start time", i+1)
+				continue
+			}
+
+			// h.logger.Debug().Str("name", name).Str("genre", genre).Time("start_time", startTime).Msg("Extracted schedule row")
 
 			h.schedule = append(h.schedule, &types.ScheduleRow{
-				Title:     title,
+				Name:      name,
 				Genre:     genre,
 				StartTime: startTime,
-				EndTime:   endTime,
 			})
 
 		}
@@ -345,41 +341,39 @@ func (h *Handler) pullCgSheet() {
 // Helper functions
 //
 
-func parseSerialDateTime(serialDate float64) time.Time {
+func parseSerialDateTime(serialDate float64) (time.Time, error) {
 	// Google Sheets' epoch starts on 1899-12-30.
-	excelEpoch := time.Date(1899, 12, 30, 0, 0, 0, 0, time.UTC)
+	berlinLoc, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		return time.Time{}, err
+	}
+	excelEpoch := time.Date(1899, 12, 30, 0, 0, 0, 0, berlinLoc)
 
 	// Separate the integer part (days) from the fractional part (time).
 	days := math.Floor(serialDate)
 	fraction := serialDate - days
 
-	// The 1900 leap year bug in Excel/Sheets: They incorrectly believe
-	// 1900 was a leap year. Serial dates >= 61 (representing March 1, 1900)
-	// are off by one. We must subtract a day to compensate.
-	if days >= 61 {
-		days--
-	}
-
 	datePart := excelEpoch.AddDate(0, 0, int(days))
 	dayDuration := time.Duration(24 * time.Hour)
 	timeFraction := time.Duration(fraction * float64(dayDuration))
 
-	return datePart.Add(timeFraction)
+	return datePart.Add(timeFraction), nil
 }
 
-func extractCountdown(values [][]interface{}, countdownType types.CountdownType) (*types.SimpleCountdown, error) {
+func extractCountdown(values [][]any, countdownType types.CountdownType) (*types.SimpleCountdown, error) {
 	if len(values) >= 1 {
 		var info, countdownTime string = "Countdown", "00:00:00"
 
-		if len(values) > 0 && len(values[0]) > 0 {
-			if mainInfo, ok := values[0][0].(string); ok && mainInfo != "" {
-				info = mainInfo
+		if len(values[0]) > 0 {
+			if time, ok := values[0][0].(string); ok && time != "" {
+				countdownTime = time
 			}
 		}
-		if len(values) > 1 && len(values[1]) > 0 {
-			if countdownInfo, ok := values[1][0].(string); ok && countdownInfo != "" {
-				countdownTime = countdownInfo
+		if len(values[0]) > 1 {
+			if mainInfo, ok := values[0][1].(string); ok && mainInfo != "" {
+				info = mainInfo
 			}
+
 		}
 
 		return &types.SimpleCountdown{
@@ -392,45 +386,31 @@ func extractCountdown(values [][]interface{}, countdownType types.CountdownType)
 	return nil, fmt.Errorf("not enough data to extract Countdown")
 }
 
-func extractDJCountdown(values [][]interface{}, countdownType types.CountdownType) (*types.DJCountdown, error) {
+func extractDJCountdown(values [][]any, countdownType types.CountdownType) (*types.DJCountdown, error) {
 	if len(values) >= 1 {
-		var info, countdownTime, dj1, dj2, genre string = "Countdown", "00:00:00", "", "", ""
+		var countdownTime, name, genre string = "00:00:00", "", ""
 
-		if len(values) > 0 && len(values[0]) > 0 {
-			if mainInfo, ok := values[0][0].(string); ok && mainInfo != "" {
-				info = mainInfo
-			}
-		}
-		if len(values) > 1 && len(values[1]) > 0 {
-			if countdownInfo, ok := values[1][0].(string); ok && countdownInfo != "" {
+		if len(values[0]) > 0 {
+			if countdownInfo, ok := values[0][0].(string); ok && countdownInfo != "" {
 				countdownTime = countdownInfo
 			}
 		}
-		if len(values) > 2 && len(values[2]) > 0 {
-			if dj1Info, ok := values[2][0].(string); ok && dj1Info != "" {
-				dj1 = dj1Info
+		if len(values[0]) > 1 {
+			if nameInfo, ok := values[0][1].(string); ok && nameInfo != "" {
+				name = nameInfo
 			}
 		}
-		if len(values) > 3 && len(values[3]) > 0 {
-			if dj2Info, ok := values[3][0].(string); ok && dj2Info != "" {
-				dj2 = dj2Info
-			}
-		}
-		if len(values) > 4 && len(values[4]) > 0 {
-			if genreInfo, ok := values[4][0].(string); ok && genreInfo != "" {
+		if len(values[0]) > 2 {
+			if genreInfo, ok := values[0][2].(string); ok && genreInfo != "" {
 				genre = genreInfo
 			}
 		}
 
 		return &types.DJCountdown{
-			SimpleCountdown: &types.SimpleCountdown{
-				CountdownType: countdownType,
-				Text:          info,
-				CountdownTime: countdownTime,
-			},
-			FirstDJ:  dj1,
-			SecondDJ: dj2,
-			Genre:    genre,
+			CountdownType: countdownType,
+			Name:          name,
+			Genre:         genre,
+			CountdownTime: countdownTime,
 		}, nil
 	}
 

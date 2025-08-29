@@ -17,29 +17,14 @@ import (
 )
 
 const (
-	// Schedule bar layer configuration
-	scheduleBarStartLayer = 41
-	scheduleBarEndLayer   = 44
-	scheduleBarMaxChars   = 35
-
 	// Lower third layer configuration
 	lowerThirdSingleLayer = 20
 	lowerThirdDuoLayer1   = 21
 	lowerThirdDuoLayer2   = 22
 
-	// Bar template layer configuration
-	barTemplateStartLayer = 51
-	barTemplateEndLayer   = 61
-
 	// Network timeouts
 	connectionTimeout = 30 * time.Second
 )
-
-// layerMapping maps layers to array indices for bar templates
-var layerMapping = map[int]int{
-	51: 0, 52: 1, 53: 2, 54: 3, 55: 4,
-	56: 5, 57: 6, 58: 7, 59: 8, 60: 9, 61: 10,
-}
 
 // Proxy represents a CasparCG AMCP proxy server
 type Proxy struct {
@@ -49,7 +34,10 @@ type Proxy struct {
 	serverAddr string
 	serverConn net.Conn
 
-	sheetsData gTypes.SheetsData
+	updateCh chan *types.CommandCG
+
+	sheetsData      gTypes.SheetsData
+	scheduleHandler *ScheduleHandler
 
 	wg     sync.WaitGroup
 	mu     sync.RWMutex
@@ -77,6 +65,7 @@ func NewProxy(proxyPort, casparCGHost, casparCGPort string, sheetsData gTypes.Sh
 		proxyPort:  proxyPort,
 		serverAddr: serverAddr,
 		serverConn: serverConn,
+		updateCh:   make(chan *types.CommandCG, 1),
 		sheetsData: sheetsData,
 		ctx:        ctx,
 		cancel:     cancel,
@@ -110,6 +99,9 @@ func (p *Proxy) Start() error {
 			}
 		}
 	}()
+
+	p.wg.Add(1)
+	go p.updateCommandProcessor()
 
 	return nil
 }
@@ -216,6 +208,44 @@ func (p *Proxy) forwardToServer(command string) error {
 	}
 
 	return nil
+}
+
+func (p *Proxy) updateCommandProcessor() {
+	defer p.wg.Done()
+	for {
+		select {
+		case <-p.ctx.Done():
+			return
+		case command, ok := <-p.updateCh:
+			if !ok {
+				return
+			}
+
+			p.logger.Debug().Msg("Processing schedule update command")
+
+			p.mu.RLock()
+			serverConn := p.serverConn
+			p.mu.RUnlock()
+
+			if serverConn == nil {
+				return
+			}
+
+			cmd, err := command.BuildCommand()
+			if err != nil {
+				p.logger.Error().Err(err).Msg("Failed to build command for schedule update")
+				return
+			}
+
+			p.logger.Debug().Str("processed_command", cmd).Msg("Sending update command to Server.")
+
+			// AMCP protocol requires \r\n line endings
+			if _, err := serverConn.Write([]byte(cmd + "\r\n")); err != nil {
+				return
+			}
+
+		}
+	}
 }
 
 // Close cleanly shuts down the proxy

@@ -20,16 +20,30 @@ type CommandCG struct {
 	JsonData     any            `json:"json_data,omitempty"`
 }
 
-// Command generates the command string from the CommandCG struct
-func (c *CommandCG) Command() (string, error) {
+// BuildCommand generates the command string from the CommandCG struct
+func (c *CommandCG) BuildCommand() (string, error) {
+	if c.Call == nil {
+		return "", fmt.Errorf("call must be specified")
+	}
+
+	switch *c.Call {
+	case CommandCallADD:
+		return c.buildAddCommand()
+	case CommandCallUPDATE:
+		return c.buildUpdateCommand()
+	}
+	return "", fmt.Errorf("unsupported command call: %s", *c.Call)
+}
+
+func (c *CommandCG) buildAddCommand() (string, error) {
 	if c.TemplatePath == nil {
 		return "", fmt.Errorf("template path must be specified")
 	}
 
 	commandParts := []string{
-		string(c.CommandType),
+		string(CommandTypeCG),
 		fmt.Sprintf("%d-%d", *c.Channel, *c.Layer),
-		string(*c.Call),
+		string(CommandCallADD),
 		strconv.Itoa(*c.CgLayer),
 		fmt.Sprintf("\"%s\"", string(*c.TemplatePath)),
 	}
@@ -40,6 +54,25 @@ func (c *CommandCG) Command() (string, error) {
 			playOnLoadValue = "1"
 		}
 		commandParts = append(commandParts, playOnLoadValue)
+	}
+
+	if c.JsonData != nil {
+		jsonString, err := c.encodeJSONData()
+		if err != nil {
+			return "", fmt.Errorf("failed to encode JSON data: %w", err)
+		}
+		commandParts = append(commandParts, fmt.Sprintf("\"%s\"", jsonString))
+	}
+
+	return strings.Join(commandParts, " "), nil
+}
+
+func (c *CommandCG) buildUpdateCommand() (string, error) {
+	commandParts := []string{
+		string(CommandTypeCG),
+		fmt.Sprintf("%d-%d", *c.Channel, *c.Layer),
+		string(CommandCallUPDATE),
+		strconv.Itoa(*c.CgLayer),
 	}
 
 	if c.JsonData != nil {
@@ -213,14 +246,12 @@ func (c *CommandCG) parseJSONData(jsonDataStr string) error {
 	switch *c.TemplatePath {
 	case TemplatePathCountdown, TemplatePathCountdownToTime:
 		c.JsonData, err = unmarshalJSON[Countdown](jsonBytes)
+	case TemplatePathDJCountdown, TemplatePathDJCountdownToTime:
+		c.JsonData, err = unmarshalJSON[DJCountdown](jsonBytes)
 	case TemplatePathTitle:
 		c.JsonData, err = unmarshalJSON[Title](jsonBytes)
-	case TemplatePathBarRed, TemplatePathBarBlue:
-		c.JsonData, err = unmarshalJSON[Bar](jsonBytes)
 	case TemplatePathSchedule:
-		c.JsonData, err = unmarshalJSON[ScheduleBar](jsonBytes)
-	case TemplatePathDanceComp:
-		c.JsonData, err = unmarshalJSON[DetailedDanceComp](jsonBytes)
+		c.JsonData, err = unmarshalJSON[Schedule](jsonBytes)
 	case TemplatePathLowerThird:
 		c.JsonData, err = unmarshalJSON[LowerThird](jsonBytes)
 	default:
@@ -237,4 +268,24 @@ func unmarshalJSON[T any](data []byte) (*T, error) {
 		return nil, fmt.Errorf("failed to unmarshal JSON data: %w", err)
 	}
 	return &result, nil
+}
+
+type UpdateCommandBuilder struct {
+	Channel  int
+	Layer    int
+	CGLayer  int
+	JsonData any
+}
+
+func NewUpdateCommand(builder UpdateCommandBuilder) *CommandCG {
+	return &CommandCG{
+		CommandStruct: CommandStruct{
+			CommandType: CommandTypeCG,
+		},
+		Call:     func() *CommandCall { v := CommandCallUPDATE; return &v }(),
+		Channel:  &builder.Channel,
+		Layer:    &builder.Layer,
+		CgLayer:  &builder.CGLayer,
+		JsonData: builder.JsonData,
+	}
 }

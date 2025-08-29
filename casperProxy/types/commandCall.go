@@ -8,13 +8,15 @@ import (
 type CommandCall string
 
 const (
-	CommandCallADD  CommandCall = "ADD"
-	CommandCallSTOP CommandCall = "STOP"
+	CommandCallADD    CommandCall = "ADD"
+	CommandCallSTOP   CommandCall = "STOP"
+	CommandCallUPDATE CommandCall = "UPDATE"
 )
 
 var commandCallMap = map[string]CommandCall{
-	"ADD":  CommandCallADD,
-	"STOP": CommandCallSTOP,
+	"ADD":    CommandCallADD,
+	"STOP":   CommandCallSTOP,
+	"UPDATE": CommandCallUPDATE,
 }
 
 func CommandCallFromString(s string) (CommandCall, error) {

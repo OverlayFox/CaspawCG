@@ -18,10 +18,10 @@ type SimpleCountdown struct {
 }
 
 type DJCountdown struct {
-	*SimpleCountdown
-	FirstDJ  string `json:"firstDJ"`
-	SecondDJ string `json:"secondDJ"`
-	Genre    string `json:"genre"`
+	CountdownType CountdownType `json:"countdownType"`
+	Name          string        `json:"name"`
+	Genre         string        `json:"genre"`
+	CountdownTime string        `json:"countdownTime"`
 }
 
 type LowerThird struct {
@@ -30,7 +30,7 @@ type LowerThird struct {
 }
 
 type ScheduleRow struct {
-	Title     string    `json:"title"`
+	Name      string    `json:"name"`
 	Genre     string    `json:"genre"`
 	StartTime time.Time `json:"startTime"`
 	EndTime   time.Time `json:"duration"`
