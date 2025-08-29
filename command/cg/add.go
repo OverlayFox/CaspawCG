@@ -56,7 +56,9 @@ func NewCmdTypeAdd(commandParts []string, sheetsHandler types.SheetsHandler, upd
 		JsonData:     jsonData,
 	}
 
-	updater.Start(layer) // start the update cycle to send updates for the schedule
+	if layer == 41 && cgLayer == 1 { // if the command is for layer 41 and cgLayer 1 (the schedule), start the updater
+		updater.Start(layer) // start the update cycle to send updates for the schedule
+	}
 
 	return cmd, nil
 }

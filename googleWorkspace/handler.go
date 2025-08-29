@@ -449,8 +449,12 @@ func parseSerialDateTime(serialDate float64) (time.Time, error) {
 	fraction := serialDate - days
 
 	datePart := excelEpoch.AddDate(0, 0, int(days))
-	dayDuration := time.Duration(24 * time.Hour)
-	timeFraction := time.Duration(fraction * float64(dayDuration))
+
+	const secondsInDay = 24 * 60 * 60 // 86400
+	totalSeconds := fraction * secondsInDay
+	roundedSeconds := math.Round(totalSeconds)
+
+	timeFraction := time.Duration(roundedSeconds) * time.Second
 
 	return datePart.Add(timeFraction), nil
 }
