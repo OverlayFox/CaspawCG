@@ -1,7 +1,6 @@
 package cg
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 	"strings"
@@ -15,9 +14,6 @@ type CmdCG struct {
 	Layer       int                   `json:"layer"`
 	Call        types.CommandCallType `json:"call"`
 	CommandCall any                   `json:"-"` // use the call type to type cast CommandCall
-
-	ctx    context.Context
-	cancel context.CancelFunc
 }
 
 // NewCommandCG creates a new CommandCG from command parts
