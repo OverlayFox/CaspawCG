@@ -5,6 +5,12 @@ import (
 	"strings"
 )
 
+var ErrUnsupportedCommandType = fmt.Errorf("unsupported command type")
+
+//
+// Command Type
+//
+
 type CommandType string
 
 const (
@@ -37,9 +43,38 @@ var commandTypeMap = map[string]CommandType{
 	"STOP":      CommandTypeStop,
 }
 
+//
+// Command Call
+//
+
+type CommandCallType string
+
+const (
+	CommandCallTypeADD    CommandCallType = "ADD"
+	CommandCallTypeSTOP   CommandCallType = "STOP"
+	CommandCallTypeUPDATE CommandCallType = "UPDATE"
+)
+
+var commandCallMap = map[string]CommandCallType{
+	"ADD":    CommandCallTypeADD,
+	"STOP":   CommandCallTypeSTOP,
+	"UPDATE": CommandCallTypeUPDATE,
+}
+
+func CommandCallFromString(s string) (CommandCallType, error) {
+	if ct, ok := commandCallMap[strings.ToUpper(s)]; ok {
+		return ct, nil
+	}
+	return "", fmt.Errorf("unknown command type: %s", s)
+}
+
 func CommandTypeFromString(s string) (CommandType, error) {
 	if ct, ok := commandTypeMap[strings.ToUpper(s)]; ok {
 		return ct, nil
 	}
 	return "", fmt.Errorf("unknown command type: %s", s)
+}
+
+type CommandHandler interface {
+	GetCommandString() (string, error)
 }

@@ -1,17 +1,9 @@
 package types
 
-type SheetsData interface {
+type SheetsHandler interface {
 	Start()
 	Close()
 
-	GetCountdown() *SimpleCountdown
-	GetCountdownDuration() *SimpleCountdown
-	GetDJCountdown() *DJCountdown
-	GetDJCountdownDuration() *DJCountdown
-
-	GetLowerThird01() *LowerThird
-	GetLowerThird02() *LowerThird
-	GetLowerThirdDJ() *LowerThird
-
-	GetCurrentSchedule() []*ScheduleRow
+	GetData(layer int, templatePath TemplatePaths) ([]byte, error)
+	GetCurrentSchedule(startIndex int) ([]byte, error)
 }

@@ -11,8 +11,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/OverlayFox/CaspawCG/casperProxy/types"
+	"github.com/OverlayFox/CaspawCG/command"
 	gTypes "github.com/OverlayFox/CaspawCG/types"
+	"github.com/OverlayFox/CaspawCG/updater"
 	"github.com/rs/zerolog"
 )
 
@@ -34,10 +35,11 @@ type Proxy struct {
 	serverAddr string
 	serverConn net.Conn
 
-	updateCh chan *types.CommandCG
+	updateCh chan string
 
-	sheetsData      gTypes.SheetsData
-	scheduleHandler *ScheduleHandler
+	commandHandler gTypes.CommandHandler
+	sheetsHandler  gTypes.SheetsHandler
+	updater        gTypes.Updater
 
 	wg     sync.WaitGroup
 	mu     sync.RWMutex
@@ -46,7 +48,7 @@ type Proxy struct {
 }
 
 // NewProxy creates a new CasparCG AMCP Proxy instance
-func NewProxy(proxyPort, casparCGHost, casparCGPort string, sheetsData gTypes.SheetsData, logger zerolog.Logger) (*Proxy, error) {
+func NewProxy(proxyPort, casparCGHost, casparCGPort string, sheetsData gTypes.SheetsHandler, logger zerolog.Logger) (*Proxy, error) {
 	if proxyPort == "" || casparCGHost == "" || casparCGPort == "" {
 		return nil, errors.New("proxy port, CasparCG host, and port must be specified")
 	}
@@ -59,17 +61,26 @@ func NewProxy(proxyPort, casparCGHost, casparCGPort string, sheetsData gTypes.Sh
 	logger.Debug().Str("server_address", serverAddr).Msg("Successfully connected to the CasparCG server")
 
 	ctx, cancel := context.WithCancel(context.Background())
+	p := &Proxy{
+		logger: logger,
 
-	return &Proxy{
-		logger:     logger,
 		proxyPort:  proxyPort,
 		serverAddr: serverAddr,
 		serverConn: serverConn,
-		updateCh:   make(chan *types.CommandCG, 1),
-		sheetsData: sheetsData,
-		ctx:        ctx,
-		cancel:     cancel,
-	}, nil
+
+		updateCh: make(chan string, 1),
+
+		sheetsHandler: sheetsData,
+
+		ctx:    ctx,
+		cancel: cancel,
+	}
+	p.updater = updater.NewHandler(p.updateCh, p.sheetsHandler, logger)
+
+	p.wg.Add(1)
+	go p.updateProcessor()
+
+	return p, nil
 }
 
 // Start begins listening for client connections
@@ -80,6 +91,7 @@ func (p *Proxy) Start() error {
 		return fmt.Errorf("failed to listen on port %s: %w", p.proxyPort, err)
 	}
 
+	// Listener Loop
 	p.wg.Add(1)
 	go func() {
 		defer p.wg.Done()
@@ -99,9 +111,6 @@ func (p *Proxy) Start() error {
 			}
 		}
 	}()
-
-	p.wg.Add(1)
-	go p.updateCommandProcessor()
 
 	return nil
 }
@@ -160,9 +169,7 @@ func (p *Proxy) processClientCommands(clientConn net.Conn) error {
 
 			processedCommand, err := p.interceptCommand(commandStr)
 			if err != nil {
-				if !errors.Is(err, ErrNotCGAddCall) {
-					p.logger.Error().Err(err).Str("command", commandStr).Msg("Error intercepting command")
-				}
+				p.logger.Error().Err(err).Str("command", commandStr).Msg("Error intercepting command")
 				processedCommand = commandStr // Use original command on error
 			}
 
@@ -177,19 +184,15 @@ func (p *Proxy) processClientCommands(clientConn net.Conn) error {
 
 // interceptCommand parses and processes supported commands
 func (p *Proxy) interceptCommand(commandStr string) (string, error) {
-	command, err := types.NewCommandFromString(commandStr)
+	cmdHandler, err := command.NewHandlerFromCmdString(commandStr, p.sheetsHandler, p.updater)
 	if err != nil {
-		if errors.Is(err, types.ErrUnsupportedCommandType) {
+		if errors.Is(err, gTypes.ErrUnsupportedCommandType) {
 			return commandStr, nil // Not an error, just unsupported
 		}
 		return commandStr, fmt.Errorf("failed to parse command: %w", err)
 	}
 
-	if command.GetCommandType() == types.CommandTypeCG {
-		return p.handleCGCommand(command, commandStr)
-	}
-
-	return commandStr, nil
+	return cmdHandler.GetCommandString()
 }
 
 // forwardToServer sends a command to the CasparCG server
@@ -210,13 +213,13 @@ func (p *Proxy) forwardToServer(command string) error {
 	return nil
 }
 
-func (p *Proxy) updateCommandProcessor() {
+func (p *Proxy) updateProcessor() {
 	defer p.wg.Done()
 	for {
 		select {
 		case <-p.ctx.Done():
 			return
-		case command, ok := <-p.updateCh:
+		case cmd, ok := <-p.updateCh:
 			if !ok {
 				return
 			}
@@ -228,12 +231,6 @@ func (p *Proxy) updateCommandProcessor() {
 			p.mu.RUnlock()
 
 			if serverConn == nil {
-				return
-			}
-
-			cmd, err := command.BuildCommand()
-			if err != nil {
-				p.logger.Error().Err(err).Msg("Failed to build command for schedule update")
 				return
 			}
 

@@ -7,7 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/OverlayFox/CaspawCG/types"
+	"github.com/OverlayFox/CaspawCG/googleWorkspace/types"
+	gTypes "github.com/OverlayFox/CaspawCG/types"
 	"github.com/rs/zerolog"
 	"google.golang.org/api/option"
 	"google.golang.org/api/sheets/v4"
@@ -19,14 +20,14 @@ type Handler struct {
 	sheets *sheets.SpreadsheetsService
 	cgID   string
 
-	countdown           *types.SimpleCountdown
-	countdownDuration   *types.SimpleCountdown
-	djCountdown         *types.DJCountdown
-	djCountdownDuration *types.DJCountdown
-	lowerThird1         *types.LowerThird
-	lowerThird2         *types.LowerThird
-	lowerThirdDJ        *types.LowerThird
-	schedule            []*types.ScheduleRow
+	countdown           *types.SheetsCountdown
+	countdownDuration   *types.SheetsCountdown
+	djCountdown         *types.SheetsDJCountdown
+	djCountdownDuration *types.SheetsDJCountdown
+	lowerThird1         *types.SheetsLowerThird
+	lowerThird2         *types.SheetsLowerThird
+	lowerThirdDJ        *types.SheetsLowerThird
+	schedule            []*types.SheetsScheduleRow
 
 	mtx         sync.RWMutex
 	scheduleMtx sync.RWMutex
@@ -36,7 +37,7 @@ type Handler struct {
 	wg     sync.WaitGroup
 }
 
-func NewHandler(logger zerolog.Logger) (types.SheetsData, error) {
+func NewHandler(logger zerolog.Logger) (gTypes.SheetsHandler, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 	srv, err := sheets.NewService(ctx, option.WithCredentialsFile("service-account.json"))
 	if err != nil {
@@ -52,37 +53,37 @@ func NewHandler(logger zerolog.Logger) (types.SheetsData, error) {
 		ctx:    ctx,
 		cancel: cancel,
 
-		countdownDuration: &types.SimpleCountdown{
+		countdownDuration: &types.SheetsCountdown{
 			CountdownType: types.CountdownTypeDuration,
 			Text:          "Countdown",
 			CountdownTime: "00:00:00",
 		},
-		countdown: &types.SimpleCountdown{
+		countdown: &types.SheetsCountdown{
 			CountdownType: types.CountdownTypeToTime,
 			Text:          "Countdown",
 			CountdownTime: "00:00:00",
 		},
-		djCountdownDuration: &types.DJCountdown{
+		djCountdownDuration: &types.SheetsDJCountdown{
 			CountdownType: types.CountdownTypeDuration,
 			Name:          "DJ Countdown",
 			Genre:         "<DJ Genre>",
 			CountdownTime: "00:00:00",
 		},
-		djCountdown: &types.DJCountdown{
+		djCountdown: &types.SheetsDJCountdown{
 			CountdownType: types.CountdownTypeToTime,
 			Name:          "DJ Countdown",
 			Genre:         "<DJ Genre>",
 			CountdownTime: "00:00:00",
 		},
-		lowerThird1: &types.LowerThird{
+		lowerThird1: &types.SheetsLowerThird{
 			Row1: "",
 			Row2: "",
 		},
-		lowerThird2: &types.LowerThird{
+		lowerThird2: &types.SheetsLowerThird{
 			Row1: "",
 			Row2: "",
 		},
-		schedule: make([]*types.ScheduleRow, 0),
+		schedule: make([]*types.SheetsScheduleRow, 0),
 	}, nil
 }
 
@@ -111,11 +112,60 @@ func (h *Handler) Start() {
 	}()
 }
 
-func (h *Handler) GetCountdown() *types.SimpleCountdown {
+func (h *Handler) GetData(layer int, templatePath gTypes.TemplatePaths) ([]byte, error) {
+	switch templatePath {
+	case gTypes.TemplatePathCountdown, gTypes.TemplatePathCountdownToTime:
+		var sheetsCountdown *types.SheetsCountdown
+		switch layer {
+		case 20:
+			sheetsCountdown = h.getCountdown()
+		case 21:
+			sheetsCountdown = h.getCountdownDuration()
+		default:
+			return nil, fmt.Errorf("unknown layer '%d' for countdown template", layer)
+		}
+		countdown := gTypes.Countdown{
+			Title:        sheetsCountdown.Text,
+			TimerMinutes: "00:00",
+			TimerHours:   sheetsCountdown.CountdownTime,
+		}
+		return countdown.MarshalJSON()
+
+	case gTypes.TemplatePathDJCountdown, gTypes.TemplatePathDJCountdownToTime:
+		var sheetsCountdown *types.SheetsDJCountdown
+		switch layer {
+		case 30:
+			sheetsCountdown = h.getDJCountdown()
+		case 31:
+			sheetsCountdown = h.getDJCountdownDuration()
+		default:
+			return nil, fmt.Errorf("unknown layer '%d' for dj-countdown template", layer)
+		}
+		logo, err := getDJLogo(sheetsCountdown.Name)
+		if err != nil {
+			return nil, err
+		}
+		countdown := gTypes.DJCountdown{
+			Name:         sheetsCountdown.Name,
+			Genre:        sheetsCountdown.Genre,
+			Logo:         logo,
+			TimerMinutes: "00:00",
+			TimerHours:   sheetsCountdown.CountdownTime,
+		}
+		return countdown.MarshalJSON()
+
+	case gTypes.TemplatePathSchedule:
+		return h.GetCurrentSchedule(0)
+	}
+
+	return nil, fmt.Errorf("unknown template path: %s", templatePath)
+}
+
+func (h *Handler) getCountdown() *types.SheetsCountdown {
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
 
-	countdownCopy := types.SimpleCountdown{}
+	countdownCopy := types.SheetsCountdown{}
 	if h.countdown != nil {
 		countdownCopy = *h.countdown
 	}
@@ -123,11 +173,11 @@ func (h *Handler) GetCountdown() *types.SimpleCountdown {
 	return &countdownCopy
 }
 
-func (h *Handler) GetCountdownDuration() *types.SimpleCountdown {
+func (h *Handler) getCountdownDuration() *types.SheetsCountdown {
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
 
-	countdownDurationCopy := types.SimpleCountdown{}
+	countdownDurationCopy := types.SheetsCountdown{}
 	if h.countdownDuration != nil {
 		countdownDurationCopy = *h.countdownDuration
 	}
@@ -135,11 +185,11 @@ func (h *Handler) GetCountdownDuration() *types.SimpleCountdown {
 	return &countdownDurationCopy
 }
 
-func (h *Handler) GetDJCountdown() *types.DJCountdown {
+func (h *Handler) getDJCountdown() *types.SheetsDJCountdown {
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
 
-	djCountdownCopy := types.DJCountdown{}
+	djCountdownCopy := types.SheetsDJCountdown{}
 	if h.djCountdown != nil {
 		djCountdownCopy = *h.djCountdown
 	}
@@ -147,11 +197,11 @@ func (h *Handler) GetDJCountdown() *types.DJCountdown {
 	return &djCountdownCopy
 }
 
-func (h *Handler) GetDJCountdownDuration() *types.DJCountdown {
+func (h *Handler) getDJCountdownDuration() *types.SheetsDJCountdown {
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
 
-	djCountdownDurationCopy := types.DJCountdown{}
+	djCountdownDurationCopy := types.SheetsDJCountdown{}
 	if h.djCountdownDuration != nil {
 		djCountdownDurationCopy = *h.djCountdownDuration
 	}
@@ -159,11 +209,11 @@ func (h *Handler) GetDJCountdownDuration() *types.DJCountdown {
 	return &djCountdownDurationCopy
 }
 
-func (h *Handler) GetLowerThird01() *types.LowerThird {
+func (h *Handler) getLowerThird01() *types.SheetsLowerThird {
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
 
-	lowerThirdCopy := types.LowerThird{}
+	lowerThirdCopy := types.SheetsLowerThird{}
 	if h.lowerThird1 != nil {
 		lowerThirdCopy = *h.lowerThird1
 	}
@@ -171,11 +221,11 @@ func (h *Handler) GetLowerThird01() *types.LowerThird {
 	return &lowerThirdCopy
 }
 
-func (h *Handler) GetLowerThird02() *types.LowerThird {
+func (h *Handler) getLowerThird02() *types.SheetsLowerThird {
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
 
-	lowerThirdCopy := types.LowerThird{}
+	lowerThirdCopy := types.SheetsLowerThird{}
 	if h.lowerThird2 != nil {
 		lowerThirdCopy = *h.lowerThird2
 	}
@@ -183,11 +233,11 @@ func (h *Handler) GetLowerThird02() *types.LowerThird {
 	return &lowerThirdCopy
 }
 
-func (h *Handler) GetLowerThirdDJ() *types.LowerThird {
+func (h *Handler) getLowerThirdDJ() *types.SheetsLowerThird {
 	h.mtx.RLock()
 	defer h.mtx.RUnlock()
 
-	lowerThirdCopy := types.LowerThird{}
+	lowerThirdCopy := types.SheetsLowerThird{}
 	if h.lowerThirdDJ != nil {
 		lowerThirdCopy = *h.lowerThirdDJ
 	}
@@ -195,13 +245,58 @@ func (h *Handler) GetLowerThirdDJ() *types.LowerThird {
 	return &lowerThirdCopy
 }
 
-func (h *Handler) GetCurrentSchedule() []*types.ScheduleRow {
-	scheduleCopy := make([]*types.ScheduleRow, len(h.schedule))
+func (h *Handler) GetCurrentSchedule(startIndex int) ([]byte, error) {
+	scheduleCopy := make([]*types.SheetsScheduleRow, len(h.schedule))
 	h.scheduleMtx.RLock()
 	copy(scheduleCopy, h.schedule)
 	h.scheduleMtx.RUnlock()
 
-	return scheduleCopy
+	result := make([]*types.SheetsScheduleRow, 0, 3)
+	n := len(scheduleCopy)
+	if n == 0 {
+		return nil, nil
+	}
+	for i := 0; i < 3; i++ {
+		idx := (startIndex + i) % n
+		row := scheduleCopy[idx]
+		if row == nil {
+			continue
+		}
+		result = append(result, &types.SheetsScheduleRow{
+			Name:      row.Name,
+			Genre:     row.Genre,
+			StartTime: row.StartTime,
+		})
+	}
+
+	logos := make([]string, 0, 3)
+	for i := 0; i < 3; i++ {
+		logo, err := getDJLogo(result[i].Name)
+		if err != nil {
+			return nil, err
+		}
+		logos = append(logos, logo)
+	}
+
+	schedule := gTypes.Schedule{
+		Name01: result[0].Name,
+		Name02: result[1].Name,
+		Name03: result[2].Name,
+
+		Genre01: result[0].Genre,
+		Genre02: result[1].Genre,
+		Genre03: result[2].Genre,
+
+		Time01: result[0].StartTime.Format("15:04"),
+		Time02: result[1].StartTime.Format("15:04"),
+		Time03: result[2].StartTime.Format("15:04"),
+
+		Logo01: logos[0],
+		Logo02: logos[1],
+		Logo03: logos[2],
+	}
+
+	return schedule.MarshalJSON()
 }
 
 func (h *Handler) pullCgSheet() {
@@ -303,7 +398,7 @@ func (h *Handler) pullCgSheet() {
 
 	// Extract Schedule
 	if len(resp.ValueRanges) > 7 && len(resp.ValueRanges[7].Values) > 0 {
-		h.schedule = make([]*types.ScheduleRow, 0)
+		h.schedule = make([]*types.SheetsScheduleRow, 0)
 		for i, row := range resp.ValueRanges[7].Values {
 			if len(row) < 3 {
 				h.logger.Warn().Msgf("Skipping row %d in schedule: expected at least 4 columns, but got %d", i+1, len(row))
@@ -327,7 +422,7 @@ func (h *Handler) pullCgSheet() {
 
 			// h.logger.Debug().Str("name", name).Str("genre", genre).Time("start_time", startTime).Msg("Extracted schedule row")
 
-			h.schedule = append(h.schedule, &types.ScheduleRow{
+			h.schedule = append(h.schedule, &types.SheetsScheduleRow{
 				Name:      name,
 				Genre:     genre,
 				StartTime: startTime,
@@ -360,7 +455,7 @@ func parseSerialDateTime(serialDate float64) (time.Time, error) {
 	return datePart.Add(timeFraction), nil
 }
 
-func extractCountdown(values [][]any, countdownType types.CountdownType) (*types.SimpleCountdown, error) {
+func extractCountdown(values [][]any, countdownType types.CountdownType) (*types.SheetsCountdown, error) {
 	if len(values) >= 1 {
 		var info, countdownTime string = "Countdown", "00:00:00"
 
@@ -376,7 +471,7 @@ func extractCountdown(values [][]any, countdownType types.CountdownType) (*types
 
 		}
 
-		return &types.SimpleCountdown{
+		return &types.SheetsCountdown{
 			CountdownType: countdownType,
 			Text:          info,
 			CountdownTime: countdownTime,
@@ -386,7 +481,7 @@ func extractCountdown(values [][]any, countdownType types.CountdownType) (*types
 	return nil, fmt.Errorf("not enough data to extract Countdown")
 }
 
-func extractDJCountdown(values [][]any, countdownType types.CountdownType) (*types.DJCountdown, error) {
+func extractDJCountdown(values [][]any, countdownType types.CountdownType) (*types.SheetsDJCountdown, error) {
 	if len(values) >= 1 {
 		var countdownTime, name, genre string = "00:00:00", "", ""
 
@@ -406,7 +501,7 @@ func extractDJCountdown(values [][]any, countdownType types.CountdownType) (*typ
 			}
 		}
 
-		return &types.DJCountdown{
+		return &types.SheetsDJCountdown{
 			CountdownType: countdownType,
 			Name:          name,
 			Genre:         genre,
