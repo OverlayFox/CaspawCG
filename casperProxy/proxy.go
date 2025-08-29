@@ -18,11 +18,6 @@ import (
 )
 
 const (
-	// Lower third layer configuration
-	lowerThirdSingleLayer = 20
-	lowerThirdDuoLayer1   = 21
-	lowerThirdDuoLayer2   = 22
-
 	// Network timeouts
 	connectionTimeout = 30 * time.Second
 )
@@ -37,9 +32,8 @@ type Proxy struct {
 
 	updateCh chan string
 
-	commandHandler gTypes.CommandHandler
-	sheetsHandler  gTypes.SheetsHandler
-	updater        gTypes.Updater
+	sheetsHandler gTypes.SheetsHandler
+	updater       gTypes.Updater
 
 	wg     sync.WaitGroup
 	mu     sync.RWMutex
