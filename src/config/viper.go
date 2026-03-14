@@ -24,7 +24,6 @@ func applyDefaults(target any) {
 	if d, ok := target.(Defaulter); ok {
 		d.Default()
 	}
-
 	v := reflect.ValueOf(target).Elem()
 	if v.Kind() == reflect.Struct {
 		for i := 0; i < v.NumField(); i++ {
@@ -39,32 +38,50 @@ func applyDefaults(target any) {
 }
 
 // applyValidation checks the main struct and its immediate fields for the Validator interface
-func applyValidation(target interface{}) error {
-	if v, ok := target.(Validator); ok {
-		if err := v.Validate(); err != nil {
+func applyValidation(target any) error {
+	v := reflect.ValueOf(target)
+	if v.Kind() == reflect.Ptr {
+		v = v.Elem()
+	}
+
+	if v.CanAddr() {
+		if validator, ok := v.Addr().Interface().(Validator); ok {
+			if err := validator.Validate(); err != nil {
+				return err
+			}
+		}
+	} else if validator, ok := v.Interface().(Validator); ok {
+		if err := validator.Validate(); err != nil {
 			return err
 		}
 	}
 
-	val := reflect.ValueOf(target).Elem()
-	if val.Kind() == reflect.Struct {
-		for i := 0; i < val.NumField(); i++ {
-			field := val.Field(i)
-			if field.CanAddr() {
-				if v, ok := field.Addr().Interface().(Validator); ok {
-					if err := v.Validate(); err != nil {
-						fieldName := val.Type().Field(i).Name
-						return fmt.Errorf("'%s' validation failed: %w", fieldName, err)
-					}
+	switch v.Kind() {
+	case reflect.Struct:
+		for i := 0; i < v.NumField(); i++ {
+			field := v.Field(i)
+			if err := applyValidation(field.Addr().Interface()); err != nil {
+				fieldName := v.Type().Field(i).Name
+				return fmt.Errorf("[%s] %w", fieldName, err)
+			}
+		}
+
+	case reflect.Slice, reflect.Array:
+		for i := 0; i < v.Len(); i++ {
+			element := v.Index(i)
+			if element.Kind() == reflect.Struct {
+				if err := applyValidation(element.Addr().Interface()); err != nil {
+					return fmt.Errorf("index %d: %w", i, err)
 				}
 			}
 		}
 	}
+
 	return nil
 }
 
 type Config struct {
-	DataSourceManager data.Config `yaml:"data_source_manager"`
+	DataSourceManager data.Config `mapstructure:"data_source_manager"`
 }
 
 func LoadConfig(logger zerolog.Logger) (*Config, error) {
@@ -74,7 +91,6 @@ func LoadConfig(logger zerolog.Logger) (*Config, error) {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
 	viper.AddConfigPath(".")
-	viper.AddConfigPath("./config")
 
 	if err := viper.ReadInConfig(); err != nil {
 		var configFileNotFoundError viper.ConfigFileNotFoundError
