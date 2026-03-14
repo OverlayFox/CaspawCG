@@ -2,26 +2,70 @@ package ui
 
 import (
 	"context"
-	"fmt"
+	"sync"
+
+	"caspaw-cg/src/types"
+
+	"github.com/rs/zerolog"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // App struct
 type App struct {
-	ctx context.Context
+	logger zerolog.Logger
+
+	eventProcessor types.EventProcessor
+
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
 }
 
 // NewApp creates a new App application struct
-func NewApp() *App {
-	return &App{}
+func NewApp(logger zerolog.Logger, eventProcessor types.EventProcessor) *App {
+	return &App{
+		logger:         logger.With().Str("component", "app").Logger(),
+		eventProcessor: eventProcessor,
+	}
 }
 
-// Startup is called when the app starts. The context is saved
-// so we can call the runtime methods
 func (a *App) Startup(ctx context.Context) {
-	a.ctx = ctx
+	c, cancel := context.WithCancel(ctx)
+	a.ctx = c
+	a.cancel = cancel
+
+	a.listenForEvents()
 }
 
-// Greet returns a greeting for the given name
-func (a *App) Greet(name string) string {
-	return fmt.Sprintf("Hello %s, It's show time!", name)
+func (a *App) Shutdown() {
+	a.cancel()
+	a.wg.Wait()
+}
+
+// listenForEvents continuously listens for events from the event processor
+// and emits them to the frontend
+func (a *App) listenForEvents() {
+	a.wg.Add(1)
+	go func() {
+		defer a.wg.Done()
+
+		eventCh := a.eventProcessor.Listen()
+		for {
+			select {
+			case <-a.ctx.Done():
+				return
+			case event := <-eventCh:
+				identifier := event.GetIdentifier()
+				data := event.GetData()
+
+				payload := types.WailsPayload{
+					Identifier: string(identifier),
+					Value:      data,
+				}
+				a.logger.Info().Interface("payload", payload).Msg("Received event")
+
+				runtime.EventsEmit(a.ctx, string(identifier), payload)
+			}
+		}
+	}()
 }

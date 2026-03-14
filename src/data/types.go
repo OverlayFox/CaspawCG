@@ -1,4 +1,4 @@
-package types
+package data
 
 // DataType represents the type of data being handles
 type DataType string

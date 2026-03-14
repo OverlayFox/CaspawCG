@@ -1,26 +1,25 @@
-// 1. Initialize the Grid
+import { initLiveEvents } from "./events";
+initLiveEvents();
+
 const grid = GridStack.init({
-  cellHeight: 100, // Height of one grid block
-  margin: 10, // Space between blocks
+  cellHeight: 100,
+  margin: 10,
   float: true, // Elements don't automatically fall to the bottom
 });
 
 let isLiveMode = false;
 
-// 2. Mocking the data that will eventually come from your Go API
-async function fetchApiOptions() {
+async function fetchTemplateOptions() {
   // In the future, this will be: return await window.go.main.UIService.GetDropdownOptions();
   return ["Select an option...", "User Data", "System Logs", "Network Stats"];
 }
 
-// 2.b Mocking Datasource options for the custom fields
 async function fetchDatasources() {
   return await window.go.ui.UIService.GetDataSources();
 }
 
-// 3. Updated Add Widget Function
 async function addWidget() {
-  const options = await fetchApiOptions();
+  const options = await fetchTemplateOptions();
   let optionsHtml = options
     .map((opt) => `<option value="${opt}">${opt}</option>`)
     .join("");
@@ -46,7 +45,6 @@ async function addWidget() {
     `;
   grid.addWidget(widgetElement, { w: 3, h: 3 });
 }
-
 // 4. New Function: Add Custom Field
 async function addField(buttonElement) {
   const container = buttonElement.previousElementSibling; // targets custom-fields-container
@@ -95,7 +93,6 @@ async function toggleMode() {
     modeBtn.classList.add("mode-live");
     addBtn.style.display = "none";
 
-    // --- POPULATE LIVE DATA ---
     const fieldRows = document.querySelectorAll(".field-row");
 
     fieldRows.forEach(async (row) => {

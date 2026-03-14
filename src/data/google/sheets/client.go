@@ -9,7 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"caspaw-cg/src/types"
+	"caspaw-cg/src/data"
+	d "caspaw-cg/src/data"
 
 	"github.com/rs/zerolog"
 	"google.golang.org/api/option"
@@ -18,9 +19,10 @@ import (
 
 type client struct {
 	logger zerolog.Logger
-	deps   Dependencies
 
-	dataFields []*types.Data
+	cfg data.GoogleSheetDataSource
+
+	dataFields []*d.Data
 	mtx        sync.RWMutex
 
 	service *gs.Service
@@ -35,8 +37,8 @@ type Dependencies struct {
 	CredentialsFilePath string
 }
 
-func NewClient(ctx context.Context, logger zerolog.Logger, deps Dependencies) types.DataSource {
-	absPath, err := filepath.Abs(deps.CredentialsFilePath)
+func NewClient(ctx context.Context, logger zerolog.Logger, cfg data.GoogleSheetDataSource) d.DataSource {
+	absPath, err := filepath.Abs(cfg.CredentialsFilePath)
 	if err != nil {
 		logger.Error().Err(err).Msg("invalid credentials file path")
 		return nil
@@ -46,7 +48,7 @@ func NewClient(ctx context.Context, logger zerolog.Logger, deps Dependencies) ty
 		return nil
 	}
 
-	service, err := gs.NewService(ctx, option.WithAuthCredentialsFile(option.ServiceAccount, deps.CredentialsFilePath))
+	service, err := gs.NewService(ctx, option.WithAuthCredentialsFile(option.ServiceAccount, cfg.CredentialsFilePath))
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to create Google Sheets service")
 		return nil
@@ -54,10 +56,10 @@ func NewClient(ctx context.Context, logger zerolog.Logger, deps Dependencies) ty
 
 	ctx, cancel := context.WithCancel(ctx)
 	client := &client{
-		logger: logger,
-		deps:   deps,
+		logger: logger.With().Str("component", fmt.Sprintf("google-sheets-client-%s", cfg.SpreadSheetID)).Logger(),
+		cfg:    cfg,
 
-		dataFields: make([]*types.Data, 0),
+		dataFields: make([]*d.Data, 0),
 
 		service: service,
 
@@ -70,10 +72,10 @@ func NewClient(ctx context.Context, logger zerolog.Logger, deps Dependencies) ty
 }
 
 func (c *client) GetName() string {
-	return fmt.Sprintf("GoogleSheet: %s", c.deps.SpreadSheetID)
+	return fmt.Sprintf("GoogleSheet: %s", c.cfg.SpreadSheetID)
 }
 
-func (c *client) Prime(locations []types.Location) error {
+func (c *client) Prime(locations []d.Location) error {
 	result, err := c.batchFetch(locations)
 	if err != nil {
 		return err
@@ -99,14 +101,14 @@ func (c *client) RemovePrime(keys []string) error {
 	return nil
 }
 
-func (c *client) Get(key string) (types.Data, error) {
+func (c *client) Get(key string) (d.Data, error) {
 	c.mtx.RLock()
 	defer c.mtx.RUnlock()
 
 	for _, data := range c.dataFields {
 		if data.Key == key {
-			return types.Data{
-				Location: types.Location{
+			return d.Data{
+				Location: d.Location{
 					Key:  data.Key,
 					Type: data.Type,
 				},
@@ -115,7 +117,7 @@ func (c *client) Get(key string) (types.Data, error) {
 		}
 	}
 
-	return types.Data{}, fmt.Errorf("no data found for key: '%s'", key)
+	return d.Data{}, fmt.Errorf("no data found for key: '%s'", key)
 }
 
 func (c *client) Close() {
@@ -126,7 +128,7 @@ func (c *client) Close() {
 }
 
 // fetch fetches a singular datapoint from the google sheet
-func (c *client) batchFetch(emptyData []types.Location) ([]*types.Data, error) {
+func (c *client) batchFetch(emptyData []d.Location) ([]*d.Data, error) {
 	if len(emptyData) == 0 {
 		return nil, fmt.Errorf("no locations provided")
 	}
@@ -141,14 +143,14 @@ func (c *client) batchFetch(emptyData []types.Location) ([]*types.Data, error) {
 		keys = append(keys, loc.Key)
 	}
 	resp, err := c.service.Spreadsheets.Values.
-		BatchGet(c.deps.SpreadSheetID).
+		BatchGet(c.cfg.SpreadSheetID).
 		Ranges(keys...).
 		Context(c.ctx).Do()
 	if err != nil {
 		return nil, err
 	}
 
-	result := make([]*types.Data, 0, len(resp.ValueRanges))
+	result := make([]*d.Data, 0, len(resp.ValueRanges))
 	for _, valueRange := range resp.ValueRanges {
 		var fetchedData any
 		if len(valueRange.Values) > 0 && len(valueRange.Values[0]) > 0 {
@@ -158,8 +160,8 @@ func (c *client) batchFetch(emptyData []types.Location) ([]*types.Data, error) {
 		}
 		for _, emptyDt := range emptyData {
 			if emptyDt.Key == valueRange.Range {
-				result = append(result, &types.Data{
-					Location: types.Location{
+				result = append(result, &d.Data{
+					Location: d.Location{
 						Key:  emptyDt.Key,
 						Type: emptyDt.Type,
 					},
@@ -187,7 +189,7 @@ func (c *client) updateDataFields() {
 				return
 			case <-ticker.C:
 				c.mtx.RLock()
-				locations := make([]types.Location, 0, len(c.dataFields))
+				locations := make([]d.Location, 0, len(c.dataFields))
 				for _, data := range c.dataFields {
 					locations = append(locations, data.Location)
 				}

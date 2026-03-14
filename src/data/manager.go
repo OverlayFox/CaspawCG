@@ -4,26 +4,24 @@ import (
 	"fmt"
 	"slices"
 	"sync"
-
-	"caspaw-cg/src/types"
 )
 
 // manager manages all datasources given to the application
 type manager struct {
-	cfg Config
+	cfg *Config
 
-	dataSources []types.DataSource
+	dataSources []DataSource
 	mtx         sync.RWMutex
 }
 
-func NewManager(cfg Config) types.DatasourceManager {
+func NewManager(cfg *Config) DatasourceManager {
 	return &manager{
 		cfg:         cfg,
-		dataSources: make([]types.DataSource, 0),
+		dataSources: make([]DataSource, 0),
 	}
 }
 
-func (m *manager) AddDataSource(ds types.DataSource) error {
+func (m *manager) AddDataSource(ds DataSource) error {
 	names := m.GetDataSourceNames()
 	if slices.Contains(names, ds.GetName()) {
 		return fmt.Errorf("datasource with name '%s' already exists", ds.GetName())
@@ -50,7 +48,7 @@ func (m *manager) RemoveDataSource(name string) error {
 	return fmt.Errorf("datasource with name '%s' not found", name)
 }
 
-func (m *manager) GetDataSource(name string) (types.DataSource, error) {
+func (m *manager) GetDataSource(name string) (DataSource, error) {
 	m.mtx.RLock()
 	defer m.mtx.RUnlock()
 

@@ -5,11 +5,17 @@ import (
 	"fmt"
 	"reflect"
 
+	casparcg "caspaw-cg/src/casparCG"
 	"caspaw-cg/src/data"
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 )
+
+type Config struct {
+	DataSourceManager *data.Config       `mapstructure:"data_source_manager"`
+	CasparCGClients   []*casparcg.Config `mapstructure:"casparcg_clients"`
+}
 
 type Defaulter interface {
 	Default()
@@ -40,7 +46,7 @@ func applyDefaults(target any) {
 // applyValidation checks the main struct and its immediate fields for the Validator interface
 func applyValidation(target any) error {
 	v := reflect.ValueOf(target)
-	if v.Kind() == reflect.Ptr {
+	if v.Kind() == reflect.Pointer {
 		v = v.Elem()
 	}
 
@@ -78,10 +84,6 @@ func applyValidation(target any) error {
 	}
 
 	return nil
-}
-
-type Config struct {
-	DataSourceManager data.Config `mapstructure:"data_source_manager"`
 }
 
 func LoadConfig(logger zerolog.Logger) (*Config, error) {
