@@ -418,6 +418,7 @@ linters:
         - URI
         - URL
         - DB
+        - CG
     usetesting:
       # Enable/disable `os.TempDir()` detections.
       # Default: false
