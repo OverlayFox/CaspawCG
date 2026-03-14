@@ -2,9 +2,9 @@ package ui
 
 import "caspaw-cg/src/types"
 
+// UIService bridges the UI with the GoLang system
 type UIService struct {
-	app *App
-
+	app               *App
 	datasourceManager types.DatasourceManager
 }
 
@@ -20,6 +20,5 @@ func (u *UIService) GetDataSources() []string {
 			"No datasources available",
 		}
 	}
-
 	return names
 }

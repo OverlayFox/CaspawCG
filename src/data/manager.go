@@ -10,12 +10,15 @@ import (
 
 // manager manages all datasources given to the application
 type manager struct {
+	cfg Config
+
 	dataSources []types.DataSource
 	mtx         sync.RWMutex
 }
 
-func NewManager() types.DatasourceManager {
+func NewManager(cfg Config) types.DatasourceManager {
 	return &manager{
+		cfg:         cfg,
 		dataSources: make([]types.DataSource, 0),
 	}
 }

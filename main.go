@@ -2,10 +2,13 @@ package main
 
 import (
 	"embed"
+	"os"
 
+	"caspaw-cg/src/config"
 	"caspaw-cg/src/data"
 	"caspaw-cg/src/ui"
 
+	"github.com/rs/zerolog"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -15,11 +18,17 @@ import (
 var assets embed.FS
 
 func main() {
+	logger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout}).With().Timestamp().Logger()
+	cfg, err := config.LoadConfig(logger.With().Str("component", "config").Logger())
+	if err != nil {
+		logger.Fatal().Err(err).Msg("Failed to load config")
+	}
+
 	app := ui.NewApp()
-	manager := data.NewManager()
+	dsManager := data.NewManager(cfg.DataSourceManager)
 
 	// Create application with options
-	err := wails.Run(&options.App{
+	err = wails.Run(&options.App{
 		Title:  "caspaw-cg",
 		Width:  1024,
 		Height: 768,
@@ -30,10 +39,10 @@ func main() {
 		OnStartup:        app.Startup,
 		Bind: []any{
 			app,
-			ui.NewUIService(app, manager),
+			ui.NewUIService(app, dsManager),
 		},
 	})
 	if err != nil {
-		println("Error:", err.Error())
+		logger.Fatal().Err(err).Msg("Failed to start application")
 	}
 }
