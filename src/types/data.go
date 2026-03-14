@@ -22,14 +22,31 @@ type Data struct {
 }
 
 type DataSource interface {
-	// Adds the specified locations to the data source for priming.
+	// GetName returns the identifier of the Datasource
+	GetName() string
+
+	// Prime adds the specified locations to the data source for priming.
 	// Location string example: "sheet1!A1" - currently only supports single fields
 	Prime(locations []Location) error
-	// Removes the specified locations from the data source's primed data.
+	// RemovePrime removes the specified locations from the data source's primed data.
 	RemovePrime(keys []string) error
 
-	// Retrieves the data for the specified location.
+	// Get retrieves the data for the specified location.
 	Get(key string) (Data, error)
 
+	// Close closes the datasource
 	Close()
+}
+
+type DatasourceManager interface {
+	// AddDataSource adds a datasource
+	AddDataSource(ds DataSource) error
+	// RemoveDataSource removes a datasource
+	RemoveDataSource(name string) error
+	// GetDataSource returns a datasource by name
+	GetDataSource(name string) (DataSource, error)
+
+	// UI functions
+	// GetDataSourceNames returns the names of all datasources
+	GetDataSourceNames() []string
 }

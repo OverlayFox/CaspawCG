@@ -15,13 +15,7 @@ async function fetchApiOptions() {
 
 // 2.b Mocking Datasource options for the custom fields
 async function fetchDatasources() {
-  // Future: return await window.go.main.UIService.GetDataSources();
-  return [
-    "Select Source...",
-    "Go_Local_DB",
-    "Go_Network_Stream",
-    "Go_Hardware_Sensors",
-  ];
+  return await window.go.ui.UIService.GetDataSources();
 }
 
 // 3. Updated Add Widget Function

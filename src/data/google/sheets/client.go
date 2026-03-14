@@ -69,6 +69,10 @@ func NewClient(ctx context.Context, logger zerolog.Logger, deps Dependencies) ty
 	return client
 }
 
+func (c *client) GetName() string {
+	return fmt.Sprintf("GoogleSheet: %s", c.deps.SpreadSheetID)
+}
+
 func (c *client) Prime(locations []types.Location) error {
 	result, err := c.batchFetch(locations)
 	if err != nil {
