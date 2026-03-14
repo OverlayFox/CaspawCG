@@ -3,7 +3,6 @@ package sheets
 import (
 	"context"
 	"fmt"
-	"maps"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,7 +20,7 @@ type client struct {
 	logger zerolog.Logger
 	deps   Dependencies
 
-	dataFields map[string]any
+	dataFields []*types.Data
 	mtx        sync.RWMutex
 
 	service *gs.Service
@@ -58,6 +57,8 @@ func NewClient(ctx context.Context, logger zerolog.Logger, deps Dependencies) ty
 		logger: logger,
 		deps:   deps,
 
+		dataFields: make([]*types.Data, 0),
+
 		service: service,
 
 		ctx:    ctx,
@@ -68,36 +69,49 @@ func NewClient(ctx context.Context, logger zerolog.Logger, deps Dependencies) ty
 	return client
 }
 
-func (c *client) Prime(locations []string) error {
+func (c *client) Prime(locations []types.Location) error {
 	result, err := c.batchFetch(locations)
 	if err != nil {
 		return err
 	}
-
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
-	maps.Copy(c.dataFields, result)
-
+	c.dataFields = append(c.dataFields, result...)
 	return nil
 }
 
-func (c *client) RemovePrime(locations []string) error {
+func (c *client) RemovePrime(keys []string) error {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
-	for _, loc := range locations {
-		delete(c.dataFields, loc)
+
+	for _, key := range keys {
+		for i, data := range c.dataFields {
+			if data.Key == key {
+				c.dataFields = append(c.dataFields[:i], c.dataFields[i+1:]...)
+				break
+			}
+		}
 	}
 	return nil
 }
 
-func (c *client) Get(location string) (any, error) {
+func (c *client) Get(key string) (types.Data, error) {
 	c.mtx.RLock()
 	defer c.mtx.RUnlock()
-	value, ok := c.dataFields[location]
-	if !ok {
-		return nil, fmt.Errorf("no data found at location: '%s'", location)
+
+	for _, data := range c.dataFields {
+		if data.Key == key {
+			return types.Data{
+				Location: types.Location{
+					Key:  data.Key,
+					Type: data.Type,
+				},
+				Value: data.Value,
+			}, nil
+		}
 	}
-	return value, nil
+
+	return types.Data{}, fmt.Errorf("no data found for key: '%s'", key)
 }
 
 func (c *client) Close() {
@@ -108,34 +122,50 @@ func (c *client) Close() {
 }
 
 // fetch fetches a singular datapoint from the google sheet
-func (c *client) batchFetch(locations []string) (map[string]any, error) {
-	if len(locations) == 0 {
+func (c *client) batchFetch(emptyData []types.Location) ([]*types.Data, error) {
+	if len(emptyData) == 0 {
 		return nil, fmt.Errorf("no locations provided")
 	}
-	for _, loc := range locations {
-		if strings.Contains(loc, ":") || !strings.Contains(loc, "!") {
-			return nil, fmt.Errorf("invalid location format '%s', use 'sheet1!A1'", loc)
+	for _, loc := range emptyData {
+		if strings.Contains(loc.Key, ":") || !strings.Contains(loc.Key, "!") {
+			return nil, fmt.Errorf("invalid location format '%s', use 'sheet1!A1'", loc.Key)
 		}
 	}
 
+	keys := make([]string, 0, len(emptyData))
+	for _, loc := range emptyData {
+		keys = append(keys, loc.Key)
+	}
 	resp, err := c.service.Spreadsheets.Values.
 		BatchGet(c.deps.SpreadSheetID).
-		Ranges(locations...).
+		Ranges(keys...).
 		Context(c.ctx).Do()
 	if err != nil {
 		return nil, err
 	}
 
-	result := make(map[string]any)
-	for i, valueRange := range resp.ValueRanges {
-		loc := locations[i]
+	result := make([]*types.Data, 0, len(resp.ValueRanges))
+	for _, valueRange := range resp.ValueRanges {
+		var fetchedData any
 		if len(valueRange.Values) > 0 && len(valueRange.Values[0]) > 0 {
-			result[loc] = valueRange.Values[0][0]
+			fetchedData = valueRange.Values[0][0]
 		} else {
-			c.logger.Warn().Str("location", loc).Msg("cell is empty, adding it to result with nil value")
-			result[loc] = nil
+			fetchedData = nil
+		}
+		for _, emptyDt := range emptyData {
+			if emptyDt.Key == valueRange.Range {
+				result = append(result, &types.Data{
+					Location: types.Location{
+						Key:  emptyDt.Key,
+						Type: emptyDt.Type,
+					},
+					Value: fetchedData,
+				})
+				break
+			}
 		}
 	}
+
 	return result, nil
 }
 
@@ -153,9 +183,9 @@ func (c *client) updateDataFields() {
 				return
 			case <-ticker.C:
 				c.mtx.RLock()
-				locations := make([]string, 0, len(c.dataFields))
-				for loc := range c.dataFields {
-					locations = append(locations, loc)
+				locations := make([]types.Location, 0, len(c.dataFields))
+				for _, data := range c.dataFields {
+					locations = append(locations, data.Location)
 				}
 				c.mtx.RUnlock()
 
@@ -170,7 +200,14 @@ func (c *client) updateDataFields() {
 				}
 
 				c.mtx.Lock()
-				maps.Copy(c.dataFields, result)
+				for _, data := range c.dataFields {
+					for _, updatedData := range result {
+						if data.Key == updatedData.Key {
+							data.Value = updatedData.Value
+							break
+						}
+					}
+				}
 				c.mtx.Unlock()
 			}
 		}
