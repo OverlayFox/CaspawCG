@@ -9,5 +9,10 @@
   "author": {
     "name": "OverlayFox",
     "email": "info@overlayfox.com"
+  },
+  "info": {
+    "productName": "caspaw-cg",
+    "productVersion": "0.0.0",
+    "license": "MIT"
   }
 }
