@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"embed"
-	"fmt"
 	"os"
 
 	casparcg "caspaw-cg/src/casparCG"
@@ -33,13 +32,15 @@ func main() {
 	// Setup App for Front End
 	ctx := context.Background()
 	eventsProcessor := events.NewProcessor(ctx, logger)
-	app := ui.NewApp(logger, eventsProcessor)
+	app := ui.NewApp(ctx, logger, eventsProcessor)
 
 	// init and populate dataSource Manager
 	dataSourceManager := data.NewManager(cfg.DataSourceManager)
-	for _, dataSource := range cfg.DataSourceManager.GoogleSheetDataSource {
-		client := sheets.NewClient(ctx, logger, dataSource)
-		dataSourceManager.AddDataSource(client)
+	if cfg.DataSourceManager != nil && cfg.DataSourceManager.GoogleSheetDataSource != nil {
+		for _, dataSource := range cfg.DataSourceManager.GoogleSheetDataSource {
+			client := sheets.NewClient(ctx, logger, dataSource)
+			dataSourceManager.AddDataSource(client)
+		}
 	}
 
 	// init casparCG clients

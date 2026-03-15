@@ -26,7 +26,7 @@ type client struct {
 
 func NewClient(ctx context.Context, logger zerolog.Logger, cfg *Config, eventProcessor types.EventProcessor) types.CasparCGClient {
 	c, cancel := context.WithCancel(ctx)
-	return &client{
+	client := &client{
 		logger: logger.With().Str("component", fmt.Sprintf("caspar-client-%s:%d", cfg.Host, cfg.Port)).Logger(),
 		cfg:    cfg,
 
@@ -36,6 +36,9 @@ func NewClient(ctx context.Context, logger zerolog.Logger, cfg *Config, eventPro
 		ctx:    c,
 		cancel: cancel,
 	}
+
+	client.keepAlive()
+	return client
 }
 
 func (c *client) Connect() error {
@@ -57,7 +60,6 @@ func (c *client) keepAlive() {
 			select {
 			case <-ticker.C:
 				var event types.CasparCGKeepAlive
-
 				resp, err := c.caspar.PING("")
 				if err != nil {
 					event = types.CasparCGKeepAlive{
@@ -72,8 +74,8 @@ func (c *client) keepAlive() {
 						IsAlive: false,
 					}
 				}
-
 				c.eventProcessor.Push(event)
+
 				c.logger.Debug().Str("response", resp.Message).Msg("PING response")
 			case <-c.ctx.Done():
 				return

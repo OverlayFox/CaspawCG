@@ -1,22 +1,30 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dashboard App</title>
-    
-    <link href="https://cdn.jsdelivr.net/npm/gridstack@10.0.1/dist/gridstack.min.css" rel="stylesheet"/>
-    <link rel="stylesheet" href="./src/style.css">
-</head>
-<body>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/gridstack@10.0.1/dist/gridstack.min.css"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
     <div id="toolbar">
-        <button id="add-widget-btn">Add New Element</button>
-        <button id="toggle-mode-btn" class="mode-edit">Current: EDIT MODE</button>
+      <button id="add-widget-btn">Add New Element</button>
+      <button id="toggle-mode-btn" class="mode-edit">Current: EDIT MODE</button>
     </div>
 
     <div class="grid-stack"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/gridstack@10.0.1/dist/gridstack-all.js"></script>
-    <script src="./src/main.js"></script>
-</body>
+    <script type= "module" src="./src/main.js"></script>
+    
+    <div id="caspar-status-bar" class="status-bar">
+      <span class="status-title">CasparCG Clients:</span>
+      <div id="caspar-clients-container" class="status-clients"></div>
+    </div>
+  </body>
 </html>

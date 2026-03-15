@@ -16,24 +16,25 @@ type App struct {
 
 	eventProcessor types.EventProcessor
 
-	ctx    context.Context
-	cancel context.CancelFunc
-	wg     sync.WaitGroup
+	ctx      context.Context
+	wailsCtx context.Context
+	cancel   context.CancelFunc
+	wg       sync.WaitGroup
 }
 
 // NewApp creates a new App application struct
-func NewApp(logger zerolog.Logger, eventProcessor types.EventProcessor) *App {
+func NewApp(ctx context.Context, logger zerolog.Logger, eventProcessor types.EventProcessor) *App {
+	c, cancel := context.WithCancel(ctx)
 	return &App{
 		logger:         logger.With().Str("component", "app").Logger(),
 		eventProcessor: eventProcessor,
+		ctx:            c,
+		cancel:         cancel,
 	}
 }
 
-func (a *App) Startup(ctx context.Context) {
-	c, cancel := context.WithCancel(ctx)
-	a.ctx = c
-	a.cancel = cancel
-
+func (a *App) Startup(wailsCtx context.Context) {
+	a.wailsCtx = wailsCtx
 	a.listenForEvents()
 }
 
@@ -64,7 +65,7 @@ func (a *App) listenForEvents() {
 				}
 				a.logger.Info().Interface("payload", payload).Msg("Received event")
 
-				runtime.EventsEmit(a.ctx, string(identifier), payload)
+				runtime.EventsEmit(a.wailsCtx, "live-data-update", payload)
 			}
 		}
 	}()

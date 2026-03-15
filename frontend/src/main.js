@@ -1,4 +1,5 @@
 import { initLiveEvents } from "./events";
+
 initLiveEvents();
 
 const grid = GridStack.init({
@@ -28,17 +29,12 @@ async function addWidget() {
         <div class="grid-stack-item">
             <div class="grid-stack-item-content widget-card">
                 <strong>Dynamic Element</strong>
-                
                 <select class="api-dropdown edit-only">
                     ${optionsHtml}
                 </select>
-                
                 <button class="action-btn" onclick="alert('Button Clicked!')">Execute</button>
-                
                 <button class="delete-btn edit-only" onclick="grid.removeWidget(this.closest('.grid-stack-item'))" style="background-color: #e74c3c; margin-left: 5px;">Remove</button>
-
                 <div class="custom-fields-container" style="overflow-y: auto; max-height: 70%; margin-top: 10px;"></div>
-
                 <button class="edit-only" onclick="addField(this)" style="margin-top: 10px; width: 100%;">➕ Add Custom Field</button>
             </div>
         </div>
@@ -137,3 +133,5 @@ document.getElementById("add-widget-btn").addEventListener("click", addWidget);
 document
   .getElementById("toggle-mode-btn")
   .addEventListener("click", toggleMode);
+window.addField = addField;
+window.grid = grid;

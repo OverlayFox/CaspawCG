@@ -153,3 +153,73 @@ body:not(.is-live) .live-only {
   padding-top: 5px;
   border-top: 1px dashed var(--border-color); /* Updated to use theme border */
 }
+
+/* --- Global Status Bar Styles --- */
+body {
+  /* Add padding so your grid doesn't get hidden behind the status bar */
+  padding-bottom: 35px;
+}
+
+.status-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 35px;
+  background-color: #111822; /* Slightly darker than your Wails bg */
+  border-top: 1px solid #2c3e50;
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  box-sizing: border-box;
+  z-index: 1000;
+  font-size: 13px;
+  color: #ecf0f1;
+  font-family: sans-serif;
+}
+
+.status-title {
+  font-weight: bold;
+  margin-right: 15px;
+  color: #95a5a6;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-clients {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto; /* Allows scrolling if you have tons of clients */
+  scrollbar-width: none; /* Hides scrollbar on Firefox */
+}
+
+.status-clients::-webkit-scrollbar {
+  display: none; /* Hides scrollbar on Chrome/Edge */
+}
+
+.client-chip {
+  background-color: #1b2636;
+  padding: 4px 10px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  border: 1px solid #2c3e50;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-online {
+  background-color: #2ecc71;
+  box-shadow: 0 0 6px #2ecc71;
+}
+
+.status-offline {
+  background-color: #e74c3c;
+  box-shadow: 0 0 6px #e74c3c;
+}
