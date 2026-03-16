@@ -1,70 +1,245 @@
-export function initLiveEvents() {
-  console.log("Live events listener is mounting...");
+/**
+ * Event Constants
+ */
+const EVENT_TYPES = {
+  LIVE_DATA_UPDATE: "live-data-update",
+};
 
-  window.runtime.EventsOn("live-data-update", (data) => {
-    console.info("Live data update received:", data);
+const SPECIAL_IDENTIFIERS = {
+  CASPAR_KEEP_ALIVE: "CasparCGKeepAlive",
+};
 
-    if (data.identifier === "CasparCGKeepAlive") {
-      updateCasparStatus(data.value);
+const CSS_CLASSES = {
+  IS_LIVE: "is-live",
+  FIELD_ROW: "field-row",
+  STATUS_DOT: "status-dot",
+  STATUS_ONLINE: "status-online",
+  STATUS_OFFLINE: "status-offline",
+  CLIENT_CHIP: "client-chip",
+};
+
+const SELECTORS = {
+  FIELD_ID: ".f-id",
+  LIVE_VALUE_DISPLAY: ".live-value-display",
+  CASPAR_CLIENTS_CONTAINER: "#caspar-clients-container",
+};
+
+const ANIMATION_DURATION = 300;
+const HIGHLIGHT_COLOR = "#2ecc71";
+
+/**
+ * DOM Utilities for event handling
+ */
+const EventDOMUtils = {
+  querySelector(selector, parent = document) {
+    return parent.querySelector(selector);
+  },
+
+  querySelectorAll(selector, parent = document) {
+    return parent.querySelectorAll(selector);
+  },
+
+  createElement(tag, config = {}) {
+    const element = document.createElement(tag);
+    if (config.id) element.id = config.id;
+    if (config.className) element.className = config.className;
+    if (config.textContent) element.textContent = config.textContent;
+    if (config.innerHTML) element.innerHTML = config.innerHTML;
+    return element;
+  },
+};
+
+/**
+ * Data Update Handler - manages live data updates for field rows
+ */
+const DataUpdateHandler = {
+  handle(data) {
+    if (!this.isLiveMode()) {
+      return;
     }
 
-    if (!document.body.classList.contains("is-live")) return;
-
-    const fieldRows = document.querySelectorAll(".field-row");
-    fieldRows.forEach((row) => {
-      const identifier = row.querySelector(".f-id").value;
+    const fieldRows = EventDOMUtils.querySelectorAll(SELECTORS.FIELD_ID);
+    fieldRows.forEach((fieldInput) => {
+      const identifier = fieldInput.value;
 
       if (identifier === data.identifier) {
-        const valueDisplay = row.querySelector(".live-value-display");
-
-        if (typeof data.value === "object") {
-          valueDisplay.innerText = JSON.stringify(data.value);
-        } else {
-          valueDisplay.innerText = data.value;
+        const row = fieldInput.closest(`.${CSS_CLASSES.FIELD_ROW}`);
+        if (row) {
+          this.updateFieldValue(row, data.value);
         }
-
-        valueDisplay.style.color = "#2ecc71";
-        setTimeout(() => (valueDisplay.style.color = ""), 300);
       }
     });
-  });
-}
+  },
 
-function updateCasparStatus(clientData) {
-  const { host, port, isAlive } = clientData;
-  const container = document.getElementById("caspar-clients-container");
-  if (!container) return;
+  updateFieldValue(row, value) {
+    const valueDisplay = EventDOMUtils.querySelector(
+      SELECTORS.LIVE_VALUE_DISPLAY,
+      row,
+    );
 
-  // Create a safe, unique HTML ID from the host and port (e.g., "caspar-192-168-1-5-5250")
-  const safeId = `caspar-${host}-${port}`.replace(/[^a-zA-Z0-9-]/g, "-");
+    if (!valueDisplay) {
+      console.warn("Value display element not found in field row");
+      return;
+    }
 
-  // Check if we already have a chip for this client
-  let chip = document.getElementById(safeId);
+    try {
+      // Handle different value types
+      if (typeof value === "object" && value !== null) {
+        valueDisplay.textContent = JSON.stringify(value, null, 2);
+      } else {
+        valueDisplay.textContent = value;
+      }
 
-  if (!chip) {
-    // Build a new chip if it's the first time we are seeing this client
-    chip = document.createElement("div");
-    chip.id = safeId;
-    chip.className = "client-chip";
+      // Visual feedback animation
+      this.highlightUpdate(valueDisplay);
+    } catch (error) {
+      console.error("Error updating field value:", error);
+      valueDisplay.textContent = "Error displaying value";
+    }
+  },
 
-    const dot = document.createElement("div");
-    dot.className = `status-dot ${isAlive ? "status-online" : "status-offline"}`;
+  highlightUpdate(element) {
+    element.style.color = HIGHLIGHT_COLOR;
+    setTimeout(() => {
+      element.style.color = "";
+    }, ANIMATION_DURATION);
+  },
 
-    const text = document.createElement("span");
-    text.innerText = `${host}:${port}`;
+  isLiveMode() {
+    return document.body.classList.contains(CSS_CLASSES.IS_LIVE);
+  },
+};
+
+/**
+ * CasparCG Status Manager - handles CasparCG client status updates
+ */
+const CasparStatusManager = {
+  update(clientData) {
+    if (!this.validateClientData(clientData)) {
+      console.error("Invalid client data received:", clientData);
+      return;
+    }
+
+    const { host, port, isAlive } = clientData;
+    const container = EventDOMUtils.querySelector(
+      SELECTORS.CASPAR_CLIENTS_CONTAINER,
+    );
+
+    if (!container) {
+      console.warn("CasparCG clients container not found in DOM");
+      return;
+    }
+
+    const clientId = this.generateClientId(host, port);
+    let chip = document.getElementById(clientId);
+
+    if (!chip) {
+      chip = this.createClientChip(clientId, host, port, isAlive);
+      container.appendChild(chip);
+    } else {
+      this.updateClientStatus(chip, isAlive);
+    }
+  },
+
+  validateClientData(data) {
+    return (
+      data &&
+      typeof data === "object" &&
+      typeof data.host === "string" &&
+      (typeof data.port === "number" || typeof data.port === "string") &&
+      typeof data.isAlive === "boolean"
+    );
+  },
+
+  generateClientId(host, port) {
+    // Create a safe, unique HTML ID from host and port
+    return `caspar-${host}-${port}`.replace(/[^a-zA-Z0-9-]/g, "-");
+  },
+
+  createClientChip(id, host, port, isAlive) {
+    const chip = EventDOMUtils.createElement("div", {
+      id,
+      className: CSS_CLASSES.CLIENT_CHIP,
+    });
+
+    const dot = EventDOMUtils.createElement("div", {
+      className: `${CSS_CLASSES.STATUS_DOT} ${
+        isAlive ? CSS_CLASSES.STATUS_ONLINE : CSS_CLASSES.STATUS_OFFLINE
+      }`,
+    });
+
+    const text = EventDOMUtils.createElement("span", {
+      textContent: `${host}:${port}`,
+    });
 
     chip.appendChild(dot);
     chip.appendChild(text);
-    container.appendChild(chip);
-  } else {
-    // If the chip exists, just update the dot color
-    const dot = chip.querySelector(".status-dot");
-    if (isAlive) {
-      dot.classList.remove("status-offline");
-      dot.classList.add("status-online");
-    } else {
-      dot.classList.remove("status-online");
-      dot.classList.add("status-offline");
+
+    return chip;
+  },
+
+  updateClientStatus(chip, isAlive) {
+    const dot = EventDOMUtils.querySelector(`.${CSS_CLASSES.STATUS_DOT}`, chip);
+
+    if (!dot) {
+      console.warn("Status dot not found in client chip");
+      return;
     }
+
+    if (isAlive) {
+      dot.classList.remove(CSS_CLASSES.STATUS_OFFLINE);
+      dot.classList.add(CSS_CLASSES.STATUS_ONLINE);
+    } else {
+      dot.classList.remove(CSS_CLASSES.STATUS_ONLINE);
+      dot.classList.add(CSS_CLASSES.STATUS_OFFLINE);
+    }
+  },
+};
+
+/**
+ * Event Router - routes events to appropriate handlers
+ */
+const EventRouter = {
+  route(eventType, data) {
+    try {
+      if (eventType === EVENT_TYPES.LIVE_DATA_UPDATE) {
+        // Handle special identifiers
+        if (data.identifier === SPECIAL_IDENTIFIERS.CASPAR_KEEP_ALIVE) {
+          CasparStatusManager.update(data.value);
+        }
+
+        // Handle regular field updates
+        DataUpdateHandler.handle(data);
+      } else {
+        console.warn(`Unhandled event type: ${eventType}`);
+      }
+    } catch (error) {
+      console.error(`Error routing event (${eventType}):`, error);
+    }
+  },
+};
+
+/**
+ * Initialize live event listeners
+ */
+export function initLiveEvents() {
+  console.log("Initializing live events listener...");
+
+  if (!window.runtime || !window.runtime.EventsOn) {
+    console.error(
+      "Wails runtime not available. Event listeners cannot be initialized.",
+    );
+    return;
+  }
+
+  try {
+    window.runtime.EventsOn(EVENT_TYPES.LIVE_DATA_UPDATE, (data) => {
+      console.info("Live data update received:", data);
+      EventRouter.route(EVENT_TYPES.LIVE_DATA_UPDATE, data);
+    });
+
+    console.log("Live events listener initialized successfully");
+  } catch (error) {
+    console.error("Failed to initialize live events:", error);
   }
 }
