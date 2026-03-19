@@ -1,4 +1,5 @@
 import { initLiveEvents } from "./events";
+import { LayoutManager } from "./layout";
 
 /**
  * Application State
@@ -153,11 +154,23 @@ const DOMUtils = {
  */
 const WidgetManager = {
   async create() {
+    return this.createFromConfig(null);
+  },
+
+  async createFromConfig(config = null) {
     const options = await APIService.getTemplateOptions();
     const optionsHtml = DOMUtils.createOptionsHTML(options);
 
+    const template = config?.template || "";
+    const layer = config?.layer || 1;
+    const channel = config?.channel || 1;
+    const posX = config?.posX ?? 0;
+    const posY = config?.posY ?? 0;
+    const sizeX = config?.sizeX ?? 100;
+    const sizeY = config?.sizeY ?? 100;
+
     const widgetElement = `
-      <div class="grid-stack-item">
+      <div class="grid-stack-item" data-widget-id="${config?.id || Date.now()}">
         <div class="grid-stack-item-content ${CSS_CLASSES.WIDGET_CARD}">
           <div class="widget-header">
             <strong>Dynamic Element</strong>
@@ -168,11 +181,11 @@ const WidgetManager = {
             </select>
             <div class="input-group ${CSS_CLASSES.EDIT_ONLY}">
               <label for="layer-input">Layer:</label>
-              <input type="number" class="layer-input" id="layer-input" min="1" max="9999" value="1">
+              <input type="number" class="layer-input" id="layer-input" min="1" max="9999" value="${layer}">
             </div>
             <div class="input-group ${CSS_CLASSES.EDIT_ONLY}">
               <label for="channel-input">Channel:</label>
-              <input type="number" class="channel-input" id="channel-input" min="1" max="9999" value="1">
+              <input type="number" class="channel-input" id="channel-input" min="1" max="9999" value="${channel}">
             </div>
             <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="execute">Execute</button>
             <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="stop">Stop</button>
@@ -181,19 +194,19 @@ const WidgetManager = {
           <div class="widget-position-size-controls">
             <div class="input-group">
               <label>Pos X (pixels):</label>
-              <input type="number" class="pos-x-input" min="0" max="1920" value="0">
+              <input type="number" class="pos-x-input" min="0" max="1920" value="${posX}">
             </div>
             <div class="input-group">
               <label>Pos Y (pixels):</label>
-              <input type="number" class="pos-y-input" min="0" max="1080" value="0">
+              <input type="number" class="pos-y-input" min="0" max="1080" value="${posY}">
             </div>
             <div class="input-group">
               <label>Size X (%):</label>
-              <input type="number" class="size-x-input" min="0" max="100" value="100">
+              <input type="number" class="size-x-input" min="0" max="100" value="${sizeX}">
             </div>
             <div class="input-group">
               <label>Size Y (%):</label>
-              <input type="number" class="size-y-input" min="0" max="100" value="100">
+              <input type="number" class="size-y-input" min="0" max="100" value="${sizeY}">
             </div>
           </div>
           <div class="${CSS_CLASSES.CUSTOM_FIELDS}"></div>
@@ -202,13 +215,39 @@ const WidgetManager = {
       </div>
     `;
 
-    const gridItem = AppState.grid.addWidget(widgetElement, {
-      w: 7,
-      h: 2,
+    const gridOptions = {
+      w: config?.w || 7,
+      h: config?.h || 2,
       minW: 7,
       minH: 2,
-    });
+    };
+
+    if (config) {
+      gridOptions.x = config.x;
+      gridOptions.y = config.y;
+    }
+
+    const gridItem = AppState.grid.addWidget(widgetElement, gridOptions);
+
+    // Set template selection if provided
+    if (template) {
+      const dropdown = DOMUtils.querySelector(".api-dropdown", gridItem);
+      if (dropdown) dropdown.value = template;
+    }
+
+    // Restore fields if provided
+    if (config?.fields && config.fields.length > 0) {
+      const widgetCard = DOMUtils.querySelector(
+        `.${CSS_CLASSES.WIDGET_CARD}`,
+        gridItem,
+      );
+      for (const field of config.fields) {
+        await FieldManager.addFromConfig(widgetCard, field);
+      }
+    }
+
     this.attachEventListeners(gridItem);
+    return gridItem;
   },
 
   attachEventListeners(gridItem) {
@@ -225,6 +264,13 @@ const WidgetManager = {
     if (deleteBtn) {
       deleteBtn.addEventListener("click", () => {
         AppState.grid.removeWidget(gridItem);
+        LayoutManager.scheduleAutoSave(
+          AppState.grid,
+          CSS_CLASSES,
+          SELECTORS,
+          FIELD_TYPES,
+          DOMUtils,
+        );
       });
     }
 
@@ -252,8 +298,29 @@ const WidgetManager = {
     if (addFieldBtn) {
       addFieldBtn.addEventListener("click", () => {
         FieldManager.add(widgetCard);
+        LayoutManager.scheduleAutoSave(
+          AppState.grid,
+          CSS_CLASSES,
+          SELECTORS,
+          FIELD_TYPES,
+          DOMUtils,
+        );
       });
     }
+
+    // Add change listeners for auto-save
+    const inputs = widgetCard.querySelectorAll("input, select");
+    inputs.forEach((input) => {
+      input.addEventListener("change", () => {
+        LayoutManager.scheduleAutoSave(
+          AppState.grid,
+          CSS_CLASSES,
+          SELECTORS,
+          FIELD_TYPES,
+          DOMUtils,
+        );
+      });
+    });
   },
 
   stopWidgetAction(widgetCard) {
@@ -367,6 +434,10 @@ const WidgetManager = {
  */
 const FieldManager = {
   async add(widgetCard) {
+    return this.addFromConfig(widgetCard, null);
+  },
+
+  async addFromConfig(widgetCard, config = null) {
     const container = DOMUtils.querySelector(
       `.${CSS_CLASSES.CUSTOM_FIELDS}`,
       widgetCard,
@@ -376,16 +447,21 @@ const FieldManager = {
     const sources = await APIService.getDataSources();
     const sourcesHtml = DOMUtils.createOptionsHTML(sources);
 
+    const key = config?.key || "";
+    const type = config?.type || FIELD_TYPES.STRING;
+    const id = config?.id || "";
+    const source = config?.source || sources[0] || "";
+
     const row = DOMUtils.createElement("div", CSS_CLASSES.FIELD_ROW);
     row.innerHTML = `
       <div class="${CSS_CLASSES.EDIT_ONLY} field-row-edit">
-        <input type="text" placeholder="Key" class="f-key">
+        <input type="text" placeholder="Key" class="f-key" value="${key}">
         <select class="f-type">
-          <option value="${FIELD_TYPES.STRING}">String</option>
-          <option value="${FIELD_TYPES.INT}">Int</option>
-          <option value="${FIELD_TYPES.FLOAT}">Float</option>
+          <option value="${FIELD_TYPES.STRING}" ${type === FIELD_TYPES.STRING ? "selected" : ""}>String</option>
+          <option value="${FIELD_TYPES.INT}" ${type === FIELD_TYPES.INT ? "selected" : ""}>Int</option>
+          <option value="${FIELD_TYPES.FLOAT}" ${type === FIELD_TYPES.FLOAT ? "selected" : ""}>Float</option>
         </select>
-        <input type="text" placeholder="Location" class="f-id">
+        <input type="text" placeholder="Location" class="f-id" value="${id}">
         <select class="f-source">
           ${sourcesHtml}
         </select>
@@ -397,9 +473,24 @@ const FieldManager = {
       </div>
     `;
 
+    // Set source selection if provided
+    if (source) {
+      const sourceSelect = DOMUtils.querySelector(".f-source", row);
+      if (sourceSelect) sourceSelect.value = source;
+    }
+
     const deleteBtn = DOMUtils.querySelector(".delete-row-btn", row);
     if (deleteBtn) {
-      deleteBtn.addEventListener("click", () => row.remove());
+      deleteBtn.addEventListener("click", () => {
+        row.remove();
+        LayoutManager.scheduleAutoSave(
+          AppState.grid,
+          CSS_CLASSES,
+          SELECTORS,
+          FIELD_TYPES,
+          DOMUtils,
+        );
+      });
     }
 
     container.appendChild(row);
@@ -486,7 +577,7 @@ const ModeManager = {
 /**
  * Application Initialization
  */
-function initializeApp() {
+async function initializeApp() {
   // Initialize GridStack
   AppState.grid = GridStack.init({
     cellHeight: 100,
@@ -494,13 +585,36 @@ function initializeApp() {
     float: true,
   });
 
+  // Listen for grid changes (move, resize) and auto-save
+  AppState.grid.on("change", () => {
+    LayoutManager.scheduleAutoSave(
+      AppState.grid,
+      CSS_CLASSES,
+      SELECTORS,
+      FIELD_TYPES,
+      DOMUtils,
+    );
+  });
+
   // Initialize event listeners
   initLiveEvents();
+
+  // Load saved layout
+  await LayoutManager.loadLayout(WidgetManager);
 
   // Attach button event listeners
   const addWidgetBtn = DOMUtils.querySelector(SELECTORS.ADD_WIDGET_BTN);
   if (addWidgetBtn) {
-    addWidgetBtn.addEventListener("click", () => WidgetManager.create());
+    addWidgetBtn.addEventListener("click", async () => {
+      await WidgetManager.create();
+      LayoutManager.scheduleAutoSave(
+        AppState.grid,
+        CSS_CLASSES,
+        SELECTORS,
+        FIELD_TYPES,
+        DOMUtils,
+      );
+    });
   }
 
   const toggleModeBtn = DOMUtils.querySelector(SELECTORS.TOGGLE_MODE_BTN);

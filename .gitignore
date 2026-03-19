@@ -39,3 +39,7 @@ build/bin
 node_modules
 frontend/dist
 
+# Logs
+logs/
+layout.json
+

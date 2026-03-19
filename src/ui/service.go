@@ -20,6 +20,16 @@ func NewUIService(app *App, datasourceManager data.DatasourceManager, casparCGCl
 	}
 }
 
+func (u *UIService) SaveLayout(config LayoutConfig) error {
+	u.app.logger.Info().Msg("Saving layout configuration")
+	return SaveLayout(config)
+}
+
+func (u *UIService) LoadLayout() (LayoutConfig, error) {
+	u.app.logger.Info().Msg("Loading layout configuration")
+	return LoadLayout()
+}
+
 func (u *UIService) GetDataSources() []string {
 	names := u.datasourceManager.GetDataSourceNames()
 	if len(names) == 0 {
