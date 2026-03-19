@@ -18,6 +18,7 @@ type Location struct {
 
 type Data struct {
 	Location
+
 	Value any
 }
 

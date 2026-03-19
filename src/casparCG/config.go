@@ -1,6 +1,7 @@
 package casparcg
 
 import (
+	"errors"
 	"fmt"
 	"net"
 )
@@ -12,17 +13,17 @@ type Config struct {
 
 func (c *Config) Validate() error {
 	if c.Host == "" {
-		return fmt.Errorf("host is required")
+		return errors.New("host is required")
 	}
 	if net.ParseIP(c.Host) == nil {
 		return fmt.Errorf("invalid host: %s", c.Host)
 	}
 
 	if c.Port == 0 {
-		return fmt.Errorf("port is required")
+		return errors.New("port is required")
 	}
 	if c.Port < 1 || c.Port > 65535 {
-		return fmt.Errorf("port must be between 1 and 65535")
+		return errors.New("port must be between 1 and 65535")
 	}
 
 	return nil

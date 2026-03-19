@@ -1,0 +1,3 @@
+casparcg_client:
+  - host: "localhost"
+    port: 5250

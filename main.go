@@ -5,13 +5,14 @@ import (
 	"embed"
 	"os"
 
-	casparcg "caspaw-cg/src/casparCG"
 	"caspaw-cg/src/config"
 	"caspaw-cg/src/data"
 	"caspaw-cg/src/data/google/sheets"
 	"caspaw-cg/src/events"
 	"caspaw-cg/src/types"
 	"caspaw-cg/src/ui"
+
+	casparcg "caspaw-cg/src/casparCG"
 
 	"github.com/rs/zerolog"
 	"github.com/wailsapp/wails/v2"
@@ -28,6 +29,7 @@ func main() {
 	if err != nil {
 		logger.Fatal().Err(err).Msg("Failed to load config")
 	}
+	logger.Info().Msg("Config loaded successfully")
 
 	// Setup App for Front End
 	ctx := context.Background()

@@ -1,9 +1,9 @@
-.PHONY: run-wails
-run-wails:
+.PHONY: start
+start:
 	wails dev -tags webkit2_41
 
-.PHONY: build-wails
-build-wails:
+.PHONY: build
+build:
 	wails build -tags webkit2_41
 
 .PHONY: install-dev

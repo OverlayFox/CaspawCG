@@ -1,6 +1,7 @@
 package data
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -17,10 +18,10 @@ type GoogleSheetDataSource struct {
 
 func (gsds *GoogleSheetDataSource) Validate() error {
 	if gsds.SpreadSheetID == "" {
-		return fmt.Errorf("spreadsheet_id is required")
+		return errors.New("spreadsheet_id is required")
 	}
 	if gsds.CredentialsFilePath == "" {
-		return fmt.Errorf("credentials_file_path is required")
+		return errors.New("credentials_file_path is required")
 	}
 
 	if _, err := filepath.Abs(gsds.CredentialsFilePath); err != nil {

@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"reflect"
 
-	casparcg "caspaw-cg/src/casparCG"
 	"caspaw-cg/src/data"
+
+	casparcg "caspaw-cg/src/casparCG"
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"

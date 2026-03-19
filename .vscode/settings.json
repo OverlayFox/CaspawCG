@@ -18,6 +18,7 @@
   "gopls": {
     "ui.completion.usePlaceholders": false,
     "ui.diagnostic.staticcheck": false,
-    "formatting.gofumpt": true
+    "formatting.gofumpt": true,
+    "formatting.local": "caspaw-cg"
   }
 }

@@ -2,6 +2,7 @@ package sheets
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"caspaw-cg/src/data"
+
 	d "caspaw-cg/src/data"
 
 	"github.com/rs/zerolog"
@@ -130,7 +132,7 @@ func (c *client) Close() {
 // fetch fetches a singular datapoint from the google sheet
 func (c *client) batchFetch(emptyData []d.Location) ([]*d.Data, error) {
 	if len(emptyData) == 0 {
-		return nil, fmt.Errorf("no locations provided")
+		return nil, errors.New("no locations provided")
 	}
 	for _, loc := range emptyData {
 		if strings.Contains(loc.Key, ":") || !strings.Contains(loc.Key, "!") {

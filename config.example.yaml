@@ -7,3 +7,7 @@ data_source_manager:
       credentials_file_path: "path/to/your/credentials.json"
     - spreadsheet_id: "another_spreadsheet_id"
       credentials_file_path: "path/to/another/credentials.json"
+
+casparcg_client:
+  - host: "localhost"
+    port: 5250
