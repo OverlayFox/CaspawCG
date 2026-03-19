@@ -50,6 +50,12 @@ func main() {
 	for _, clientCfg := range cfg.CasparCGClients {
 		client := casparcg.NewClient(ctx, logger, clientCfg, eventsProcessor)
 		casparCGClients = append(casparCGClients, client)
+		err := client.Connect()
+		if err != nil {
+			logger.Error().Err(err).Str("host", clientCfg.Host).Int("port", clientCfg.Port).Msg("Failed to connect to CasparCG server")
+		} else {
+			logger.Debug().Str("host", clientCfg.Host).Int("port", clientCfg.Port).Msg("Connected to CasparCG server")
+		}
 	}
 
 	err = wails.Run(&options.App{

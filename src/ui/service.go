@@ -29,3 +29,16 @@ func (u *UIService) GetDataSources() []string {
 	}
 	return names
 }
+
+func (u *UIService) GetCasparCGTemplates() []string {
+	result := make([]string, 0)
+	for _, client := range u.casparCGClients {
+		templates, err := client.GetTemplates()
+		if err != nil {
+			u.app.logger.Error().Err(err).Msg("Failed to get templates from CasparCG client")
+			continue
+		}
+		result = append(result, templates...)
+	}
+	return result
+}

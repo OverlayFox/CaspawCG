@@ -47,13 +47,7 @@ const FIELD_TYPES = {
 const APIService = {
   async getTemplateOptions() {
     try {
-      // Future implementation: return await window.go.ui.UIService.GetDropdownOptions();
-      return [
-        "Select an option...",
-        "User Data",
-        "System Logs",
-        "Network Stats",
-      ];
+      return await window.go.ui.UIService.GetCasparCGTemplates();
     } catch (error) {
       console.error("Failed to fetch template options:", error);
       return [];

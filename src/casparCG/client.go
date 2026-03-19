@@ -36,7 +36,6 @@ func NewClient(ctx context.Context, logger zerolog.Logger, cfg *Config, eventPro
 		ctx:    c,
 		cancel: cancel,
 	}
-
 	client.keepAlive()
 	return client
 }
@@ -50,6 +49,14 @@ func (c *client) Connect() error {
 	return nil
 }
 
+func (c *client) GetTemplates() ([]string, error) {
+	templates, _, err := c.caspar.TLS("./")
+	if err != nil {
+		return nil, err
+	}
+	return templates, nil
+}
+
 func (c *client) keepAlive() {
 	c.wg.Add(1)
 	go func() {
@@ -60,23 +67,22 @@ func (c *client) keepAlive() {
 			select {
 			case <-ticker.C:
 				var event types.CasparCGKeepAlive
-				resp, err := c.caspar.PING("")
+				_, err := c.caspar.PING("")
 				if err != nil {
-					event = types.CasparCGKeepAlive{
-						Host:    c.cfg.Host,
-						Port:    c.cfg.Port,
-						IsAlive: true,
-					}
-				} else {
+					c.logger.Error().Err(err).Msg("Failed to ping CasparCG server")
 					event = types.CasparCGKeepAlive{
 						Host:    c.cfg.Host,
 						Port:    c.cfg.Port,
 						IsAlive: false,
 					}
+				} else {
+					event = types.CasparCGKeepAlive{
+						Host:    c.cfg.Host,
+						Port:    c.cfg.Port,
+						IsAlive: true,
+					}
 				}
 				c.eventProcessor.Push(event)
-
-				c.logger.Debug().Str("response", resp.Message).Msg("PING response")
 			case <-c.ctx.Done():
 				return
 			}

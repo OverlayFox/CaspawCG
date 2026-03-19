@@ -63,8 +63,6 @@ func (a *App) listenForEvents() {
 					Identifier: string(identifier),
 					Value:      data,
 				}
-				a.logger.Info().Interface("payload", payload).Msg("Received event")
-
 				runtime.EventsEmit(a.wailsCtx, "live-data-update", payload)
 			}
 		}

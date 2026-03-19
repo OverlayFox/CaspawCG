@@ -29,8 +29,6 @@ func NewProcessor(ctx context.Context, logger zerolog.Logger) types.EventProcess
 }
 
 func (p *processor) Push(event types.Event) error {
-	p.logger.Debug().Interface("event", event).Msg("received event, distributing it to all listeners")
-
 	p.mtx.Lock()
 	defer p.mtx.Unlock()
 
