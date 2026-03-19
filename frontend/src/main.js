@@ -74,15 +74,19 @@ const APIService = {
     sizeY = null,
   ) {
     try {
+      const sizing = {
+        posX: posX !== null ? parseInt(posX, 10) : 0,
+        posY: posY !== null ? parseInt(posY, 10) : 0,
+        sizeX: sizeX !== null ? parseFloat(sizeX) : 100,
+        sizeY: sizeY !== null ? parseFloat(sizeY) : 100,
+      };
+
       await window.go.ui.UIService.PushCasparCGData(
         template,
         layer,
         channel,
         data,
-        posX,
-        posY,
-        sizeX,
-        sizeY,
+        sizing,
       );
     } catch (error) {
       console.error("Failed to push CG data:", error);
