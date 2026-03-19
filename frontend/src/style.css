@@ -394,10 +394,31 @@ body:not(.is-live) .live-only {
 
 .action-btn {
   background-color: var(--accent-green);
+  max-width: 80px;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .action-btn:hover {
   background-color: #27ae60;
+}
+
+.action-btn[data-action="execute"] {
+  background-color: var(--accent-green);
+}
+
+.action-btn[data-action="execute"]:hover {
+  background-color: #27ae60;
+}
+
+.action-btn[data-action="stop"] {
+  background-color: #e74c3c;
+}
+
+.action-btn[data-action="stop"]:hover {
+  background-color: #c0392b;
 }
 
 /* ============================================================

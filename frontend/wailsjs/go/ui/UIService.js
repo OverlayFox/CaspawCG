@@ -10,6 +10,10 @@ export function GetDataSources() {
   return window['go']['ui']['UIService']['GetDataSources']();
 }
 
-export function PushCasparCGData(arg1, arg2) {
-  return window['go']['ui']['UIService']['PushCasparCGData'](arg1, arg2);
+export function PushCasparCGData(arg1, arg2, arg3, arg4) {
+  return window['go']['ui']['UIService']['PushCasparCGData'](arg1, arg2, arg3, arg4);
+}
+
+export function StopCasparCGData(arg1, arg2, arg3) {
+  return window['go']['ui']['UIService']['StopCasparCGData'](arg1, arg2, arg3);
 }

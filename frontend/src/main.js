@@ -63,11 +63,24 @@ const APIService = {
     }
   },
 
-  async pushCGData(template, data) {
+  async pushCGData(template, layer = 1, channel = 1, data) {
     try {
-      await window.go.ui.UIService.PushCasparCGData(template, data);
+      await window.go.ui.UIService.PushCasparCGData(
+        template,
+        layer,
+        channel,
+        data,
+      );
     } catch (error) {
       console.error("Failed to push CG data:", error);
+    }
+  },
+
+  async stopCGData(template, layer = 1, channel = 1) {
+    try {
+      await window.go.ui.UIService.StopCasparCGData(template, layer, channel);
+    } catch (error) {
+      console.error("Failed to stop CG data:", error);
     }
   },
 
@@ -136,7 +149,10 @@ const WidgetManager = {
             <select class="api-dropdown ${CSS_CLASSES.EDIT_ONLY}">
               ${optionsHtml}
             </select>
-            <button class="${CSS_CLASSES.ACTION_BTN}" data-action="execute">Execute</button>
+            <input type="number" class="layer-input ${CSS_CLASSES.EDIT_ONLY}" placeholder="Layer" min="1" max="9999" value="1">
+            <input type="number" class="channel-input ${CSS_CLASSES.EDIT_ONLY}" placeholder="Channel" min="1" max="9999" value="1">
+            <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="execute">Execute</button>
+            <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="stop">Stop</button>
             <button class="${CSS_CLASSES.DELETE_BTN} ${CSS_CLASSES.EDIT_ONLY}" data-action="remove">Remove</button>
           </div>
           <div class="${CSS_CLASSES.CUSTOM_FIELDS}"></div>
@@ -166,16 +182,21 @@ const WidgetManager = {
       });
     }
 
-    // Execute button handler
-    const executeBtn = DOMUtils.querySelector(
+    // Execute and Stop button handlers
+    const actionBtns = DOMUtils.querySelectorAll(
       `.${CSS_CLASSES.ACTION_BTN}`,
       widgetCard,
     );
-    if (executeBtn) {
-      executeBtn.addEventListener("click", () => {
-        this.executeWidgetAction(widgetCard);
+    actionBtns.forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const action = e.target.dataset.action;
+        if (action === "execute") {
+          this.startWidgetAction(widgetCard);
+        } else if (action === "stop") {
+          this.stopWidgetAction(widgetCard);
+        }
       });
-    }
+    });
 
     // Add field button handler
     const addFieldBtn = DOMUtils.querySelector(
@@ -189,11 +210,36 @@ const WidgetManager = {
     }
   },
 
-  executeWidgetAction(widgetCard) {
+  stopWidgetAction(widgetCard) {
     const dropdown = DOMUtils.querySelector(".api-dropdown", widgetCard);
-    const selectedValue = dropdown?.value;
+    const layerInput = DOMUtils.querySelector(".layer-input", widgetCard);
+    const channelInput = DOMUtils.querySelector(".channel-input", widgetCard);
 
-    if (!selectedValue) {
+    const selectedTemplate = dropdown?.value;
+    const layer = parseInt(layerInput?.value, 10) || 1;
+    const channel = parseInt(channelInput?.value, 10) || 1;
+
+    if (!selectedTemplate) {
+      console.error("No template selected for stopping.");
+      return;
+    }
+
+    console.log(
+      `Stopping template on layer ${layer}, channel ${channel}: ${selectedTemplate}`,
+    );
+    APIService.stopCGData(selectedTemplate, layer, channel);
+  },
+
+  startWidgetAction(widgetCard) {
+    const dropdown = DOMUtils.querySelector(".api-dropdown", widgetCard);
+    const layerInput = DOMUtils.querySelector(".layer-input", widgetCard);
+    const channelInput = DOMUtils.querySelector(".channel-input", widgetCard);
+
+    const selectedTemplate = dropdown?.value;
+    const layer = parseInt(layerInput?.value, 10) || 1;
+    const channel = parseInt(channelInput?.value, 10) || 1;
+
+    if (!selectedTemplate) {
       console.error("No template selected for execution.");
       return;
     }
@@ -225,8 +271,11 @@ const WidgetManager = {
       data[key] = value;
     });
 
-    console.log("Executing with data:", data);
-    APIService.pushCGData(selectedValue, data);
+    console.log(
+      `Starting template on layer ${layer}, channel ${channel} with data:`,
+      data,
+    );
+    APIService.pushCGData(selectedTemplate, layer, channel, data);
   },
 };
 

@@ -5,4 +5,6 @@ export function GetCasparCGTemplates():Promise<Array<string>>;
 
 export function GetDataSources():Promise<Array<string>>;
 
-export function PushCasparCGData(arg1:string,arg2:Record<string, any>):Promise<void>;
+export function PushCasparCGData(arg1:string,arg2:number,arg3:number,arg4:Record<string, any>):Promise<void>;
+
+export function StopCasparCGData(arg1:string,arg2:number,arg3:number):Promise<void>;

@@ -58,8 +58,8 @@ func (c *client) GetTemplates() ([]string, error) {
 	return templates, nil
 }
 
-func (c *client) PushCGData(template string, data map[string]any) error {
-	c.logger.Info().Msgf("Pushing data to template '%s': %v", template, data)
+func (c *client) PushCGData(template string, layer, channel int, data map[string]any) error {
+	c.logger.Info().Msgf("Pushing data to template '%s' on layer %d, channel %d: %v", template, layer, channel, data)
 
 	_, resp, err := c.caspar.INFOTEMPLATE(template)
 	if err != nil {
@@ -79,14 +79,28 @@ func (c *client) PushCGData(template string, data map[string]any) error {
 	}
 	jsonStr := string(jsonData)
 
-	resp, err = c.caspar.CG(1, 1).ADD(1, template, true, &jsonStr)
+	resp, err = c.caspar.CG(layer, channel).ADD(1, template, true, &jsonStr)
 	if err != nil {
-		c.logger.Error().Err(err).Msgf("Failed to push data to template '%s'", template)
+		c.logger.Error().Err(err).Msgf("Failed to push data to template '%s' on layer %d, channel %d", template, layer, channel)
 		return err
 	}
 	if resp.Code != 200 && resp.Code != 202 {
 		err := fmt.Errorf("unexpected response code %d: %s", resp.Code, resp.Message)
-		c.logger.Error().Err(err).Msgf("Failed to push data to template '%s'", template)
+		c.logger.Error().Err(err).Msgf("Failed to push data to template '%s' on layer %d, channel %d", template, layer, channel)
+		return err
+	}
+	return nil
+}
+
+func (c *client) StopCGData(template string, layer, channel int) error {
+	resp, err := c.caspar.CG(layer, channel).STOP(1)
+	if err != nil {
+		c.logger.Error().Err(err).Msgf("Failed to stop template '%s' on layer %d, channel %d", template, layer, channel)
+		return err
+	}
+	if resp.Code != 200 && resp.Code != 202 {
+		err := fmt.Errorf("unexpected response code %d: %s", resp.Code, resp.Message)
+		c.logger.Error().Err(err).Msgf("Failed to stop template '%s' on layer %d, channel %d", template, layer, channel)
 		return err
 	}
 	return nil

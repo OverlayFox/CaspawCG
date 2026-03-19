@@ -43,11 +43,20 @@ func (u *UIService) GetCasparCGTemplates() []string {
 	return result
 }
 
-func (u *UIService) PushCasparCGData(template string, data map[string]any) {
+func (u *UIService) PushCasparCGData(template string, layer, channel int, data map[string]any) {
 	for _, client := range u.casparCGClients {
-		err := client.PushCGData(template, data)
+		err := client.PushCGData(template, layer, channel, data)
 		if err != nil {
-			u.app.logger.Error().Err(err).Msgf("Failed to push CG data to template '%s'", template)
+			u.app.logger.Error().Err(err).Msgf("Failed to push CG data to template '%s' on layer %d, channel %d", template, layer, channel)
+		}
+	}
+}
+
+func (u *UIService) StopCasparCGData(template string, layer, channel int) {
+	for _, client := range u.casparCGClients {
+		err := client.StopCGData(template, layer, channel)
+		if err != nil {
+			u.app.logger.Error().Err(err).Msgf("Failed to stop CG data for template '%s' on layer %d, channel %d", template, layer, channel)
 		}
 	}
 }
