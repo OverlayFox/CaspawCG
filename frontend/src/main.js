@@ -63,6 +63,14 @@ const APIService = {
     }
   },
 
+  async pushCGData(template, data) {
+    try {
+      await window.go.ui.UIService.PushCasparCGData(template, data);
+    } catch (error) {
+      console.error("Failed to push CG data:", error);
+    }
+  },
+
   async fetchLiveData(identifier, type, source) {
     // Future implementation:
     // return await window.go.ui.UIService.FetchData(identifier, type, source);
@@ -184,8 +192,41 @@ const WidgetManager = {
   executeWidgetAction(widgetCard) {
     const dropdown = DOMUtils.querySelector(".api-dropdown", widgetCard);
     const selectedValue = dropdown?.value;
-    console.log("Widget action executed:", selectedValue);
-    // Add your custom logic here
+
+    if (!selectedValue) {
+      console.error("No template selected for execution.");
+      return;
+    }
+
+    const fieldRows = DOMUtils.querySelectorAll(
+      `.${CSS_CLASSES.FIELD_ROW}`,
+      widgetCard,
+    );
+
+    const data = {};
+    fieldRows.forEach((row) => {
+      const keyInput = DOMUtils.querySelector(SELECTORS.FIELD_KEY, row);
+      const typeSelect = DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row);
+      const idInput = DOMUtils.querySelector(SELECTORS.FIELD_ID, row);
+
+      if (!keyInput || !keyInput.value) return; // Skip if no key
+
+      const key = keyInput.value;
+      const type = typeSelect?.value || FIELD_TYPES.STRING;
+      let value = idInput?.value || "";
+
+      // Convert value based on type
+      if (type === FIELD_TYPES.INT) {
+        value = parseInt(value, 10) || 0;
+      } else if (type === FIELD_TYPES.FLOAT) {
+        value = parseFloat(value) || 0.0;
+      }
+
+      data[key] = value;
+    });
+
+    console.log("Executing with data:", data);
+    APIService.pushCGData(selectedValue, data);
   },
 };
 

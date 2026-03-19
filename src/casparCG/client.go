@@ -2,6 +2,7 @@ package casparcg
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -55,6 +56,40 @@ func (c *client) GetTemplates() ([]string, error) {
 		return nil, err
 	}
 	return templates, nil
+}
+
+func (c *client) PushCGData(template string, data map[string]any) error {
+	c.logger.Info().Msgf("Pushing data to template '%s': %v", template, data)
+
+	_, resp, err := c.caspar.INFOTEMPLATE(template)
+	if err != nil {
+		c.logger.Error().Err(err).Msgf("Failed to get template info for '%s'", template)
+		return err
+	}
+	if resp.Code != 200 && resp.Code != 202 {
+		err := fmt.Errorf("unexpected response code %d: %s", resp.Code, resp.Message)
+		c.logger.Error().Err(err).Msgf("Failed to get template info for '%s'", template)
+		return err
+	}
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		c.logger.Error().Err(err).Msgf("Failed to marshal data for template '%s'", template)
+		return err
+	}
+	jsonStr := string(jsonData)
+
+	resp, err = c.caspar.CG(1, 1).ADD(1, template, true, &jsonStr)
+	if err != nil {
+		c.logger.Error().Err(err).Msgf("Failed to push data to template '%s'", template)
+		return err
+	}
+	if resp.Code != 200 && resp.Code != 202 {
+		err := fmt.Errorf("unexpected response code %d: %s", resp.Code, resp.Message)
+		c.logger.Error().Err(err).Msgf("Failed to push data to template '%s'", template)
+		return err
+	}
+	return nil
 }
 
 func (c *client) keepAlive() {

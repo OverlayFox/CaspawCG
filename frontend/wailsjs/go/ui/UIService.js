@@ -9,3 +9,7 @@ export function GetCasparCGTemplates() {
 export function GetDataSources() {
   return window['go']['ui']['UIService']['GetDataSources']();
 }
+
+export function PushCasparCGData(arg1, arg2) {
+  return window['go']['ui']['UIService']['PushCasparCGData'](arg1, arg2);
+}
