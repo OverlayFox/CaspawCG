@@ -63,13 +63,26 @@ const APIService = {
     }
   },
 
-  async pushCGData(template, layer = 1, channel = 1, data) {
+  async pushCGData(
+    template,
+    layer = 1,
+    channel = 1,
+    data,
+    posX = null,
+    posY = null,
+    sizeX = null,
+    sizeY = null,
+  ) {
     try {
       await window.go.ui.UIService.PushCasparCGData(
         template,
         layer,
         channel,
         data,
+        posX,
+        posY,
+        sizeX,
+        sizeY,
       );
     } catch (error) {
       console.error("Failed to push CG data:", error);
@@ -161,13 +174,36 @@ const WidgetManager = {
             <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="stop">Stop</button>
             <button class="${CSS_CLASSES.DELETE_BTN} ${CSS_CLASSES.EDIT_ONLY}" data-action="remove">Remove</button>
           </div>
+          <div class="widget-position-size-controls">
+            <div class="input-group">
+              <label>Pos X (pixels):</label>
+              <input type="number" class="pos-x-input" min="0" max="1920" value="0">
+            </div>
+            <div class="input-group">
+              <label>Pos Y (pixels):</label>
+              <input type="number" class="pos-y-input" min="0" max="1080" value="0">
+            </div>
+            <div class="input-group">
+              <label>Size X (%):</label>
+              <input type="number" class="size-x-input" min="0" max="100" value="100">
+            </div>
+            <div class="input-group">
+              <label>Size Y (%):</label>
+              <input type="number" class="size-y-input" min="0" max="100" value="100">
+            </div>
+          </div>
           <div class="${CSS_CLASSES.CUSTOM_FIELDS}"></div>
           <button class="${CSS_CLASSES.ADD_FIELD_BTN} ${CSS_CLASSES.EDIT_ONLY}">➕ Add Custom Field</button>
         </div>
       </div>
     `;
 
-    const gridItem = AppState.grid.addWidget(widgetElement, { w: 3, h: 3 });
+    const gridItem = AppState.grid.addWidget(widgetElement, {
+      w: 7,
+      h: 2,
+      minW: 7,
+      minH: 2,
+    });
     this.attachEventListeners(gridItem);
   },
 
@@ -220,10 +256,20 @@ const WidgetManager = {
     const dropdown = DOMUtils.querySelector(".api-dropdown", widgetCard);
     const layerInput = DOMUtils.querySelector(".layer-input", widgetCard);
     const channelInput = DOMUtils.querySelector(".channel-input", widgetCard);
+    const posXInput = DOMUtils.querySelector(".pos-x-input", widgetCard);
+    const posYInput = DOMUtils.querySelector(".pos-y-input", widgetCard);
+    const sizeXInput = DOMUtils.querySelector(".size-x-input", widgetCard);
+    const sizeYInput = DOMUtils.querySelector(".size-y-input", widgetCard);
 
     const selectedTemplate = dropdown?.value;
     const layer = parseInt(layerInput?.value, 10) || 1;
     const channel = parseInt(channelInput?.value, 10) || 1;
+
+    // These can be null if not provided
+    const posX = posXInput?.value ? parseInt(posXInput.value, 10) : null;
+    const posY = posYInput?.value ? parseInt(posYInput.value, 10) : null;
+    const sizeX = sizeXInput?.value ? parseFloat(sizeXInput.value) : null;
+    const sizeY = sizeYInput?.value ? parseFloat(sizeYInput.value) : null;
 
     if (!selectedTemplate) {
       console.error("No template selected for stopping.");
@@ -233,17 +279,35 @@ const WidgetManager = {
     console.log(
       `Stopping template on layer ${layer}, channel ${channel}: ${selectedTemplate}`,
     );
-    APIService.stopCGData(selectedTemplate, layer, channel);
+    APIService.stopCGData(
+      selectedTemplate,
+      layer,
+      channel,
+      posX,
+      posY,
+      sizeX,
+      sizeY,
+    );
   },
 
   startWidgetAction(widgetCard) {
     const dropdown = DOMUtils.querySelector(".api-dropdown", widgetCard);
     const layerInput = DOMUtils.querySelector(".layer-input", widgetCard);
     const channelInput = DOMUtils.querySelector(".channel-input", widgetCard);
+    const posXInput = DOMUtils.querySelector(".pos-x-input", widgetCard);
+    const posYInput = DOMUtils.querySelector(".pos-y-input", widgetCard);
+    const sizeXInput = DOMUtils.querySelector(".size-x-input", widgetCard);
+    const sizeYInput = DOMUtils.querySelector(".size-y-input", widgetCard);
 
     const selectedTemplate = dropdown?.value;
     const layer = parseInt(layerInput?.value, 10) || 1;
     const channel = parseInt(channelInput?.value, 10) || 1;
+
+    // These can be null if not provided
+    const posX = posXInput?.value ? parseInt(posXInput.value, 10) : null;
+    const posY = posYInput?.value ? parseInt(posYInput.value, 10) : null;
+    const sizeX = sizeXInput?.value ? parseFloat(sizeXInput.value) : null;
+    const sizeY = sizeYInput?.value ? parseFloat(sizeYInput.value) : null;
 
     if (!selectedTemplate) {
       console.error("No template selected for execution.");
@@ -278,10 +342,19 @@ const WidgetManager = {
     });
 
     console.log(
-      `Starting template on layer ${layer}, channel ${channel} with data:`,
+      `Starting template on layer ${layer}, channel ${channel}, pos: (${posX}, ${posY}), size: (${sizeX}%, ${sizeY}%) with data:`,
       data,
     );
-    APIService.pushCGData(selectedTemplate, layer, channel, data);
+    APIService.pushCGData(
+      selectedTemplate,
+      layer,
+      channel,
+      data,
+      posX,
+      posY,
+      sizeX,
+      sizeY,
+    );
   },
 };
 

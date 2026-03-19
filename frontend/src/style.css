@@ -255,6 +255,39 @@ button#toggle-mode-btn.mode-live:hover {
   border-color: var(--accent-blue);
 }
 
+.widget-position-size-controls {
+  display: flex;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.widget-position-size-controls .input-group {
+  flex: 0 0 auto;
+}
+
+.widget-position-size-controls input {
+  width: 60px;
+  padding: 4px var(--spacing-sm);
+  background-color: var(--bg-field-input);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  text-align: center;
+}
+
+.widget-position-size-controls input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+}
+
+body.is-live .widget-position-size-controls input {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
 /* ============================================================
    FORM ELEMENTS
    ============================================================ */

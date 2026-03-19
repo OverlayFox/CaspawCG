@@ -58,7 +58,7 @@ func (c *client) GetTemplates() ([]string, error) {
 	return templates, nil
 }
 
-func (c *client) PushCGData(template string, layer, channel int, data map[string]any) error {
+func (c *client) PushCGData(template string, layer, channel int, data map[string]any, posX, posY *int, sizeX, sizeY *float64) error {
 	c.logger.Info().Msgf("Pushing data to template '%s' on layer %d, channel %d: %v", template, layer, channel, data)
 
 	_, resp, err := c.caspar.INFOTEMPLATE(template)
