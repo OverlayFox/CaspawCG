@@ -153,11 +153,6 @@ button#toggle-mode-btn.mode-live:hover {
   margin-bottom: var(--spacing-md);
 }
 
-.widget-header-controls .api-dropdown {
-  flex-grow: 1;
-  min-width: 0;
-}
-
 .widget-header-controls button {
   flex-shrink: 0;
   padding: var(--spacing-sm) var(--spacing-md);
@@ -272,6 +267,13 @@ option {
   outline: none;
   padding: var(--spacing-sm);
   font-size: 14px;
+}
+
+.api-dropdown {
+  flex-grow: 1;
+  min-width: 0;
+  padding: 4px var(--spacing-sm);
+  font-size: 13px;
 }
 
 .widget-card select:focus {
@@ -419,6 +421,20 @@ body:not(.is-live) .live-only {
 
 .action-btn[data-action="stop"]:hover {
   background-color: #c0392b;
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.input-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
 }
 
 /* ============================================================

@@ -149,8 +149,14 @@ const WidgetManager = {
             <select class="api-dropdown ${CSS_CLASSES.EDIT_ONLY}">
               ${optionsHtml}
             </select>
-            <input type="number" class="layer-input ${CSS_CLASSES.EDIT_ONLY}" placeholder="Layer" min="1" max="9999" value="1">
-            <input type="number" class="channel-input ${CSS_CLASSES.EDIT_ONLY}" placeholder="Channel" min="1" max="9999" value="1">
+            <div class="input-group ${CSS_CLASSES.EDIT_ONLY}">
+              <label for="layer-input">Layer:</label>
+              <input type="number" class="layer-input" id="layer-input" min="1" max="9999" value="1">
+            </div>
+            <div class="input-group ${CSS_CLASSES.EDIT_ONLY}">
+              <label for="channel-input">Channel:</label>
+              <input type="number" class="channel-input" id="channel-input" min="1" max="9999" value="1">
+            </div>
             <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="execute">Execute</button>
             <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="stop">Stop</button>
             <button class="${CSS_CLASSES.DELETE_BTN} ${CSS_CLASSES.EDIT_ONLY}" data-action="remove">Remove</button>
