@@ -5,17 +5,16 @@ import (
 	"fmt"
 	"reflect"
 
+	caspar "caspaw-cg/src/caspar"
 	"caspaw-cg/src/data"
-
-	casparcg "caspaw-cg/src/casparCG"
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	DataSourceManager *data.Config       `mapstructure:"data_source_manager"`
-	CasparCGClients   []*casparcg.Config `mapstructure:"casparcg_clients"`
+	DataSourceManager *data.Config     `mapstructure:"data_source_manager"`
+	CasparCGClients   []*caspar.Config `mapstructure:"casparcg_clients"`
 }
 
 type Defaulter interface {

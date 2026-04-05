@@ -3,7 +3,7 @@ module caspaw-cg
 go 1.26.0
 
 require (
-	github.com/overlayfox/casparcg-amcp-go v0.0.1
+	github.com/overlayfox/casparcg-amcp-go v0.2.0
 	github.com/rs/zerolog v1.34.0
 	github.com/spf13/viper v1.21.0
 	github.com/wailsapp/wails/v2 v2.11.0

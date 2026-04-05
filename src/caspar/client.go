@@ -10,6 +10,7 @@ import (
 	"caspaw-cg/src/types"
 
 	"github.com/overlayfox/casparcg-amcp-go"
+	casparTypes "github.com/overlayfox/casparcg-amcp-go/types"
 	"github.com/rs/zerolog"
 )
 
@@ -42,7 +43,7 @@ func NewClient(ctx context.Context, logger zerolog.Logger, cfg *Config, eventPro
 }
 
 func (c *client) Connect() error {
-	err := c.caspar.Connect()
+	err := c.caspar.Connect(c.ctx)
 	if err != nil {
 		return err
 	}
@@ -51,7 +52,7 @@ func (c *client) Connect() error {
 }
 
 func (c *client) GetTemplates() ([]string, error) {
-	templates, _, err := c.caspar.TLS("./")
+	templates, err := c.caspar.Query().TLS(ptr(""))
 	if err != nil {
 		return nil, err
 	}
@@ -61,17 +62,10 @@ func (c *client) GetTemplates() ([]string, error) {
 func (c *client) PushCGData(template string, layer, channel int, data map[string]any, sizing types.Sizing) error {
 	c.logger.Info().Msgf("Pushing data to template '%s' on layer %d, channel %d: %v with sizing: %+v", template, layer, channel, data, sizing)
 
-	_, resp, err := c.caspar.INFOTEMPLATE(template)
+	_, err := c.caspar.Query().Info().Template(template) // Using this to check if the template exists before trying to add data to it
 	if err != nil {
-		c.logger.Error().Err(err).Msgf("Failed to get template info for '%s'", template)
 		return err
 	}
-	if resp.Code != 200 && resp.Code != 202 {
-		err := fmt.Errorf("unexpected response code %d: %s", resp.Code, resp.Message)
-		c.logger.Error().Err(err).Msgf("Failed to get template info for '%s'", template)
-		return err
-	}
-
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		c.logger.Error().Err(err).Msgf("Failed to marshal data for template '%s'", template)
@@ -79,31 +73,16 @@ func (c *client) PushCGData(template string, layer, channel int, data map[string
 	}
 	jsonStr := string(jsonData)
 
-	resp, err = c.caspar.CG(layer, channel).ADD(1, template, true, &jsonStr)
-	if err != nil {
-		c.logger.Error().Err(err).Msgf("Failed to push data to template '%s' on layer %d, channel %d", template, layer, channel)
-		return err
+	params := casparTypes.CGAdd{
+		Template:   template,
+		PlayOnLoad: true,
+		Data:       ptr(jsonStr),
 	}
-	if resp.Code != 200 && resp.Code != 202 {
-		err := fmt.Errorf("unexpected response code %d: %s", resp.Code, resp.Message)
-		c.logger.Error().Err(err).Msgf("Failed to push data to template '%s' on layer %d, channel %d", template, layer, channel)
-		return err
-	}
-	return nil
+	return c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Add(params)
 }
 
 func (c *client) StopCGData(template string, layer, channel int) error {
-	resp, err := c.caspar.CG(layer, channel).STOP(1)
-	if err != nil {
-		c.logger.Error().Err(err).Msgf("Failed to stop template '%s' on layer %d, channel %d", template, layer, channel)
-		return err
-	}
-	if resp.Code != 200 && resp.Code != 202 {
-		err := fmt.Errorf("unexpected response code %d: %s", resp.Code, resp.Message)
-		c.logger.Error().Err(err).Msgf("Failed to stop template '%s' on layer %d, channel %d", template, layer, channel)
-		return err
-	}
-	return nil
+	return c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Stop()
 }
 
 func (c *client) keepAlive() {
@@ -116,7 +95,7 @@ func (c *client) keepAlive() {
 			select {
 			case <-ticker.C:
 				var event types.CasparCGKeepAlive
-				_, err := c.caspar.PING("")
+				_, err := c.caspar.Ping(nil)
 				if err != nil {
 					c.logger.Error().Err(err).Msg("Failed to ping CasparCG server")
 					event = types.CasparCGKeepAlive{
@@ -137,4 +116,8 @@ func (c *client) keepAlive() {
 			}
 		}
 	}()
+}
+
+func ptr[T any](t T) *T {
+	return &t
 }
