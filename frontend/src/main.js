@@ -1,3 +1,6 @@
+import 'gridstack/dist/gridstack.min.css';
+import { GridStack } from 'gridstack';
+
 import { initLiveEvents } from "./events";
 import { LayoutManager } from "./layout";
 
