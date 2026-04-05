@@ -1,5 +1,5 @@
-.PHONY: start
-start:
+.PHONY: dev
+dev:
 	wails dev -tags webkit2_41
 
 .PHONY: build
@@ -20,3 +20,17 @@ lint:
 .PHONY: lint-fix
 lint-fix:
 	golangci-lint run --fix
+
+.PHONY: caspar-server
+caspar-server:
+	@echo "==> Starting CasparCG Server..."
+	cd caspar && \
+	export QT_X11_NO_MITSHM=1 && \
+	export DISPLAY=:0 && \
+	casparcg-server-2.5 casparcg.config
+
+.PHONY: caspar-scanner
+caspar-scanner:
+	@echo "==> Starting CasparCG Scanner..."
+	cd caspar && \
+	casparcg-scanner casparcg.config

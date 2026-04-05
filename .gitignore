@@ -43,3 +43,10 @@ frontend/dist
 logs/
 layout.json
 
+# CasparCG
+caspar/cef-cache
+caspar/data
+caspar/log/
+caspar/media
+caspar/template
+caspar/_media
