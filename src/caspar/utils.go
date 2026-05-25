@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	casparTypes "github.com/overlayfox/casparcg-amcp-go/types"
+
 	"github.com/overlayfox/caspaw-cg/src/types"
 )
 
