@@ -61,7 +61,7 @@ func (c *client) GetTemplates() ([]string, error) {
 }
 
 func (c *client) PushCGData(template string, layer, channel int, data map[string]any, sizing types.Sizing) error {
-	c.logger.Info().Msgf("Pushing data to template '%s' on layer %d, channel %d: %v with sizing: %+v", template, layer, channel, data, sizing)
+	c.logger.Debug().Msgf("Pushing data to template '%s' on layer %d, channel %d: %v with sizing: %+v", template, layer, channel, data, sizing)
 
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -85,8 +85,8 @@ func (c *client) PushCGData(template string, layer, channel int, data map[string
 		if err != nil {
 			return err
 		}
-		err = c.caspar.Mixer().Channel(channel).Layer(layer).SetFill(sizing.GetCasparMixerParams(res))
-		if err != nil {
+		c.logger.Debug().Msgf("Setting mixer for template '%s' on layer %d, channel %d with sizing: %+v and resolution: %+v", template, layer, channel, sizing, res)
+		if err = c.caspar.Mixer().Channel(channel).Layer(layer).SetFill(sizing.GetCasparMixerParams(res)); err != nil {
 			return err
 		}
 	}
@@ -94,7 +94,19 @@ func (c *client) PushCGData(template string, layer, channel int, data map[string
 }
 
 func (c *client) StopCGData(template string, layer, channel int) error {
-	return c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Stop()
+	c.logger.Debug().Msgf("Stopping template '%s' on layer %d, channel %d", template, layer, channel)
+	if err := c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Stop(); err != nil {
+		return err
+	}
+
+	// TODO: Once the information is available via the CasparCG-AMCP-Go library, we should wait as long as the outplay time of the template is reporting
+	select {
+	case <-time.After(3000 * time.Millisecond):
+		c.logger.Debug().Msgf("Resetting mixer for template '%s' on layer %d, channel %d to default fill", template, layer, channel)
+		return c.caspar.Mixer().Channel(channel).Layer(layer).SetFill(casparTypes.MixerParamsFill{X: 0, Y: 0, XScale: 100, YScale: 100})
+	case <-c.ctx.Done():
+		return c.ctx.Err()
+	}
 }
 
 func (c *client) keepAlive() {
