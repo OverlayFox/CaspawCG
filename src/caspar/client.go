@@ -9,6 +9,7 @@ import (
 
 	"github.com/overlayfox/casparcg-amcp-go"
 	casparTypes "github.com/overlayfox/casparcg-amcp-go/types"
+
 	"github.com/rs/zerolog"
 
 	"github.com/overlayfox/caspaw-cg/src/types"
@@ -52,7 +53,7 @@ func (c *client) Connect() error {
 }
 
 func (c *client) GetTemplates() ([]string, error) {
-	templates, err := c.caspar.Query().TLS(ptr(""))
+	templates, err := c.caspar.Query().TLS(new(""))
 	if err != nil {
 		return nil, err
 	}
@@ -60,12 +61,8 @@ func (c *client) GetTemplates() ([]string, error) {
 }
 
 func (c *client) PushCGData(template string, layer, channel int, data map[string]any, sizing types.Sizing) error {
-	c.logger.Info().Msgf("Pushing data to template '%s' on layer %d, channel %d: %v with sizing: %+v", template, layer, channel, data, sizing)
+	c.logger.Debug().Msgf("Pushing data to template '%s' on layer %d, channel %d: %v with sizing: %+v", template, layer, channel, data, sizing)
 
-	_, err := c.caspar.Query().Info().Template(template) //nolint:staticcheck // Using this to check if the template exists before trying to add data to it
-	if err != nil {
-		return err
-	}
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		c.logger.Error().Err(err).Msgf("Failed to marshal data for template '%s'", template)
@@ -76,13 +73,40 @@ func (c *client) PushCGData(template string, layer, channel int, data map[string
 	params := casparTypes.CGAdd{
 		Template:   template,
 		PlayOnLoad: true,
-		Data:       ptr(jsonStr),
+		Data:       &jsonStr,
+	}
+
+	if !sizing.IsDefault() {
+		info, err := c.caspar.Query().Info().Generic()
+		if err != nil {
+			return err
+		}
+		res, err := VideoModeToResolution(info[0].VideoMode)
+		if err != nil {
+			return err
+		}
+		c.logger.Debug().Msgf("Setting mixer for template '%s' on layer %d, channel %d with sizing: %+v and resolution: %+v", template, layer, channel, sizing, res)
+		if err = c.caspar.Mixer().Channel(channel).Layer(layer).SetFill(sizing.GetCasparMixerParams(res)); err != nil {
+			return err
+		}
 	}
 	return c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Add(params)
 }
 
 func (c *client) StopCGData(template string, layer, channel int) error {
-	return c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Stop()
+	c.logger.Debug().Msgf("Stopping template '%s' on layer %d, channel %d", template, layer, channel)
+	if err := c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Stop(); err != nil {
+		return err
+	}
+
+	// TODO: Once the information is available via the CasparCG-AMCP-Go library, we should wait as long as the outplay time of the template is reporting
+	select {
+	case <-time.After(3000 * time.Millisecond):
+		c.logger.Debug().Msgf("Resetting mixer for template '%s' on layer %d, channel %d to default fill", template, layer, channel)
+		return c.caspar.Mixer().Channel(channel).Layer(layer).SetFill(casparTypes.MixerParamsFill{X: 0, Y: 0, XScale: 100, YScale: 100})
+	case <-c.ctx.Done():
+		return c.ctx.Err()
+	}
 }
 
 func (c *client) keepAlive() {
@@ -116,8 +140,4 @@ func (c *client) keepAlive() {
 			}
 		}
 	}()
-}
-
-func ptr[T any](t T) *T {
-	return &t
 }
