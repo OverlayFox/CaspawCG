@@ -5,19 +5,18 @@ import (
 	"embed"
 	"os"
 
-	"caspaw-cg/src/config"
-	"caspaw-cg/src/data"
-	"caspaw-cg/src/data/google/sheets"
-	"caspaw-cg/src/events"
-	"caspaw-cg/src/types"
-	"caspaw-cg/src/ui"
-
-	casparcg "caspaw-cg/src/casparCG"
-
 	"github.com/rs/zerolog"
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+
+	casparcg "github.com/overlayfox/caspaw-cg/src/caspar"
+	"github.com/overlayfox/caspaw-cg/src/config"
+	"github.com/overlayfox/caspaw-cg/src/data"
+	"github.com/overlayfox/caspaw-cg/src/data/google/sheets"
+	"github.com/overlayfox/caspaw-cg/src/events"
+	"github.com/overlayfox/caspaw-cg/src/types"
+	"github.com/overlayfox/caspaw-cg/src/ui"
 )
 
 //go:embed all:frontend/dist
@@ -46,7 +45,7 @@ func main() {
 	}
 
 	// init casparCG clients
-	var casparCGClients []types.CasparCGClient
+	casparCGClients := make([]types.CasparCGClient, 0, len(cfg.CasparCGClients))
 	for _, clientCfg := range cfg.CasparCGClients {
 		client := casparcg.NewClient(ctx, logger, clientCfg, eventsProcessor)
 		casparCGClients = append(casparCGClients, client)

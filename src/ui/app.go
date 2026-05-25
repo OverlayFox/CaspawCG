@@ -4,10 +4,10 @@ import (
 	"context"
 	"sync"
 
-	"caspaw-cg/src/types"
-
 	"github.com/rs/zerolog"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+
+	"github.com/overlayfox/caspaw-cg/src/types"
 )
 
 // App struct

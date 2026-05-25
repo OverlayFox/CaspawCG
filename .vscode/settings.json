@@ -1,24 +1,25 @@
 {
   "go.lintTool": "golangci-lint",
   "go.lintOnSave": "package",
-  "go.lintFlags": ["--config", ".golangci.yaml"],
-
-  "go.toolsManagement.autoUpdate": true,
-  "go.useLanguageServer": true,
-
+  "go.lintFlags": ["--config=${workspaceFolder}/.golangci.yaml"],
   "[go]": {
-    "editor.tabSize": 4,
     "editor.formatOnSave": true,
-    "editor.insertSpaces": false,
-    "editor.codeActionsOnSave": {
-      "source.organizeImports": "explicit"
-    }
+    "editor.defaultFormatter": "golang.go"
   },
-
+  "go.formatTool": "default",
+  "go.useLanguageServer": true,
   "gopls": {
-    "ui.completion.usePlaceholders": false,
-    "ui.diagnostic.staticcheck": false,
     "formatting.gofumpt": true,
-    "formatting.local": "caspaw-cg"
-  }
+    "formatting.local": "gitlab.com/clipmyhorsetv/streaming/circe",
+    "buildFlags": ["-tags=integration"]
+  },
+  "go.coverageDecorator": {
+    "type": "gutter",
+    "coveredHighlightColor": "rgba(64,128,64,0.5)",
+    "uncoveredHighlightColor": "rgba(128,64,64,0.25)",
+    "coveredGutterStyle": "blockgreen",
+    "uncoveredGutterStyle": "blockred"
+  },
+  "go.coverageOptions": "showCoveredCodeOnly",
+  "go.coverOnSave": false
 }

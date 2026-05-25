@@ -7,11 +7,11 @@ import (
 	"sync"
 	"time"
 
-	"caspaw-cg/src/types"
-
 	"github.com/overlayfox/casparcg-amcp-go"
 	casparTypes "github.com/overlayfox/casparcg-amcp-go/types"
 	"github.com/rs/zerolog"
+
+	"github.com/overlayfox/caspaw-cg/src/types"
 )
 
 type client struct {
@@ -62,7 +62,7 @@ func (c *client) GetTemplates() ([]string, error) {
 func (c *client) PushCGData(template string, layer, channel int, data map[string]any, sizing types.Sizing) error {
 	c.logger.Info().Msgf("Pushing data to template '%s' on layer %d, channel %d: %v with sizing: %+v", template, layer, channel, data, sizing)
 
-	_, err := c.caspar.Query().Info().Template(template) // Using this to check if the template exists before trying to add data to it
+	_, err := c.caspar.Query().Info().Template(template) //nolint:staticcheck // Using this to check if the template exists before trying to add data to it
 	if err != nil {
 		return err
 	}

@@ -1,8 +1,8 @@
 package ui
 
 import (
-	"caspaw-cg/src/data"
-	"caspaw-cg/src/types"
+	"github.com/overlayfox/caspaw-cg/src/data"
+	"github.com/overlayfox/caspaw-cg/src/types"
 )
 
 // UIService bridges the UI with the GoLang system

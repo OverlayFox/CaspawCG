@@ -10,9 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"caspaw-cg/src/data"
-
-	d "caspaw-cg/src/data"
+	d "github.com/overlayfox/caspaw-cg/src/data"
 
 	"github.com/rs/zerolog"
 	"google.golang.org/api/option"
@@ -22,7 +20,7 @@ import (
 type client struct {
 	logger zerolog.Logger
 
-	cfg data.GoogleSheetDataSource
+	cfg d.GoogleSheetDataSource
 
 	dataFields []*d.Data
 	mtx        sync.RWMutex
@@ -39,7 +37,7 @@ type Dependencies struct {
 	CredentialsFilePath string
 }
 
-func NewClient(ctx context.Context, logger zerolog.Logger, cfg data.GoogleSheetDataSource) d.DataSource {
+func NewClient(ctx context.Context, logger zerolog.Logger, cfg d.GoogleSheetDataSource) d.DataSource {
 	absPath, err := filepath.Abs(cfg.CredentialsFilePath)
 	if err != nil {
 		logger.Error().Err(err).Msg("invalid credentials file path")

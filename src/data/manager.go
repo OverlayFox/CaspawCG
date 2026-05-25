@@ -62,8 +62,8 @@ func (m *manager) GetDataSource(name string) (DataSource, error) {
 }
 
 func (m *manager) GetDataSourceNames() []string {
-	var names []string
 	m.mtx.RLock()
+	names := make([]string, 0, len(m.dataSources))
 	for _, ds := range m.dataSources {
 		names = append(names, ds.GetName())
 	}

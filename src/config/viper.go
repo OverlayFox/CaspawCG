@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"reflect"
 
-	caspar "caspaw-cg/src/caspar"
-	"caspaw-cg/src/data"
+	casparcg "github.com/overlayfox/caspaw-cg/src/caspar"
+	"github.com/overlayfox/caspaw-cg/src/data"
 
 	"github.com/rs/zerolog"
 	"github.com/spf13/viper"
 )
 
 type Config struct {
-	DataSourceManager *data.Config     `mapstructure:"data_source_manager"`
-	CasparCGClients   []*caspar.Config `mapstructure:"casparcg_clients"`
+	DataSourceManager *data.Config       `mapstructure:"data_source_manager"`
+	CasparCGClients   []*casparcg.Config `mapstructure:"casparcg_clients"`
 }
 
 type Defaulter interface {
@@ -32,7 +32,7 @@ func applyDefaults(target any) {
 	}
 	v := reflect.ValueOf(target).Elem()
 	if v.Kind() == reflect.Struct {
-		for i := 0; i < v.NumField(); i++ {
+		for i := range v.NumField() {
 			field := v.Field(i)
 			if field.CanAddr() {
 				if d, ok := field.Addr().Interface().(Defaulter); ok {
@@ -64,7 +64,7 @@ func applyValidation(target any) error {
 
 	switch v.Kind() {
 	case reflect.Struct:
-		for i := 0; i < v.NumField(); i++ {
+		for i := range v.NumField() {
 			field := v.Field(i)
 			if err := applyValidation(field.Addr().Interface()); err != nil {
 				fieldName := v.Type().Field(i).Name
@@ -73,7 +73,7 @@ func applyValidation(target any) error {
 		}
 
 	case reflect.Slice, reflect.Array:
-		for i := 0; i < v.Len(); i++ {
+		for i := range v.Len() {
 			element := v.Index(i)
 			if element.Kind() == reflect.Struct {
 				if err := applyValidation(element.Addr().Interface()); err != nil {

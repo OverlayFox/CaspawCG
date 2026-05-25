@@ -1,4 +1,4 @@
-module caspaw-cg
+module github.com/overlayfox/caspaw-cg
 
 go 1.26.0
 
