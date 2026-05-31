@@ -5,6 +5,14 @@
  * don't need to wrap individual calls in try/catch.
  */
 export const APIService = {
+  async clearAll() {
+    try {
+      await window.go.ui.UIService.ClearAll();
+    } catch (error) {
+      console.error("Failed to clear all data:", error);
+    }
+  },
+
   async getTemplateOptions() {
     try {
       return await window.go.ui.UIService.GetCasparCGTemplates();

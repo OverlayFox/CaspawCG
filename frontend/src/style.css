@@ -120,6 +120,14 @@ button#toggle-mode-btn.mode-live:hover {
   background-color: #b91c1c;
 }
 
+button#clear-all-btn {
+  background-color: var(--accent-red);
+}
+
+button#clear-all-btn:hover {
+  background-color: #b91c1c;
+}
+
 /* ============================================================
    GROUP CONTAINERS
    ============================================================ */
@@ -610,6 +618,64 @@ body:not(.is-live) .live-only {
     font-size: 11px;
     padding: 0 var(--spacing-md);
   }
+}
+
+/* ============================================================
+   CONFIRM MODAL
+   ============================================================ */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal-overlay[hidden] {
+  display: none;
+}
+
+.modal-dialog {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: var(--spacing-xl);
+  min-width: 320px;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+}
+
+.modal-message {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+}
+
+.modal-actions button {
+  min-width: 80px;
+}
+
+.modal-actions #confirm-modal-cancel {
+  background-color: var(--bg-field-input);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+}
+
+.modal-actions #confirm-modal-cancel:hover {
+  background-color: #333338;
+  border-color: var(--accent-blue);
 }
 
 /* ============================================================

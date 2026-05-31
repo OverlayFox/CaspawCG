@@ -5,6 +5,8 @@ import {ui} from '../models';
 import {types} from '../models';
 import {time} from '../models';
 
+export function ClearAll():Promise<void>;
+
 export function GetCasparCGTemplates():Promise<Array<string>>;
 
 export function GetDataSourceValue(arg1:string,arg2:data.Location):Promise<data.Data>;

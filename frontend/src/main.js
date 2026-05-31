@@ -1,14 +1,38 @@
 import { GridStack } from "gridstack";
 import "gridstack/dist/gridstack.min.css";
 
-import { AppState } from "./state.js";
-import { DOMUtils } from "./dom-utils.js";
+import { APIService } from "./api.js";
 import { SELECTORS } from "./constants.js";
-import { LayoutManager } from "./layout.js";
-import { WidgetManager } from "./widget-manager.js";
-import { GroupManager } from "./group-manager.js";
-import { ModeManager } from "./mode-manager.js";
+import { DOMUtils } from "./dom-utils.js";
 import { initLiveEvents } from "./events.js";
+import { GroupManager } from "./group-manager.js";
+import { LayoutManager } from "./layout.js";
+import { ModeManager } from "./mode-manager.js";
+import { AppState } from "./state.js";
+import { WidgetManager } from "./widget-manager.js";
+
+function showConfirm() {
+  return new Promise((resolve) => {
+    const modal = document.getElementById("confirm-modal");
+    const okBtn = document.getElementById("confirm-modal-ok");
+    const cancelBtn = document.getElementById("confirm-modal-cancel");
+
+    const cleanup = (result) => {
+      modal.hidden = true;
+      okBtn.removeEventListener("click", onOk);
+      cancelBtn.removeEventListener("click", onCancel);
+      resolve(result);
+    };
+
+    const onOk = () => cleanup(true);
+    const onCancel = () => cleanup(false);
+
+    okBtn.addEventListener("click", onOk);
+    cancelBtn.addEventListener("click", onCancel);
+    modal.hidden = false;
+    okBtn.focus();
+  });
+}
 
 async function initializeApp() {
   AppState.grid = GridStack.init({
@@ -43,6 +67,15 @@ async function initializeApp() {
   DOMUtils.querySelector(SELECTORS.TOGGLE_MODE_BTN)?.addEventListener(
     "click",
     () => ModeManager.toggleMode(),
+  );
+
+  DOMUtils.querySelector(SELECTORS.CLEAR_ALL_BTN)?.addEventListener(
+    "click",
+    async () => {
+      if (await showConfirm()) {
+        APIService.clearAll();
+      }
+    },
   );
 }
 

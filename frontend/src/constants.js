@@ -15,6 +15,7 @@ export const SELECTORS = {
   TOGGLE_MODE_BTN: "#toggle-mode-btn",
   ADD_WIDGET_BTN: "#add-widget-btn",
   ADD_GROUP_BTN: "#add-group-btn",
+  CLEAR_ALL_BTN: "#clear-all-btn",
   FIELD_KEY: ".f-key",
   FIELD_TYPE: ".f-type",
   FIELD_ID: ".f-id",
