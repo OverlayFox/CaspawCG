@@ -4,6 +4,18 @@ A GoLang + Wails application designed to integrate the CasparCG server with dyna
 
 CaspawCG enables real-time graphics control for live broadcasting by connecting CasparCG Server with external data sources like Google Sheets, providing a UI inspired by CharacterWorks.
 
+- [CaspawCG](#caspawcg)
+  - [Features](#features)
+- [For Developers](#for-developers)
+  - [Prerequisites](#prerequisites)
+  - [Development](#development)
+  - [Configuration](#configuration)
+  - [How to get Google `credentials.json`?](#how-to-get-google-credentialsjson)
+  - [Contributing](#contributing)
+  - [License](#license)
+  - [Acknowledgments](#acknowledgments)
+  - [Support](#support)
+
 ## Features
 
 - 🎨 **Live Graphics Control** - Real-time control of CasparCG graphics and templates
@@ -30,7 +42,7 @@ CaspawCG enables real-time graphics control for live broadcasting by connecting 
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/CaspawCG.git
+git clone https://github.com/overlayfox/CaspawCG.git
 cd CaspawCG
 ```
 
@@ -47,6 +59,19 @@ make install-dev
 cd frontend
 npm install
 cd ..
+
+# Install CasparCG Server on Ubuntu24.04
+sudo apt update
+
+wget https://github.com/CasparCG/server/releases/download/v2.5.0-stable/casparcg-cef-142_142.0.17.g60aac24+2-noble1_amd64.deb
+sudo apt install ./casparcg-cef-142_142.0.17.g60aac24+2-noble1_amd64.deb
+
+wget https://github.com/CasparCG/server/releases/download/v2.5.0-stable/casparcg-server-2.5_2.5.0.stable-noble1_amd64.deb
+sudo apt install ./casparcg-server-2.5_2.5.0.stable-noble1_amd64.deb
+
+# Install CasparCG Media Server on Ubuntu 24.04
+wget https://github.com/CasparCG/media-scanner/releases/download/v1.4.0/casparcg-scanner_1.4.0-ubuntu1_amd64.deb
+sudo apt install ./casparcg-scanner_1.4.0-ubuntu1_amd64.deb
 ```
 
 3. Start CasparCG
@@ -85,6 +110,20 @@ casparcg_client:
   - host: "localhost"
     port: 5250
 ```
+
+## How to get Google `credentials.json`?
+
+1. Go to [Googles Cloud Console](https://console.cloud.google.com).
+2. Create a new project that fits your requirements.
+3. Go to [Google Sheet API](https://console.cloud.google.com/marketplace/product/google/sheets.googleapis.com).
+4. Enable the Google Sheets API -> then click `Manage`.
+5. Now select `Credentials` on the left hand side.
+6. Click `Create credentials` -> select `Service Account`
+7. Fill in the required fields and click `Create`, simply skip the permissions step
+8. Now download the JSON and rename it to `credentials.json`
+9. Drop it into the project and link to it in the `config.yaml` under `data_source_manager:` -> `google_sheet_data_sources:` --> `credentials_file_path:`
+10. Now invite the E-Mail address that is listed in `credentials.json` -> `client_email:` to your Google Sheet and give it viewing access
+11. Finally copy the google sheets `spreadsheet_id`, which is located in the URL of your google sheets: `https://docs.google.com/spreadsheets/d/THIS_HERE_IS_YOUR_SPREAD_SHEET_ID/`
 
 ## Contributing
 

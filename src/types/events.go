@@ -25,6 +25,19 @@ func (e CasparCGKeepAlive) GetData() any {
 	return e
 }
 
+type DataSourceValueUpdate struct {
+	LocationKey string
+	Value       any
+}
+
+func (e DataSourceValueUpdate) GetIdentifier() EventIdentifier {
+	return EventIdentifier(e.LocationKey)
+}
+
+func (e DataSourceValueUpdate) GetData() any {
+	return e.Value
+}
+
 type Event interface {
 	GetIdentifier() EventIdentifier
 	GetData() any

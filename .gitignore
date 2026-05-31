@@ -51,3 +51,6 @@ caspar/log/
 caspar/media
 caspar/template
 caspar/_media
+
+# Google Workspace
+credentials.json

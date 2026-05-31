@@ -11,8 +11,10 @@ import (
 	"time"
 
 	d "github.com/overlayfox/caspaw-cg/src/data"
+	"github.com/overlayfox/caspaw-cg/src/types"
 
 	"github.com/rs/zerolog"
+	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	gs "google.golang.org/api/sheets/v4"
 )
@@ -20,7 +22,8 @@ import (
 type client struct {
 	logger zerolog.Logger
 
-	cfg d.GoogleSheetDataSource
+	cfg            d.GoogleSheetDataSource
+	eventProcessor types.EventProcessor
 
 	dataFields []*d.Data
 	mtx        sync.RWMutex
@@ -37,18 +40,25 @@ type Dependencies struct {
 	CredentialsFilePath string
 }
 
-func NewClient(ctx context.Context, logger zerolog.Logger, cfg d.GoogleSheetDataSource) d.DataSource {
+func NewClient(ctx context.Context, logger zerolog.Logger, cfg d.GoogleSheetDataSource, eventProcessor types.EventProcessor) d.DataSource {
 	absPath, err := filepath.Abs(cfg.CredentialsFilePath)
 	if err != nil {
 		logger.Error().Err(err).Msg("invalid credentials file path")
 		return nil
 	}
-	if _, err := os.Stat(absPath); err != nil {
+	jsonKey, err := os.ReadFile(absPath)
+	if err != nil {
 		logger.Error().Err(err).Msg("credentials file does not exist or is inaccessible")
 		return nil
 	}
 
-	service, err := gs.NewService(ctx, option.WithAuthCredentialsFile(option.ServiceAccount, cfg.CredentialsFilePath))
+	jwtConfig, err := google.JWTConfigFromJSON(jsonKey, gs.SpreadsheetsScope)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to parse service account credentials")
+		return nil
+	}
+
+	service, err := gs.NewService(ctx, option.WithTokenSource(jwtConfig.TokenSource(ctx)))
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to create Google Sheets service")
 		return nil
@@ -56,8 +66,9 @@ func NewClient(ctx context.Context, logger zerolog.Logger, cfg d.GoogleSheetData
 
 	ctx, cancel := context.WithCancel(ctx)
 	client := &client{
-		logger: logger.With().Str("component", fmt.Sprintf("google-sheets-client-%s", cfg.SpreadSheetID)).Logger(),
-		cfg:    cfg,
+		logger:         logger.With().Str("component", fmt.Sprintf("google-sheets-client-%s", cfg.SpreadSheetID)).Logger(),
+		cfg:            cfg,
+		eventProcessor: eventProcessor,
 
 		dataFields: make([]*d.Data, 0),
 
@@ -206,15 +217,28 @@ func (c *client) updateDataFields() {
 				}
 
 				c.mtx.Lock()
+				var changed []types.DataSourceValueUpdate
 				for _, data := range c.dataFields {
 					for _, updatedData := range result {
 						if data.Key == updatedData.Key {
-							data.Value = updatedData.Value
+							if fmt.Sprintf("%v", data.Value) != fmt.Sprintf("%v", updatedData.Value) {
+								data.Value = updatedData.Value
+								changed = append(changed, types.DataSourceValueUpdate{
+									LocationKey: data.Key,
+									Value:       updatedData.Value,
+								})
+							}
 							break
 						}
 					}
 				}
 				c.mtx.Unlock()
+
+				for _, ev := range changed {
+					if err := c.eventProcessor.Push(ev); err != nil {
+						c.logger.Error().Err(err).Str("key", ev.LocationKey).Msg("failed to emit datasource update event")
+					}
+				}
 			}
 		}
 	}()

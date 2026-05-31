@@ -1,3 +1,38 @@
+export namespace data {
+	
+	export class Data {
+	    Key: string;
+	    Type: string;
+	    Value: any;
+	
+	    static createFrom(source: any = {}) {
+	        return new Data(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.Key = source["Key"];
+	        this.Type = source["Type"];
+	        this.Value = source["Value"];
+	    }
+	}
+	export class Location {
+	    Key: string;
+	    Type: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Location(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.Key = source["Key"];
+	        this.Type = source["Type"];
+	    }
+	}
+
+}
+
 export namespace types {
 	
 	export class Sizing {

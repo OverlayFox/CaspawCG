@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- cleaned up JavaScript front-end
+
 ### Added
 
+- #11 - properly added datasources into the front end and integrated google sheets as a datasource
 - #14 - added mixer commands to the UI and backend

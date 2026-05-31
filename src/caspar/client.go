@@ -101,9 +101,9 @@ func (c *client) StopCGData(template string, layer, channel int) error {
 
 	// TODO: Once the information is available via the CasparCG-AMCP-Go library, we should wait as long as the outplay time of the template is reporting
 	select {
-	case <-time.After(3000 * time.Millisecond):
+	case <-time.After(6000 * time.Millisecond):
 		c.logger.Debug().Msgf("Resetting mixer for template '%s' on layer %d, channel %d to default fill", template, layer, channel)
-		return c.caspar.Mixer().Channel(channel).Layer(layer).SetFill(casparTypes.MixerParamsFill{X: 0, Y: 0, XScale: 100, YScale: 100})
+		return c.caspar.Mixer().Channel(channel).Layer(layer).SetFill(casparTypes.MixerParamsFill{X: 0, Y: 0, XScale: 1, YScale: 1})
 	case <-c.ctx.Done():
 		return c.ctx.Err()
 	}

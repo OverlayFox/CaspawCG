@@ -6,12 +6,20 @@ export function GetCasparCGTemplates() {
   return window['go']['ui']['UIService']['GetCasparCGTemplates']();
 }
 
+export function GetDataSourceValue(arg1, arg2) {
+  return window['go']['ui']['UIService']['GetDataSourceValue'](arg1, arg2);
+}
+
 export function GetDataSources() {
   return window['go']['ui']['UIService']['GetDataSources']();
 }
 
 export function LoadLayout() {
   return window['go']['ui']['UIService']['LoadLayout']();
+}
+
+export function PrimeDataSource(arg1, arg2) {
+  return window['go']['ui']['UIService']['PrimeDataSource'](arg1, arg2);
 }
 
 export function PushCasparCGData(arg1, arg2, arg3, arg4, arg5) {
