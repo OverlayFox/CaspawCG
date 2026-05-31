@@ -79,9 +79,25 @@ func (u *UIService) PrimeDataSource(name string, locations []data.Location) erro
 	}
 
 	u.app.logger.Info().Msgf("Priming datasource '%s' with locations: %v", name, locations)
-	if err := ds.Prime(locations); err != nil {
+	if err := ds.Prime(locations); err != nil { // TODO: add removal of primed data when a new PrimDataSource is called
 		u.app.logger.Error().Err(err).Msgf("Failed to prime datasource '%s'", name)
 		return err
 	}
 	return nil
+}
+
+func (u *UIService) GetDataSourceValue(name string, location data.Location) (data.Data, error) {
+	ds, err := u.datasourceManager.GetDataSource(name)
+	if err != nil {
+		u.app.logger.Error().Err(err).Msgf("Failed to get datasource '%s'", name)
+		return data.Data{}, err
+	}
+
+	u.app.logger.Info().Msgf("Getting value from datasource '%s' for location: %v", name, location)
+	data, err := ds.Get(location.Key)
+	if err != nil {
+		u.app.logger.Error().Err(err).Msgf("Failed to get value from datasource '%s' for location: %v", name, location)
+		return data, err
+	}
+	return data, nil
 }

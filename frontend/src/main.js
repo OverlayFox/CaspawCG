@@ -106,7 +106,11 @@ const APIService = {
   },
 
   async fetchLiveData(identifier, type, source) {
-    return await window.go.ui.UIService.FetchData(identifier, type, source);
+    const result = await window.go.ui.UIService.GetDataSourceValue(source, {
+      Key: identifier,
+      Type: type,
+    });
+    return result.Value;
   },
 };
 

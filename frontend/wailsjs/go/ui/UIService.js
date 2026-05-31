@@ -6,6 +6,10 @@ export function GetCasparCGTemplates() {
   return window['go']['ui']['UIService']['GetCasparCGTemplates']();
 }
 
+export function GetDataSourceValue(arg1, arg2) {
+  return window['go']['ui']['UIService']['GetDataSourceValue'](arg1, arg2);
+}
+
 export function GetDataSources() {
   return window['go']['ui']['UIService']['GetDataSources']();
 }
