@@ -133,7 +133,9 @@ button#toggle-mode-btn.mode-live:hover {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
-  box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.2), var(--shadow-md);
+  box-shadow:
+    0 0 0 1px rgba(124, 58, 237, 0.2),
+    var(--shadow-md);
 }
 
 .group-header {
@@ -562,6 +564,14 @@ body:not(.is-live) .live-only {
 }
 
 .action-btn[data-action="stop"]:hover {
+  background-color: #c0392b;
+}
+
+.action-btn[data-action="stop-group"] {
+  background-color: #e74c3c;
+}
+
+.action-btn[data-action="stop-group"]:hover {
   background-color: #c0392b;
 }
 
