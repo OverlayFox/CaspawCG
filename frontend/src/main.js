@@ -352,7 +352,7 @@ const WidgetManager = {
     );
   },
 
-  startWidgetAction(widgetCard) {
+  async startWidgetAction(widgetCard) {
     const dropdown = DOMUtils.querySelector(".api-dropdown", widgetCard);
     const layerInput = DOMUtils.querySelector(".layer-input", widgetCard);
     const channelInput = DOMUtils.querySelector(".channel-input", widgetCard);
@@ -382,26 +382,44 @@ const WidgetManager = {
     );
 
     const data = {};
+    const fetchPromises = [];
+
     fieldRows.forEach((row) => {
       const keyInput = DOMUtils.querySelector(SELECTORS.FIELD_KEY, row);
       const typeSelect = DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row);
       const idInput = DOMUtils.querySelector(SELECTORS.FIELD_ID, row);
+      const sourceSelect = DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row);
 
       if (!keyInput || !keyInput.value) return; // Skip if no key
 
       const key = keyInput.value;
       const type = typeSelect?.value || FIELD_TYPES.STRING;
-      let value = idInput?.value || "";
+      const identifier = idInput?.value || "";
+      const source = sourceSelect?.value || "";
 
-      // Convert value based on type
-      if (type === FIELD_TYPES.INT) {
-        value = parseInt(value, 10) || 0;
-      } else if (type === FIELD_TYPES.FLOAT) {
-        value = parseFloat(value) || 0.0;
+      if (identifier && source) {
+        fetchPromises.push(
+          APIService.fetchLiveData(identifier, type, source)
+            .then((value) => {
+              data[key] = value;
+            })
+            .catch((err) => {
+              console.error(`Failed to fetch live data for key "${key}":`, err);
+              data[key] = identifier;
+            }),
+        );
+      } else {
+        let value = identifier;
+        if (type === FIELD_TYPES.INT) {
+          value = parseInt(value, 10) || 0;
+        } else if (type === FIELD_TYPES.FLOAT) {
+          value = parseFloat(value) || 0.0;
+        }
+        data[key] = value;
       }
-
-      data[key] = value;
     });
+
+    await Promise.all(fetchPromises);
 
     console.log(
       `Starting template on layer ${layer}, channel ${channel}, pos: (${posX}, ${posY}), size: (${sizeX}%, ${sizeY}%) with data:`,

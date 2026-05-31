@@ -39,7 +39,7 @@ func main() {
 	dataSourceManager := data.NewManager(cfg.DataSourceManager)
 	if cfg.DataSourceManager != nil && cfg.DataSourceManager.GoogleSheetDataSource != nil {
 		for _, dataSource := range cfg.DataSourceManager.GoogleSheetDataSource {
-			client := sheets.NewClient(ctx, logger, dataSource)
+			client := sheets.NewClient(ctx, logger, dataSource, eventsProcessor)
 			dataSourceManager.AddDataSource(client)
 		}
 	}

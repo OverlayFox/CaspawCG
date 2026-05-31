@@ -11,6 +11,7 @@ import (
 	"time"
 
 	d "github.com/overlayfox/caspaw-cg/src/data"
+	"github.com/overlayfox/caspaw-cg/src/types"
 
 	"github.com/rs/zerolog"
 	"golang.org/x/oauth2/google"
@@ -21,7 +22,8 @@ import (
 type client struct {
 	logger zerolog.Logger
 
-	cfg d.GoogleSheetDataSource
+	cfg            d.GoogleSheetDataSource
+	eventProcessor types.EventProcessor
 
 	dataFields []*d.Data
 	mtx        sync.RWMutex
@@ -38,7 +40,7 @@ type Dependencies struct {
 	CredentialsFilePath string
 }
 
-func NewClient(ctx context.Context, logger zerolog.Logger, cfg d.GoogleSheetDataSource) d.DataSource {
+func NewClient(ctx context.Context, logger zerolog.Logger, cfg d.GoogleSheetDataSource, eventProcessor types.EventProcessor) d.DataSource {
 	absPath, err := filepath.Abs(cfg.CredentialsFilePath)
 	if err != nil {
 		logger.Error().Err(err).Msg("invalid credentials file path")
@@ -64,8 +66,9 @@ func NewClient(ctx context.Context, logger zerolog.Logger, cfg d.GoogleSheetData
 
 	ctx, cancel := context.WithCancel(ctx)
 	client := &client{
-		logger: logger.With().Str("component", fmt.Sprintf("google-sheets-client-%s", cfg.SpreadSheetID)).Logger(),
-		cfg:    cfg,
+		logger:         logger.With().Str("component", fmt.Sprintf("google-sheets-client-%s", cfg.SpreadSheetID)).Logger(),
+		cfg:            cfg,
+		eventProcessor: eventProcessor,
 
 		dataFields: make([]*d.Data, 0),
 
@@ -214,15 +217,28 @@ func (c *client) updateDataFields() {
 				}
 
 				c.mtx.Lock()
+				var changed []types.DataSourceValueUpdate
 				for _, data := range c.dataFields {
 					for _, updatedData := range result {
 						if data.Key == updatedData.Key {
-							data.Value = updatedData.Value
+							if fmt.Sprintf("%v", data.Value) != fmt.Sprintf("%v", updatedData.Value) {
+								data.Value = updatedData.Value
+								changed = append(changed, types.DataSourceValueUpdate{
+									LocationKey: data.Key,
+									Value:       updatedData.Value,
+								})
+							}
 							break
 						}
 					}
 				}
 				c.mtx.Unlock()
+
+				for _, ev := range changed {
+					if err := c.eventProcessor.Push(ev); err != nil {
+						c.logger.Error().Err(err).Str("key", ev.LocationKey).Msg("failed to emit datasource update event")
+					}
+				}
 			}
 		}
 	}()
