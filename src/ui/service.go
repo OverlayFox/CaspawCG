@@ -57,10 +57,13 @@ func (u *UIService) GetCasparCGTemplates() []string {
 
 func (u *UIService) PushCasparCGData(template string, layer, channel int, data map[string]any, sizing types.Sizing, delay time.Duration) {
 	for _, client := range u.casparCGClients {
-		err := client.PushCGData(template, layer, channel, data, sizing, delay)
-		if err != nil {
-			u.app.logger.Error().Err(err).Msgf("Failed to push CG data to template '%s' on layer %d, channel %d", template, layer, channel)
-		}
+		// TODO: investigate if UIService can have a ctx and wait group setup so that we don't leak go routines here.
+		go func(client types.CasparCGClient) {
+			err := client.PushCGData(template, layer, channel, data, sizing, delay)
+			if err != nil {
+				u.app.logger.Error().Err(err).Msgf("Failed to push CG data to template '%s' on layer %d, channel %d", template, layer, channel)
+			}
+		}(client)
 	}
 }
 
@@ -122,8 +125,8 @@ func (u *UIService) PushCasparCGDataGroup(dataGroups []CGDataGroup) {
 	}
 }
 
-// func (u *UIService) StopCasparCGDataGroup(dataGroups []CGDataGroup) {
-// 	for _, data := range dataGroups {
-// 		u.StopCasparCGData(data.Template, data.Layer, data.Channel, data.Delay)
-// 	}
-// }
+func (u *UIService) StopCasparCGDataGroup(dataGroups []CGDataGroup) {
+	for _, data := range dataGroups {
+		u.StopCasparCGData(data.Template, data.Layer, data.Channel, data.Delay)
+	}
+}

@@ -133,23 +133,16 @@ export const GroupManager = {
       ),
     ];
 
-    for (const card of widgetCards) {
-      const template = DOMUtils.querySelector(".api-dropdown", card)?.value;
-      const layer = parseInt(
-        DOMUtils.querySelector(".layer-input", card)?.value,
-        10,
-      );
-      const channel = parseInt(
-        DOMUtils.querySelector(".channel-input", card)?.value,
-        10,
-      );
+    const dataGroups = (
+      await Promise.all(
+        widgetCards.map((card) => WidgetManager.collectWidgetData(card)),
+      )
+    ).filter(Boolean);
 
-      if (template && !isNaN(layer) && !isNaN(channel)) {
-        const delayVal = DOMUtils.querySelector(".delay-input", card)?.value;
-        const delay = delayVal ? parseInt(delayVal, 10) * 1_000_000 : 0;
-        await APIService.stopCGData(template, layer, channel, delay);
-      }
-    }
+    if (dataGroups.length === 0) return;
+
+    console.log(`Stopping group with ${dataGroups.length} elements`);
+    await APIService.stopCGDataGroup(dataGroups);
   },
 
   serializeGroups() {

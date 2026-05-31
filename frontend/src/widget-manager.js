@@ -226,8 +226,6 @@ export const WidgetManager = {
     const delay = delayVal ? parseInt(delayVal, 10) * 1_000_000 : 0;
 
     const data = {};
-    const fetchPromises = [];
-
     DOMUtils.querySelectorAll(`.${CSS_CLASSES.FIELD_ROW}`, widgetCard).forEach(
       (row) => {
         const keyInput = DOMUtils.querySelector(SELECTORS.FIELD_KEY, row);
@@ -237,35 +235,20 @@ export const WidgetManager = {
         const type =
           DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row)?.value ||
           FIELD_TYPES.STRING;
+        const liveDisplay = DOMUtils.querySelector(
+          SELECTORS.LIVE_VALUE_DISPLAY,
+          row,
+        );
         const identifier =
           DOMUtils.querySelector(SELECTORS.FIELD_ID, row)?.value || "";
-        const source =
-          DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row)?.value || "";
 
-        if (identifier && source) {
-          fetchPromises.push(
-            APIService.fetchLiveData(identifier, type, source)
-              .then((value) => {
-                data[key] = value;
-              })
-              .catch((err) => {
-                console.error(
-                  `Failed to fetch live data for key "${key}":`,
-                  err,
-                );
-                data[key] = identifier;
-              }),
-          );
-        } else {
-          let value = identifier;
-          if (type === FIELD_TYPES.INT) value = parseInt(value, 10) || 0;
-          else if (type === FIELD_TYPES.FLOAT) value = parseFloat(value) || 0.0;
-          data[key] = value;
-        }
+        const rawValue = liveDisplay?.textContent?.trim() || identifier;
+        let value = rawValue;
+        if (type === FIELD_TYPES.INT) value = parseInt(value, 10) || 0;
+        else if (type === FIELD_TYPES.FLOAT) value = parseFloat(value) || 0.0;
+        data[key] = value;
       },
     );
-
-    await Promise.all(fetchPromises);
 
     return { template, layer, channel, data, sizing, delay };
   },

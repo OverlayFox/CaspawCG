@@ -37,3 +37,7 @@ export function SaveLayout(arg1) {
 export function StopCasparCGData(arg1, arg2, arg3, arg4) {
   return window['go']['ui']['UIService']['StopCasparCGData'](arg1, arg2, arg3, arg4);
 }
+
+export function StopCasparCGDataGroup(arg1) {
+  return window['go']['ui']['UIService']['StopCasparCGDataGroup'](arg1);
+}
