@@ -1,14 +1,22 @@
+import { AppState } from "./state.js";
+import { DOMUtils } from "./dom-utils.js";
+import { CSS_CLASSES, SELECTORS, FIELD_TYPES } from "./constants.js";
+
 /**
- * Layout Manager - handles saving and loading layout state
+ * LayoutManager — saves and restores the grid layout to/from the backend.
+ *
+ * loadLayout() takes a WidgetManager reference as a parameter (instead of
+ * importing it) to avoid a circular dependency between this file and
+ * widget-manager.js.
  */
 export const LayoutManager = {
   saveTimeout: null,
 
-  serializeLayout(grid, CSS_CLASSES, SELECTORS, FIELD_TYPES, DOMUtils) {
+  serializeLayout() {
+    const grid = AppState.grid;
     const widgets = [];
-    const gridItems = grid.getGridItems();
 
-    gridItems.forEach((item) => {
+    grid.getGridItems().forEach((item) => {
       const widgetCard = DOMUtils.querySelector(
         `.${CSS_CLASSES.WIDGET_CARD}`,
         item,
@@ -19,6 +27,7 @@ export const LayoutManager = {
       const widgetId =
         item.getAttribute("data-widget-id") ||
         `widget-${Date.now()}-${Math.random()}`;
+
       const dropdown = DOMUtils.querySelector(".api-dropdown", widgetCard);
       const layerInput = DOMUtils.querySelector(".layer-input", widgetCard);
       const channelInput = DOMUtils.querySelector(".channel-input", widgetCard);
@@ -27,30 +36,24 @@ export const LayoutManager = {
       const sizeXInput = DOMUtils.querySelector(".size-x-input", widgetCard);
       const sizeYInput = DOMUtils.querySelector(".size-y-input", widgetCard);
 
-      // Collect fields
-      const fieldRows = DOMUtils.querySelectorAll(
-        `.${CSS_CLASSES.FIELD_ROW}`,
-        widgetCard,
-      );
       const fields = [];
-      fieldRows.forEach((row) => {
-        const keyInput = DOMUtils.querySelector(SELECTORS.FIELD_KEY, row);
-        const typeSelect = DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row);
-        const idInput = DOMUtils.querySelector(SELECTORS.FIELD_ID, row);
-        const sourceSelect = DOMUtils.querySelector(
-          SELECTORS.FIELD_SOURCE,
-          row,
-        );
+      DOMUtils.querySelectorAll(`.${CSS_CLASSES.FIELD_ROW}`, widgetCard).forEach(
+        (row) => {
+          const keyInput = DOMUtils.querySelector(SELECTORS.FIELD_KEY, row);
+          const typeSelect = DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row);
+          const idInput = DOMUtils.querySelector(SELECTORS.FIELD_ID, row);
+          const sourceSelect = DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row);
 
-        if (keyInput && keyInput.value) {
-          fields.push({
-            key: keyInput.value,
-            type: typeSelect?.value || FIELD_TYPES.STRING,
-            id: idInput?.value || "",
-            source: sourceSelect?.value || "",
-          });
-        }
-      });
+          if (keyInput?.value) {
+            fields.push({
+              key: keyInput.value,
+              type: typeSelect?.value || FIELD_TYPES.STRING,
+              id: idInput?.value || "",
+              source: sourceSelect?.value || "",
+            });
+          }
+        },
+      );
 
       widgets.push({
         id: widgetId,
@@ -65,25 +68,16 @@ export const LayoutManager = {
         posY: posYInput?.value ? parseInt(posYInput.value, 10) : null,
         sizeX: sizeXInput?.value ? parseFloat(sizeXInput.value) : null,
         sizeY: sizeYInput?.value ? parseFloat(sizeYInput.value) : null,
-        fields: fields,
+        fields,
       });
     });
 
-    return {
-      version: 1,
-      widgets: widgets,
-    };
+    return { version: 1, widgets };
   },
 
-  async saveLayout(grid, CSS_CLASSES, SELECTORS, FIELD_TYPES, DOMUtils) {
+  async saveLayout() {
     try {
-      const layout = this.serializeLayout(
-        grid,
-        CSS_CLASSES,
-        SELECTORS,
-        FIELD_TYPES,
-        DOMUtils,
-      );
+      const layout = this.serializeLayout();
       await window.go.ui.UIService.SaveLayout(layout);
       console.log("Layout saved successfully");
     } catch (error) {
@@ -94,7 +88,7 @@ export const LayoutManager = {
   async loadLayout(widgetManager) {
     try {
       const layout = await window.go.ui.UIService.LoadLayout();
-      if (layout && layout.widgets && layout.widgets.length > 0) {
+      if (layout?.widgets?.length > 0) {
         console.log("Loading layout with", layout.widgets.length, "widgets");
         for (const widgetConfig of layout.widgets) {
           await widgetManager.createFromConfig(widgetConfig);
@@ -105,13 +99,8 @@ export const LayoutManager = {
     }
   },
 
-  scheduleAutoSave(grid, CSS_CLASSES, SELECTORS, FIELD_TYPES, DOMUtils) {
-    // Debounce auto-save to avoid saving too frequently
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-    }
-    this.saveTimeout = setTimeout(() => {
-      this.saveLayout(grid, CSS_CLASSES, SELECTORS, FIELD_TYPES, DOMUtils);
-    }, 1000);
+  scheduleAutoSave() {
+    if (this.saveTimeout) clearTimeout(this.saveTimeout);
+    this.saveTimeout = setTimeout(() => this.saveLayout(), 1000);
   },
 };
