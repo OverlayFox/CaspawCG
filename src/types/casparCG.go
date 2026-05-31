@@ -2,6 +2,7 @@ package types
 
 import (
 	"math"
+	"time"
 
 	casparTypes "github.com/overlayfox/casparcg-amcp-go/types"
 )
@@ -50,6 +51,6 @@ type CasparCGClient interface {
 	GetTemplates() ([]string, error)
 
 	// Control functions for CG templates
-	PushCGData(template string, layer, channel int, data map[string]any, sizing Sizing) error
-	StopCGData(template string, layer, channel int) error
+	PushCGData(template string, layer, channel int, data map[string]any, sizing Sizing, delay time.Duration) error
+	StopCGData(template string, layer, channel int, delay time.Duration) error
 }

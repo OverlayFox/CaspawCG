@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"time"
+
 	"github.com/overlayfox/caspaw-cg/src/data"
 	"github.com/overlayfox/caspaw-cg/src/types"
 )
@@ -53,20 +55,20 @@ func (u *UIService) GetCasparCGTemplates() []string {
 	return result
 }
 
-func (u *UIService) PushCasparCGData(template string, layer, channel int, data map[string]any, sizing types.Sizing) {
+func (u *UIService) PushCasparCGData(template string, layer, channel int, data map[string]any, sizing types.Sizing, delay time.Duration) {
 	for _, client := range u.casparCGClients {
-		err := client.PushCGData(template, layer, channel, data, sizing)
+		err := client.PushCGData(template, layer, channel, data, sizing, delay)
 		if err != nil {
 			u.app.logger.Error().Err(err).Msgf("Failed to push CG data to template '%s' on layer %d, channel %d", template, layer, channel)
 		}
 	}
 }
 
-func (u *UIService) StopCasparCGData(template string, layer, channel int) {
+func (u *UIService) StopCasparCGData(template string, layer, channel int, delay time.Duration) {
 	for _, client := range u.casparCGClients {
 		// TODO: investigate if UIService can have a ctx and wait group setup so that we don't leak go routines here.
 		go func(client types.CasparCGClient) {
-			err := client.StopCGData(template, layer, channel)
+			err := client.StopCGData(template, layer, channel, delay)
 			if err != nil {
 				u.app.logger.Error().Err(err).Msgf("Failed to stop CG data for template '%s' on layer %d, channel %d", template, layer, channel)
 			}
@@ -111,16 +113,17 @@ type CGDataGroup struct {
 	Channel  int
 	Data     map[string]any
 	Sizing   types.Sizing
+	Delay    time.Duration
 }
 
 func (u *UIService) PushCasparCGDataGroup(dataGroups []CGDataGroup) {
 	for _, data := range dataGroups {
-		u.PushCasparCGData(data.Template, data.Layer, data.Channel, data.Data, data.Sizing)
+		u.PushCasparCGData(data.Template, data.Layer, data.Channel, data.Data, data.Sizing, data.Delay)
 	}
 }
 
-func (u *UIService) StopCasparCGDataGroup(dataGroups []CGDataGroup) {
-	for _, data := range dataGroups {
-		u.StopCasparCGData(data.Template, data.Layer, data.Channel)
-	}
-}
+// func (u *UIService) StopCasparCGDataGroup(dataGroups []CGDataGroup) {
+// 	for _, data := range dataGroups {
+// 		u.StopCasparCGData(data.Template, data.Layer, data.Channel, data.Delay)
+// 	}
+// }

@@ -40,6 +40,7 @@ export const LayoutManager = {
       const posYInput = DOMUtils.querySelector(".pos-y-input", widgetCard);
       const sizeXInput = DOMUtils.querySelector(".size-x-input", widgetCard);
       const sizeYInput = DOMUtils.querySelector(".size-y-input", widgetCard);
+      const delayInput = DOMUtils.querySelector(".delay-input", widgetCard);
 
       const fields = [];
       DOMUtils.querySelectorAll(`.${CSS_CLASSES.FIELD_ROW}`, widgetCard).forEach((row) => {
@@ -71,6 +72,7 @@ export const LayoutManager = {
         posY: posYInput?.value ? parseInt(posYInput.value, 10) : null,
         sizeX: sizeXInput?.value ? parseFloat(sizeXInput.value) : null,
         sizeY: sizeYInput?.value ? parseFloat(sizeYInput.value) : null,
+        delay: delayInput?.value ? parseInt(delayInput.value, 10) : 0,
         fields,
       });
     });

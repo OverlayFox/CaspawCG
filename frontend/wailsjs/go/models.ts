@@ -64,6 +64,7 @@ export namespace ui {
 	    Channel: number;
 	    Data: Record<string, any>;
 	    Sizing: types.Sizing;
+	    Delay: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new CGDataGroup(source);
@@ -76,6 +77,7 @@ export namespace ui {
 	        this.Channel = source["Channel"];
 	        this.Data = source["Data"];
 	        this.Sizing = this.convertValues(source["Sizing"], types.Sizing);
+	        this.Delay = source["Delay"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -127,6 +129,7 @@ export namespace ui {
 	    posY?: number;
 	    sizeX?: number;
 	    sizeY?: number;
+	    delay?: number;
 	    fields: FieldConfig[];
 	
 	    static createFrom(source: any = {}) {
@@ -147,6 +150,7 @@ export namespace ui {
 	        this.posY = source["posY"];
 	        this.sizeX = source["sizeX"];
 	        this.sizeY = source["sizeY"];
+	        this.delay = source["delay"];
 	        this.fields = this.convertValues(source["fields"], FieldConfig);
 	    }
 	

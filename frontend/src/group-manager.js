@@ -145,7 +145,9 @@ export const GroupManager = {
       );
 
       if (template && !isNaN(layer) && !isNaN(channel)) {
-        await APIService.stopCGData(template, layer, channel);
+        const delayVal = DOMUtils.querySelector(".delay-input", card)?.value;
+        const delay = delayVal ? parseInt(delayVal, 10) * 1_000_000 : 0;
+        await APIService.stopCGData(template, layer, channel, delay);
       }
     }
   },
@@ -195,6 +197,7 @@ export const GroupManager = {
         const posYVal = DOMUtils.querySelector(".pos-y-input", card)?.value;
         const sizeXVal = DOMUtils.querySelector(".size-x-input", card)?.value;
         const sizeYVal = DOMUtils.querySelector(".size-y-input", card)?.value;
+        const delayVal = DOMUtils.querySelector(".delay-input", card)?.value;
 
         widgets.push({
           id: widgetId,
@@ -215,6 +218,7 @@ export const GroupManager = {
           posY: posYVal ? parseInt(posYVal, 10) : null,
           sizeX: sizeXVal ? parseFloat(sizeXVal) : null,
           sizeY: sizeYVal ? parseFloat(sizeYVal) : null,
+          delay: delayVal ? parseInt(delayVal, 10) : 0,
           fields,
         });
       });

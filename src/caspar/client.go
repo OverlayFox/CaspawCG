@@ -60,8 +60,8 @@ func (c *client) GetTemplates() ([]string, error) {
 	return templates, nil
 }
 
-func (c *client) PushCGData(template string, layer, channel int, data map[string]any, sizing types.Sizing) error {
-	c.logger.Debug().Msgf("Pushing data to template '%s' on layer %d, channel %d: %v with sizing: %+v", template, layer, channel, data, sizing)
+func (c *client) PushCGData(template string, layer, channel int, data map[string]any, sizing types.Sizing, delay time.Duration) error {
+	c.logger.Debug().Msgf("Pushing data to template '%s' on layer %d, channel %d: %v with sizing: %+v and delay: %v", template, layer, channel, data, sizing, delay)
 
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -93,8 +93,8 @@ func (c *client) PushCGData(template string, layer, channel int, data map[string
 	return c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Add(params)
 }
 
-func (c *client) StopCGData(template string, layer, channel int) error {
-	c.logger.Debug().Msgf("Stopping template '%s' on layer %d, channel %d", template, layer, channel)
+func (c *client) StopCGData(template string, layer, channel int, delay time.Duration) error {
+	c.logger.Debug().Msgf("Stopping template '%s' on layer %d, channel %d with delay: %v", template, layer, channel, delay)
 	if err := c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Stop(); err != nil {
 		return err
 	}

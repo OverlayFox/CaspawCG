@@ -25,6 +25,7 @@ type WidgetConfig struct {
 	PosY     *int          `json:"posY,omitempty"`
 	SizeX    *float64      `json:"sizeX,omitempty"`
 	SizeY    *float64      `json:"sizeY,omitempty"`
+	Delay    int           `json:"delay,omitempty"`
 	Fields   []FieldConfig `json:"fields"`
 }
 

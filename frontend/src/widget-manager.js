@@ -1,9 +1,9 @@
 import { APIService } from "./api.js";
+import { CSS_CLASSES, FIELD_TYPES, SELECTORS } from "./constants.js";
 import { DOMUtils } from "./dom-utils.js";
-import { CSS_CLASSES, SELECTORS, FIELD_TYPES } from "./constants.js";
-import { AppState } from "./state.js";
 import { FieldManager } from "./field-manager.js";
 import { LayoutManager } from "./layout.js";
+import { AppState } from "./state.js";
 
 /**
  * WidgetManager — creates and manages dynamic element widget cards.
@@ -64,6 +64,10 @@ export const WidgetManager = {
           <label>Size Y (%):</label>
           <input type="number" class="size-y-input" min="0" max="100" value="${sizeY}">
         </div>
+        <div class="input-group">
+          <label>Delay (ms):</label>
+          <input type="number" class="delay-input" min="0" max="60000" value="${config?.delay || 0}">
+        </div>
       </div>
       <div class="${CSS_CLASSES.CUSTOM_FIELDS}"></div>
       <button class="${CSS_CLASSES.ADD_FIELD_BTN} ${CSS_CLASSES.EDIT_ONLY}">➕ Add Custom Field</button>
@@ -83,21 +87,29 @@ export const WidgetManager = {
   },
 
   _attachCardListeners(widgetCard, onRemove) {
-    DOMUtils.querySelector(`.${CSS_CLASSES.DELETE_BTN}`, widgetCard)
-      ?.addEventListener("click", onRemove);
+    DOMUtils.querySelector(
+      `.${CSS_CLASSES.DELETE_BTN}`,
+      widgetCard,
+    )?.addEventListener("click", onRemove);
 
-    DOMUtils.querySelectorAll(`.${CSS_CLASSES.ACTION_BTN}`, widgetCard).forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        if (e.target.dataset.action === "execute") this.startWidgetAction(widgetCard);
-        else if (e.target.dataset.action === "stop") this.stopWidgetAction(widgetCard);
-      });
+    DOMUtils.querySelectorAll(`.${CSS_CLASSES.ACTION_BTN}`, widgetCard).forEach(
+      (btn) => {
+        btn.addEventListener("click", (e) => {
+          if (e.target.dataset.action === "execute")
+            this.startWidgetAction(widgetCard);
+          else if (e.target.dataset.action === "stop")
+            this.stopWidgetAction(widgetCard);
+        });
+      },
+    );
+
+    DOMUtils.querySelector(
+      `.${CSS_CLASSES.ADD_FIELD_BTN}`,
+      widgetCard,
+    )?.addEventListener("click", () => {
+      FieldManager.add(widgetCard);
+      LayoutManager.scheduleAutoSave();
     });
-
-    DOMUtils.querySelector(`.${CSS_CLASSES.ADD_FIELD_BTN}`, widgetCard)
-      ?.addEventListener("click", () => {
-        FieldManager.add(widgetCard);
-        LayoutManager.scheduleAutoSave();
-      });
 
     widgetCard.querySelectorAll("input, select").forEach((input) => {
       input.addEventListener("change", () => LayoutManager.scheduleAutoSave());
@@ -117,11 +129,22 @@ export const WidgetManager = {
       </div>
     `;
 
-    const gridOptions = { w: config?.w || 7, h: config?.h || 2, minW: 7, minH: 2 };
-    if (config) { gridOptions.x = config.x; gridOptions.y = config.y; }
+    const gridOptions = {
+      w: config?.w || 7,
+      h: config?.h || 2,
+      minW: 7,
+      minH: 2,
+    };
+    if (config) {
+      gridOptions.x = config.x;
+      gridOptions.y = config.y;
+    }
 
     const gridItem = AppState.grid.addWidget(widgetElement, gridOptions);
-    const widgetCard = DOMUtils.querySelector(`.${CSS_CLASSES.WIDGET_CARD}`, gridItem);
+    const widgetCard = DOMUtils.querySelector(
+      `.${CSS_CLASSES.WIDGET_CARD}`,
+      gridItem,
+    );
 
     await this._restoreCardState(widgetCard, config);
 
@@ -158,10 +181,19 @@ export const WidgetManager = {
 
   stopWidgetAction(widgetCard) {
     const template = DOMUtils.querySelector(".api-dropdown", widgetCard)?.value;
-    if (!template) { console.error("No template selected for stopping."); return; }
+    if (!template) {
+      console.error("No template selected for stopping.");
+      return;
+    }
 
-    const layer = parseInt(DOMUtils.querySelector(".layer-input", widgetCard)?.value, 10) || 1;
-    const channel = parseInt(DOMUtils.querySelector(".channel-input", widgetCard)?.value, 10) || 1;
+    const layer =
+      parseInt(DOMUtils.querySelector(".layer-input", widgetCard)?.value, 10) ||
+      1;
+    const channel =
+      parseInt(
+        DOMUtils.querySelector(".channel-input", widgetCard)?.value,
+        10,
+      ) || 1;
 
     APIService.stopCGData(template, layer, channel);
   },
@@ -170,13 +202,20 @@ export const WidgetManager = {
     const template = DOMUtils.querySelector(".api-dropdown", widgetCard)?.value;
     if (!template) return null;
 
-    const layer = parseInt(DOMUtils.querySelector(".layer-input", widgetCard)?.value, 10) || 1;
-    const channel = parseInt(DOMUtils.querySelector(".channel-input", widgetCard)?.value, 10) || 1;
+    const layer =
+      parseInt(DOMUtils.querySelector(".layer-input", widgetCard)?.value, 10) ||
+      1;
+    const channel =
+      parseInt(
+        DOMUtils.querySelector(".channel-input", widgetCard)?.value,
+        10,
+      ) || 1;
 
     const posXVal = DOMUtils.querySelector(".pos-x-input", widgetCard)?.value;
     const posYVal = DOMUtils.querySelector(".pos-y-input", widgetCard)?.value;
     const sizeXVal = DOMUtils.querySelector(".size-x-input", widgetCard)?.value;
     const sizeYVal = DOMUtils.querySelector(".size-y-input", widgetCard)?.value;
+    const delayVal = DOMUtils.querySelector(".delay-input", widgetCard)?.value;
 
     const sizing = {
       posX: posXVal ? parseInt(posXVal, 10) : 0,
@@ -184,47 +223,69 @@ export const WidgetManager = {
       sizeX: sizeXVal ? parseFloat(sizeXVal) : 100,
       sizeY: sizeYVal ? parseFloat(sizeYVal) : 100,
     };
+    const delay = delayVal ? parseInt(delayVal, 10) * 1_000_000 : 0;
 
     const data = {};
     const fetchPromises = [];
 
-    DOMUtils.querySelectorAll(`.${CSS_CLASSES.FIELD_ROW}`, widgetCard).forEach((row) => {
-      const keyInput = DOMUtils.querySelector(SELECTORS.FIELD_KEY, row);
-      if (!keyInput?.value) return;
+    DOMUtils.querySelectorAll(`.${CSS_CLASSES.FIELD_ROW}`, widgetCard).forEach(
+      (row) => {
+        const keyInput = DOMUtils.querySelector(SELECTORS.FIELD_KEY, row);
+        if (!keyInput?.value) return;
 
-      const key = keyInput.value;
-      const type = DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row)?.value || FIELD_TYPES.STRING;
-      const identifier = DOMUtils.querySelector(SELECTORS.FIELD_ID, row)?.value || "";
-      const source = DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row)?.value || "";
+        const key = keyInput.value;
+        const type =
+          DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row)?.value ||
+          FIELD_TYPES.STRING;
+        const identifier =
+          DOMUtils.querySelector(SELECTORS.FIELD_ID, row)?.value || "";
+        const source =
+          DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row)?.value || "";
 
-      if (identifier && source) {
-        fetchPromises.push(
-          APIService.fetchLiveData(identifier, type, source)
-            .then((value) => { data[key] = value; })
-            .catch((err) => {
-              console.error(`Failed to fetch live data for key "${key}":`, err);
-              data[key] = identifier;
-            }),
-        );
-      } else {
-        let value = identifier;
-        if (type === FIELD_TYPES.INT) value = parseInt(value, 10) || 0;
-        else if (type === FIELD_TYPES.FLOAT) value = parseFloat(value) || 0.0;
-        data[key] = value;
-      }
-    });
+        if (identifier && source) {
+          fetchPromises.push(
+            APIService.fetchLiveData(identifier, type, source)
+              .then((value) => {
+                data[key] = value;
+              })
+              .catch((err) => {
+                console.error(
+                  `Failed to fetch live data for key "${key}":`,
+                  err,
+                );
+                data[key] = identifier;
+              }),
+          );
+        } else {
+          let value = identifier;
+          if (type === FIELD_TYPES.INT) value = parseInt(value, 10) || 0;
+          else if (type === FIELD_TYPES.FLOAT) value = parseFloat(value) || 0.0;
+          data[key] = value;
+        }
+      },
+    );
 
     await Promise.all(fetchPromises);
 
-    return { template, layer, channel, data, sizing };
+    return { template, layer, channel, data, sizing, delay };
   },
 
   async startWidgetAction(widgetCard) {
     const cgData = await this.collectWidgetData(widgetCard);
-    if (!cgData) { console.error("No template selected for execution."); return; }
+    if (!cgData) {
+      console.error("No template selected for execution.");
+      return;
+    }
     APIService.pushCGData(
-      cgData.template, cgData.layer, cgData.channel, cgData.data,
-      cgData.sizing.posX, cgData.sizing.posY, cgData.sizing.sizeX, cgData.sizing.sizeY,
+      cgData.template,
+      cgData.layer,
+      cgData.channel,
+      cgData.data,
+      cgData.sizing.posX,
+      cgData.sizing.posY,
+      cgData.sizing.sizeX,
+      cgData.sizing.sizeY,
+      cgData.delay,
     );
   },
 };
