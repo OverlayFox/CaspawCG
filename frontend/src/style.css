@@ -120,6 +120,14 @@ button#toggle-mode-btn.mode-live:hover {
   background-color: #b91c1c;
 }
 
+button#clear-all-btn {
+  background-color: var(--accent-red);
+}
+
+button#clear-all-btn:hover {
+  background-color: #b91c1c;
+}
+
 /* ============================================================
    GROUP CONTAINERS
    ============================================================ */
