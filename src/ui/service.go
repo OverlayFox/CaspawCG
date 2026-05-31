@@ -64,10 +64,13 @@ func (u *UIService) PushCasparCGData(template string, layer, channel int, data m
 
 func (u *UIService) StopCasparCGData(template string, layer, channel int) {
 	for _, client := range u.casparCGClients {
-		err := client.StopCGData(template, layer, channel)
-		if err != nil {
-			u.app.logger.Error().Err(err).Msgf("Failed to stop CG data for template '%s' on layer %d, channel %d", template, layer, channel)
-		}
+		// TODO: investigate if UIService can have a ctx and wait group setup so that we don't leak go routines here.
+		go func(client types.CasparCGClient) {
+			err := client.StopCGData(template, layer, channel)
+			if err != nil {
+				u.app.logger.Error().Err(err).Msgf("Failed to stop CG data for template '%s' on layer %d, channel %d", template, layer, channel)
+			}
+		}(client)
 	}
 }
 
