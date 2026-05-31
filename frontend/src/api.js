@@ -32,6 +32,7 @@ export const APIService = {
     posY = null,
     sizeX = null,
     sizeY = null,
+    delay = 0, // delay in nanoseconds as time.Duration is represented in Go as nanoseconds
   ) {
     try {
       const sizing = {
@@ -47,15 +48,37 @@ export const APIService = {
         channel,
         data,
         sizing,
+        delay,
       );
     } catch (error) {
       console.error("Failed to push CG data:", error);
     }
   },
 
-  async stopCGData(template, layer = 1, channel = 1) {
+  async pushCGDataGroup(dataGroups) {
     try {
-      await window.go.ui.UIService.StopCasparCGData(template, layer, channel);
+      await window.go.ui.UIService.PushCasparCGDataGroup(dataGroups);
+    } catch (error) {
+      console.error("Failed to push CG data group:", error);
+    }
+  },
+
+  async stopCGDataGroup(dataGroups) {
+    try {
+      await window.go.ui.UIService.StopCasparCGDataGroup(dataGroups);
+    } catch (error) {
+      console.error("Failed to stop CG data group:", error);
+    }
+  },
+
+  async stopCGData(template, layer = 1, channel = 1, delay = 0) {
+    try {
+      await window.go.ui.UIService.StopCasparCGData(
+        template,
+        layer,
+        channel,
+        delay,
+      );
     } catch (error) {
       console.error("Failed to stop CG data:", error);
     }

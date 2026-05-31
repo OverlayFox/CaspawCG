@@ -60,8 +60,8 @@ func (c *client) GetTemplates() ([]string, error) {
 	return templates, nil
 }
 
-func (c *client) PushCGData(template string, layer, channel int, data map[string]any, sizing types.Sizing) error {
-	c.logger.Debug().Msgf("Pushing data to template '%s' on layer %d, channel %d: %v with sizing: %+v", template, layer, channel, data, sizing)
+func (c *client) PushCGData(template string, layer, channel int, data map[string]any, sizing types.Sizing, delay time.Duration) error {
+	c.logger.Debug().Msgf("Pushing data to template '%s' on layer %d, channel %d: %v with sizing: %+v and delay: %v", template, layer, channel, data, sizing, delay)
 
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -76,37 +76,43 @@ func (c *client) PushCGData(template string, layer, channel int, data map[string
 		Data:       &jsonStr,
 	}
 
-	if !sizing.IsDefault() {
-		info, err := c.caspar.Query().Info().Generic()
-		if err != nil {
-			return err
-		}
-		res, err := VideoModeToResolution(info[0].VideoMode)
-		if err != nil {
-			return err
-		}
-		c.logger.Debug().Msgf("Setting mixer for template '%s' on layer %d, channel %d with sizing: %+v and resolution: %+v", template, layer, channel, sizing, res)
-		if err = c.caspar.Mixer().Channel(channel).Layer(layer).SetFill(sizing.GetCasparMixerParams(res)); err != nil {
-			return err
-		}
+	info, err := c.caspar.Query().Info().Generic()
+	if err != nil {
+		return err
 	}
-	return c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Add(params)
-}
-
-func (c *client) StopCGData(template string, layer, channel int) error {
-	c.logger.Debug().Msgf("Stopping template '%s' on layer %d, channel %d", template, layer, channel)
-	if err := c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Stop(); err != nil {
+	res, err := VideoModeToResolution(info[0].VideoMode)
+	if err != nil {
+		return err
+	}
+	c.logger.Debug().Msgf("Setting mixer for template '%s' on layer %d, channel %d with sizing: %+v and resolution: %+v", template, layer, channel, sizing, res)
+	if err = c.caspar.Mixer().Channel(channel).Layer(layer).SetFill(sizing.GetCasparMixerParams(res)); err != nil {
 		return err
 	}
 
-	// TODO: Once the information is available via the CasparCG-AMCP-Go library, we should wait as long as the outplay time of the template is reporting
-	select {
-	case <-time.After(6000 * time.Millisecond):
-		c.logger.Debug().Msgf("Resetting mixer for template '%s' on layer %d, channel %d to default fill", template, layer, channel)
-		return c.caspar.Mixer().Channel(channel).Layer(layer).SetFill(casparTypes.MixerParamsFill{X: 0, Y: 0, XScale: 1, YScale: 1})
-	case <-c.ctx.Done():
-		return c.ctx.Err()
+	return c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Add(params)
+}
+
+func (c *client) StopCGData(template string, layer, channel int, delay time.Duration) error {
+	c.logger.Debug().Msgf("Stopping template '%s' on layer %d, channel %d with delay: %v", template, layer, channel, delay)
+
+	if delay > 0 {
+		select {
+		case <-time.After(delay):
+			// continue to stop the CG data after the delay
+		case <-c.ctx.Done():
+			return c.ctx.Err()
+		}
 	}
+
+	return c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Stop()
+	// TODO: Once the information is available via the CasparCG-AMCP-Go library, we should wait as long as the outplay time of the template is reporting
+	// select {
+	// case <-time.After(6000 * time.Millisecond):
+	// 	c.logger.Debug().Msgf("Resetting mixer for template '%s' on layer %d, channel %d to default fill", template, layer, channel)
+	// 	return c.caspar.Mixer().Channel(channel).Layer(layer).SetFill(casparTypes.MixerParamsFill{X: 0, Y: 0, XScale: 1, YScale: 1})
+	// case <-c.ctx.Done():
+	// 	return c.ctx.Err()
+	// }
 }
 
 func (c *client) keepAlive() {

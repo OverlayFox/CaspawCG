@@ -121,6 +121,117 @@ button#toggle-mode-btn.mode-live:hover {
 }
 
 /* ============================================================
+   GROUP CONTAINERS
+   ============================================================ */
+.group-card {
+  background: #16112a;
+  border: 2px solid #7c3aed;
+  border-radius: var(--radius-md);
+  height: 100%;
+  box-sizing: border-box;
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  box-shadow:
+    0 0 0 1px rgba(124, 58, 237, 0.2),
+    var(--shadow-md);
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid rgba(124, 58, 237, 0.4);
+  flex-shrink: 0;
+}
+
+.group-name-input {
+  flex: 1;
+  min-width: 0;
+  padding: 4px var(--spacing-sm);
+  background-color: rgba(124, 58, 237, 0.15);
+  color: var(--text-main);
+  border: 1px solid rgba(124, 58, 237, 0.5);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  transition: border-color var(--transition-normal);
+}
+
+.group-name-input:focus {
+  outline: none;
+  border-color: #7c3aed;
+}
+
+.group-name-display {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: #c4b5fd;
+}
+
+.group-header-actions {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-shrink: 0;
+}
+
+.group-header-actions button {
+  font-size: 13px;
+  padding: var(--spacing-xs) var(--spacing-md);
+  white-space: nowrap;
+}
+
+.add-element-btn {
+  background-color: rgba(124, 58, 237, 0.3);
+  border: 1px solid rgba(124, 58, 237, 0.6);
+  color: #c4b5fd;
+}
+
+.add-element-btn:hover {
+  background-color: rgba(124, 58, 237, 0.5);
+}
+
+.group-widgets-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  min-height: 0;
+}
+
+.group-widgets-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.group-widgets-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.group-widgets-list::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 237, 0.4);
+  border-radius: 3px;
+}
+
+.group-widget-entry {
+  border-top: 1px dashed rgba(124, 58, 237, 0.3);
+  padding-top: var(--spacing-sm);
+}
+
+.group-widget-entry:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.group-widget-entry .widget-card {
+  height: auto;
+  border-color: rgba(124, 58, 237, 0.25);
+}
+
+/* ============================================================
    WIDGET CARDS
    ============================================================ */
 .widget-card {
@@ -453,6 +564,14 @@ body:not(.is-live) .live-only {
 }
 
 .action-btn[data-action="stop"]:hover {
+  background-color: #c0392b;
+}
+
+.action-btn[data-action="stop-group"] {
+  background-color: #e74c3c;
+}
+
+.action-btn[data-action="stop-group"]:hover {
   background-color: #c0392b;
 }
 

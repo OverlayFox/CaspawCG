@@ -22,14 +22,22 @@ export function PrimeDataSource(arg1, arg2) {
   return window['go']['ui']['UIService']['PrimeDataSource'](arg1, arg2);
 }
 
-export function PushCasparCGData(arg1, arg2, arg3, arg4, arg5) {
-  return window['go']['ui']['UIService']['PushCasparCGData'](arg1, arg2, arg3, arg4, arg5);
+export function PushCasparCGData(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['ui']['UIService']['PushCasparCGData'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function PushCasparCGDataGroup(arg1) {
+  return window['go']['ui']['UIService']['PushCasparCGDataGroup'](arg1);
 }
 
 export function SaveLayout(arg1) {
   return window['go']['ui']['UIService']['SaveLayout'](arg1);
 }
 
-export function StopCasparCGData(arg1, arg2, arg3) {
-  return window['go']['ui']['UIService']['StopCasparCGData'](arg1, arg2, arg3);
+export function StopCasparCGData(arg1, arg2, arg3, arg4) {
+  return window['go']['ui']['UIService']['StopCasparCGData'](arg1, arg2, arg3, arg4);
+}
+
+export function StopCasparCGDataGroup(arg1) {
+  return window['go']['ui']['UIService']['StopCasparCGDataGroup'](arg1);
 }

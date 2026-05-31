@@ -14,6 +14,7 @@ export const CSS_CLASSES = {
 export const SELECTORS = {
   TOGGLE_MODE_BTN: "#toggle-mode-btn",
   ADD_WIDGET_BTN: "#add-widget-btn",
+  ADD_GROUP_BTN: "#add-group-btn",
   FIELD_KEY: ".f-key",
   FIELD_TYPE: ".f-type",
   FIELD_ID: ".f-id",
@@ -21,6 +22,8 @@ export const SELECTORS = {
   LIVE_KEY_DISPLAY: ".live-key-display",
   LIVE_VALUE_DISPLAY: ".live-value-display",
 };
+
+export const GROUP_CONTAINER_CLASS = "group-container";
 
 export const FIELD_TYPES = {
   STRING: "string",
