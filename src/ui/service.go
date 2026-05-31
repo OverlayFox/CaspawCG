@@ -130,3 +130,11 @@ func (u *UIService) StopCasparCGDataGroup(dataGroups []CGDataGroup) {
 		u.StopCasparCGData(data.Template, data.Layer, data.Channel, data.Delay)
 	}
 }
+
+func (u *UIService) ClearAll() {
+	for _, client := range u.casparCGClients {
+		go func(client types.CasparCGClient) {
+			client.ClearAll()
+		}(client)
+	}
+}

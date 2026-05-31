@@ -115,6 +115,14 @@ func (c *client) StopCGData(template string, layer, channel int, delay time.Dura
 	// }
 }
 
+// TODO: this is horrible and needs to be rethought, we shouldn't need to loop through all channels and layers to clear them....but it will do for now as a emergency stop.
+func (c *client) ClearAll() {
+	c.logger.Debug().Msgf("Clearing all CG data on channel all channels")
+	for i := range 9999 {
+		c.caspar.Layer().Channel(i).Clear()
+	}
+}
+
 func (c *client) keepAlive() {
 	c.wg.Add(1)
 	go func() {

@@ -19,6 +19,16 @@
     <div class="grid-stack"></div>
     <script type= "module" src="./src/main.js"></script>
 
+    <div id="confirm-modal" class="modal-overlay" hidden>
+      <div class="modal-dialog">
+        <p class="modal-message">Are you sure you want to clear all Video Layers in CasparCG?</p>
+        <div class="modal-actions">
+          <button id="confirm-modal-cancel">Cancel</button>
+          <button id="confirm-modal-ok" class="delete-btn">Clear All</button>
+        </div>
+      </div>
+    </div>
+
     <div id="caspar-status-bar" class="status-bar">
       <span class="status-title">CasparCG Clients:</span>
       <div id="caspar-clients-container" class="status-clients"></div>

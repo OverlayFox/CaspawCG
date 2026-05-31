@@ -53,4 +53,5 @@ type CasparCGClient interface {
 	// Control functions for CG templates
 	PushCGData(template string, layer, channel int, data map[string]any, sizing Sizing, delay time.Duration) error
 	StopCGData(template string, layer, channel int, delay time.Duration) error
+	ClearAll()
 }
