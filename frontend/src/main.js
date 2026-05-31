@@ -1,5 +1,5 @@
-import 'gridstack/dist/gridstack.min.css';
-import { GridStack } from 'gridstack';
+import { GridStack } from "gridstack";
+import "gridstack/dist/gridstack.min.css";
 
 import { initLiveEvents } from "./events";
 import { LayoutManager } from "./layout";
@@ -106,23 +106,7 @@ const APIService = {
   },
 
   async fetchLiveData(identifier, type, source) {
-    // Future implementation:
-    // return await window.go.ui.UIService.FetchData(identifier, type, source);
-
-    // Temporary dummy data logic
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        let dummyData;
-        if (type === FIELD_TYPES.INT) {
-          dummyData = Math.floor(Math.random() * 1000);
-        } else if (type === FIELD_TYPES.FLOAT) {
-          dummyData = (Math.random() * 100).toFixed(2);
-        } else {
-          dummyData = `Data from ${source}`;
-        }
-        resolve(dummyData);
-      }, 500);
-    });
+    return await window.go.ui.UIService.FetchData(identifier, type, source);
   },
 };
 
@@ -549,13 +533,40 @@ const ModeManager = {
     if (!modeBtn || !addBtn) return;
 
     if (AppState.isLiveMode) {
-      this.enterLiveMode(modeBtn, addBtn);
+      await this.enterLiveMode(modeBtn, addBtn);
     } else {
       this.enterEditMode(modeBtn, addBtn);
     }
   },
 
-  enterLiveMode(modeBtn, addBtn) {
+  async enterLiveMode(modeBtn, addBtn) {
+    const sourceMap = new Map(); // sourceName -> [{Key, Type}]
+
+    const fieldRows = DOMUtils.querySelectorAll(`.${CSS_CLASSES.FIELD_ROW}`);
+    fieldRows.forEach((row) => {
+      const idInput = DOMUtils.querySelector(SELECTORS.FIELD_ID, row);
+      const typeSelect = DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row);
+      const sourceSelect = DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row);
+
+      const locationKey = idInput?.value;
+      const type = typeSelect?.value || FIELD_TYPES.STRING;
+      const source = sourceSelect?.value;
+
+      if (!locationKey || !source) return;
+
+      if (!sourceMap.has(source)) sourceMap.set(source, []);
+      sourceMap.get(source).push({ Key: locationKey, Type: type });
+    });
+
+    // Prime each data source with its locations
+    await Promise.all(
+      Array.from(sourceMap.entries()).map(([source, locations]) =>
+        window.go.ui.UIService.PrimeDataSource(source, locations).catch((err) =>
+          console.error(`Failed to prime data source '${source}':`, err),
+        ),
+      ),
+    );
+
     AppState.grid.enableMove(false);
     AppState.grid.enableResize(false);
     document.body.classList.add(CSS_CLASSES.IS_LIVE);
@@ -563,7 +574,6 @@ const ModeManager = {
     modeBtn.classList.add(CSS_CLASSES.MODE_LIVE);
     addBtn.style.display = "none";
 
-    const fieldRows = DOMUtils.querySelectorAll(`.${CSS_CLASSES.FIELD_ROW}`);
     fieldRows.forEach((row) => FieldManager.updateLiveData(row));
   },
 

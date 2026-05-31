@@ -14,6 +14,10 @@ export function LoadLayout() {
   return window['go']['ui']['UIService']['LoadLayout']();
 }
 
+export function PrimeDataSource(arg1, arg2) {
+  return window['go']['ui']['UIService']['PrimeDataSource'](arg1, arg2);
+}
+
 export function PushCasparCGData(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['ui']['UIService']['PushCasparCGData'](arg1, arg2, arg3, arg4, arg5);
 }

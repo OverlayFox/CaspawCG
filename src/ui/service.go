@@ -70,3 +70,18 @@ func (u *UIService) StopCasparCGData(template string, layer, channel int) {
 		}
 	}
 }
+
+func (u *UIService) PrimeDataSource(name string, locations []data.Location) error {
+	ds, err := u.datasourceManager.GetDataSource(name)
+	if err != nil {
+		u.app.logger.Error().Err(err).Msgf("Failed to get datasource '%s'", name)
+		return err
+	}
+
+	u.app.logger.Info().Msgf("Priming datasource '%s' with locations: %v", name, locations)
+	if err := ds.Prime(locations); err != nil {
+		u.app.logger.Error().Err(err).Msgf("Failed to prime datasource '%s'", name)
+		return err
+	}
+	return nil
+}

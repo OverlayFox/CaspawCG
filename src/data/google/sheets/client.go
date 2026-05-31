@@ -13,6 +13,7 @@ import (
 	d "github.com/overlayfox/caspaw-cg/src/data"
 
 	"github.com/rs/zerolog"
+	"golang.org/x/oauth2/google"
 	"google.golang.org/api/option"
 	gs "google.golang.org/api/sheets/v4"
 )
@@ -43,12 +44,19 @@ func NewClient(ctx context.Context, logger zerolog.Logger, cfg d.GoogleSheetData
 		logger.Error().Err(err).Msg("invalid credentials file path")
 		return nil
 	}
-	if _, err := os.Stat(absPath); err != nil {
+	jsonKey, err := os.ReadFile(absPath)
+	if err != nil {
 		logger.Error().Err(err).Msg("credentials file does not exist or is inaccessible")
 		return nil
 	}
 
-	service, err := gs.NewService(ctx, option.WithAuthCredentialsFile(option.ServiceAccount, cfg.CredentialsFilePath))
+	jwtConfig, err := google.JWTConfigFromJSON(jsonKey, gs.SpreadsheetsScope)
+	if err != nil {
+		logger.Error().Err(err).Msg("failed to parse service account credentials")
+		return nil
+	}
+
+	service, err := gs.NewService(ctx, option.WithTokenSource(jwtConfig.TokenSource(ctx)))
 	if err != nil {
 		logger.Error().Err(err).Msg("failed to create Google Sheets service")
 		return nil
