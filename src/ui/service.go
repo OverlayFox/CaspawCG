@@ -101,3 +101,23 @@ func (u *UIService) GetDataSourceValue(name string, location data.Location) (dat
 	}
 	return data, nil
 }
+
+type CGDataGroup struct {
+	Template string
+	Layer    int
+	Channel  int
+	Data     map[string]any
+	Sizing   types.Sizing
+}
+
+func (u *UIService) PushCasparCGDataGroup(dataGroups []CGDataGroup) {
+	for _, data := range dataGroups {
+		u.PushCasparCGData(data.Template, data.Layer, data.Channel, data.Data, data.Sizing)
+	}
+}
+
+func (u *UIService) StopCasparCGDataGroup(dataGroups []CGDataGroup) {
+	for _, data := range dataGroups {
+		u.StopCasparCGData(data.Template, data.Layer, data.Channel)
+	}
+}

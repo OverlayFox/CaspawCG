@@ -1,0 +1,235 @@
+import { APIService } from "./api.js";
+import {
+  CSS_CLASSES,
+  FIELD_TYPES,
+  GROUP_CONTAINER_CLASS,
+  SELECTORS,
+} from "./constants.js";
+import { DOMUtils } from "./dom-utils.js";
+import { LayoutManager } from "./layout.js";
+import { AppState } from "./state.js";
+import { WidgetManager } from "./widget-manager.js";
+
+/**
+ * GroupManager — creates group container boxes in the main grid.
+ *
+ * A group is a special grid-stack-item that holds a list of widget cards.
+ * In live mode, "Execute All" fires every widget in the group at once via
+ * PushCasparCGDataGroup.
+ */
+export const GroupManager = {
+  async create() {
+    return this.createFromConfig(null);
+  },
+
+  async createFromConfig(config = null) {
+    const groupId = config?.id || `group-${Date.now()}`;
+    const groupName = config?.name || "New Group";
+
+    const groupHTML = `
+      <div class="grid-stack-item ${GROUP_CONTAINER_CLASS}" data-group-id="${groupId}">
+        <div class="grid-stack-item-content group-card">
+          <div class="group-header">
+            <input type="text" class="group-name-input ${CSS_CLASSES.EDIT_ONLY}" value="${groupName}" placeholder="Group name">
+            <span class="group-name-display ${CSS_CLASSES.LIVE_ONLY}">${groupName}</span>
+            <div class="group-header-actions">
+              <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="execute-group">▶ Execute All</button>
+              <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="stop-group">■ Stop All</button>
+              <button class="add-element-btn ${CSS_CLASSES.EDIT_ONLY}">+ Add Element</button>
+              <button class="${CSS_CLASSES.DELETE_BTN} ${CSS_CLASSES.EDIT_ONLY}" data-action="remove-group">Remove Group</button>
+            </div>
+          </div>
+          <div class="group-widgets-list"></div>
+        </div>
+      </div>
+    `;
+
+    const gridOptions = {
+      w: config?.w || 14,
+      h: config?.h || 5,
+      minW: 7,
+      minH: 3,
+    };
+    if (config) {
+      gridOptions.x = config.x;
+      gridOptions.y = config.y;
+    }
+
+    const gridItem = AppState.grid.addWidget(groupHTML, gridOptions);
+    const groupCard = gridItem.querySelector(".group-card");
+    const widgetsList = groupCard.querySelector(".group-widgets-list");
+
+    if (config?.widgets?.length > 0) {
+      for (const widgetConfig of config.widgets) {
+        const entry = await WidgetManager.createForGroup(widgetConfig);
+        widgetsList.appendChild(entry);
+      }
+    }
+
+    this._attachGroupListeners(gridItem, groupCard);
+    return gridItem;
+  },
+
+  _attachGroupListeners(gridItem, groupCard) {
+    const nameInput = groupCard.querySelector(".group-name-input");
+    const nameDisplay = groupCard.querySelector(".group-name-display");
+    const widgetsList = groupCard.querySelector(".group-widgets-list");
+
+    nameInput?.addEventListener("input", () => {
+      if (nameDisplay) nameDisplay.textContent = nameInput.value;
+      LayoutManager.scheduleAutoSave();
+    });
+
+    groupCard
+      .querySelector(".add-element-btn")
+      ?.addEventListener("click", async () => {
+        const entry = await WidgetManager.createForGroup(null);
+        widgetsList.appendChild(entry);
+        LayoutManager.scheduleAutoSave();
+      });
+
+    groupCard
+      .querySelector(`[data-action="remove-group"]`)
+      ?.addEventListener("click", () => {
+        AppState.grid.removeWidget(gridItem);
+        LayoutManager.scheduleAutoSave();
+      });
+
+    groupCard
+      .querySelector(`[data-action="execute-group"]`)
+      ?.addEventListener("click", () => {
+        this.executeGroup(groupCard);
+      });
+    groupCard
+      .querySelector(`[data-action="stop-group"]`)
+      ?.addEventListener("click", () => {
+        this.stopGroup(groupCard);
+      });
+  },
+
+  async executeGroup(groupCard) {
+    const widgetCards = [
+      ...groupCard.querySelectorAll(
+        `.group-widgets-list .${CSS_CLASSES.WIDGET_CARD}`,
+      ),
+    ];
+
+    const dataGroups = (
+      await Promise.all(
+        widgetCards.map((card) => WidgetManager.collectWidgetData(card)),
+      )
+    ).filter(Boolean);
+
+    if (dataGroups.length === 0) return;
+
+    console.log(`Executing group with ${dataGroups.length} elements`);
+    await APIService.pushCGDataGroup(dataGroups);
+  },
+
+  async stopGroup(groupCard) {
+    const widgetCards = [
+      ...groupCard.querySelectorAll(
+        `.group-widgets-list .${CSS_CLASSES.WIDGET_CARD}`,
+      ),
+    ];
+
+    for (const card of widgetCards) {
+      const template = DOMUtils.querySelector(".api-dropdown", card)?.value;
+      const layer = parseInt(
+        DOMUtils.querySelector(".layer-input", card)?.value,
+        10,
+      );
+      const channel = parseInt(
+        DOMUtils.querySelector(".channel-input", card)?.value,
+        10,
+      );
+
+      if (template && !isNaN(layer) && !isNaN(channel)) {
+        await APIService.stopCGData(template, layer, channel);
+      }
+    }
+  },
+
+  serializeGroups() {
+    const groups = [];
+
+    AppState.grid.getGridItems().forEach((item) => {
+      if (!item.classList.contains(GROUP_CONTAINER_CLASS)) return;
+
+      const groupId =
+        item.getAttribute("data-group-id") || `group-${Date.now()}`;
+      const node = item.gridstackNode;
+      const groupCard = item.querySelector(".group-card");
+      if (!groupCard) return;
+
+      const name =
+        groupCard.querySelector(".group-name-input")?.value?.trim() || "Group";
+
+      const widgets = [];
+      groupCard.querySelectorAll(".group-widget-entry").forEach((entry) => {
+        const card = entry.querySelector(`.${CSS_CLASSES.WIDGET_CARD}`);
+        if (!card) return;
+
+        const widgetId =
+          entry.getAttribute("data-widget-id") || `w-${Date.now()}`;
+
+        const fields = [];
+        DOMUtils.querySelectorAll(`.${CSS_CLASSES.FIELD_ROW}`, card).forEach(
+          (row) => {
+            const keyInput = DOMUtils.querySelector(SELECTORS.FIELD_KEY, row);
+            if (!keyInput?.value) return;
+            fields.push({
+              key: keyInput.value,
+              type:
+                DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row)?.value ||
+                FIELD_TYPES.STRING,
+              id: DOMUtils.querySelector(SELECTORS.FIELD_ID, row)?.value || "",
+              source:
+                DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row)?.value ||
+                "",
+            });
+          },
+        );
+
+        const posXVal = DOMUtils.querySelector(".pos-x-input", card)?.value;
+        const posYVal = DOMUtils.querySelector(".pos-y-input", card)?.value;
+        const sizeXVal = DOMUtils.querySelector(".size-x-input", card)?.value;
+        const sizeYVal = DOMUtils.querySelector(".size-y-input", card)?.value;
+
+        widgets.push({
+          id: widgetId,
+          x: 0,
+          y: 0,
+          w: 0,
+          h: 0,
+          template: DOMUtils.querySelector(".api-dropdown", card)?.value || "",
+          layer:
+            parseInt(DOMUtils.querySelector(".layer-input", card)?.value, 10) ||
+            1,
+          channel:
+            parseInt(
+              DOMUtils.querySelector(".channel-input", card)?.value,
+              10,
+            ) || 1,
+          posX: posXVal ? parseInt(posXVal, 10) : null,
+          posY: posYVal ? parseInt(posYVal, 10) : null,
+          sizeX: sizeXVal ? parseFloat(sizeXVal) : null,
+          sizeY: sizeYVal ? parseFloat(sizeYVal) : null,
+          fields,
+        });
+      });
+
+      groups.push({
+        id: groupId,
+        x: node.x,
+        y: node.y,
+        w: node.w,
+        h: node.h,
+        name,
+        widgets,
+      });
+    });
+
+    return groups;
+  },
+};

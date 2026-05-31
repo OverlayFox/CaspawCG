@@ -53,6 +53,14 @@ export const APIService = {
     }
   },
 
+  async pushCGDataGroup(dataGroups) {
+    try {
+      await window.go.ui.UIService.PushCasparCGDataGroup(dataGroups);
+    } catch (error) {
+      console.error("Failed to push CG data group:", error);
+    }
+  },
+
   async stopCGData(template, layer = 1, channel = 1) {
     try {
       await window.go.ui.UIService.StopCasparCGData(template, layer, channel);

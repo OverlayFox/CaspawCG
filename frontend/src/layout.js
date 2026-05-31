@@ -1,32 +1,37 @@
 import { AppState } from "./state.js";
 import { DOMUtils } from "./dom-utils.js";
-import { CSS_CLASSES, SELECTORS, FIELD_TYPES } from "./constants.js";
+import { CSS_CLASSES, SELECTORS, GROUP_CONTAINER_CLASS, FIELD_TYPES } from "./constants.js";
 
 /**
  * LayoutManager — saves and restores the grid layout to/from the backend.
  *
- * loadLayout() takes a WidgetManager reference as a parameter (instead of
- * importing it) to avoid a circular dependency between this file and
- * widget-manager.js.
+ * Receives WidgetManager and GroupManager as parameters (or via setter) to
+ * avoid circular imports. Groups are serialized separately from top-level widgets.
  */
+
+let _groupManager = null;
+
 export const LayoutManager = {
   saveTimeout: null,
+
+  setGroupManager(gm) {
+    _groupManager = gm;
+  },
 
   serializeLayout() {
     const grid = AppState.grid;
     const widgets = [];
 
     grid.getGridItems().forEach((item) => {
-      const widgetCard = DOMUtils.querySelector(
-        `.${CSS_CLASSES.WIDGET_CARD}`,
-        item,
-      );
+      // Group containers are serialized by GroupManager, not here.
+      if (item.classList.contains(GROUP_CONTAINER_CLASS)) return;
+
+      const widgetCard = DOMUtils.querySelector(`.${CSS_CLASSES.WIDGET_CARD}`, item);
       if (!widgetCard) return;
 
       const node = item.gridstackNode;
       const widgetId =
-        item.getAttribute("data-widget-id") ||
-        `widget-${Date.now()}-${Math.random()}`;
+        item.getAttribute("data-widget-id") || `widget-${Date.now()}-${Math.random()}`;
 
       const dropdown = DOMUtils.querySelector(".api-dropdown", widgetCard);
       const layerInput = DOMUtils.querySelector(".layer-input", widgetCard);
@@ -37,23 +42,21 @@ export const LayoutManager = {
       const sizeYInput = DOMUtils.querySelector(".size-y-input", widgetCard);
 
       const fields = [];
-      DOMUtils.querySelectorAll(`.${CSS_CLASSES.FIELD_ROW}`, widgetCard).forEach(
-        (row) => {
-          const keyInput = DOMUtils.querySelector(SELECTORS.FIELD_KEY, row);
-          const typeSelect = DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row);
-          const idInput = DOMUtils.querySelector(SELECTORS.FIELD_ID, row);
-          const sourceSelect = DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row);
+      DOMUtils.querySelectorAll(`.${CSS_CLASSES.FIELD_ROW}`, widgetCard).forEach((row) => {
+        const keyInput = DOMUtils.querySelector(SELECTORS.FIELD_KEY, row);
+        const typeSelect = DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row);
+        const idInput = DOMUtils.querySelector(SELECTORS.FIELD_ID, row);
+        const sourceSelect = DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row);
 
-          if (keyInput?.value) {
-            fields.push({
-              key: keyInput.value,
-              type: typeSelect?.value || FIELD_TYPES.STRING,
-              id: idInput?.value || "",
-              source: sourceSelect?.value || "",
-            });
-          }
-        },
-      );
+        if (keyInput?.value) {
+          fields.push({
+            key: keyInput.value,
+            type: typeSelect?.value || FIELD_TYPES.STRING,
+            id: idInput?.value || "",
+            source: sourceSelect?.value || "",
+          });
+        }
+      });
 
       widgets.push({
         id: widgetId,
@@ -72,7 +75,8 @@ export const LayoutManager = {
       });
     });
 
-    return { version: 1, widgets };
+    const groups = _groupManager ? _groupManager.serializeGroups() : [];
+    return { version: 1, widgets, groups };
   },
 
   async saveLayout() {
@@ -85,13 +89,17 @@ export const LayoutManager = {
     }
   },
 
-  async loadLayout(widgetManager) {
+  async loadLayout(widgetManager, groupManager) {
     try {
       const layout = await window.go.ui.UIService.LoadLayout();
       if (layout?.widgets?.length > 0) {
-        console.log("Loading layout with", layout.widgets.length, "widgets");
         for (const widgetConfig of layout.widgets) {
           await widgetManager.createFromConfig(widgetConfig);
+        }
+      }
+      if (layout?.groups?.length > 0) {
+        for (const groupConfig of layout.groups) {
+          await groupManager.createFromConfig(groupConfig);
         }
       }
     } catch (error) {

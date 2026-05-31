@@ -15,16 +15,17 @@ export const ModeManager = {
 
     const modeBtn = DOMUtils.querySelector(SELECTORS.TOGGLE_MODE_BTN);
     const addBtn = DOMUtils.querySelector(SELECTORS.ADD_WIDGET_BTN);
+    const addGroupBtn = DOMUtils.querySelector(SELECTORS.ADD_GROUP_BTN);
     if (!modeBtn || !addBtn) return;
 
     if (AppState.isLiveMode) {
-      await this.enterLiveMode(modeBtn, addBtn);
+      await this.enterLiveMode(modeBtn, addBtn, addGroupBtn);
     } else {
-      this.enterEditMode(modeBtn, addBtn);
+      this.enterEditMode(modeBtn, addBtn, addGroupBtn);
     }
   },
 
-  async enterLiveMode(modeBtn, addBtn) {
+  async enterLiveMode(modeBtn, addBtn, addGroupBtn) {
     // Group subscribed locations by data source so we can prime each source once
     const sourceMap = new Map();
 
@@ -53,18 +54,20 @@ export const ModeManager = {
     modeBtn.textContent = "Current: LIVE MODE";
     modeBtn.classList.add(CSS_CLASSES.MODE_LIVE);
     addBtn.style.display = "none";
+    if (addGroupBtn) addGroupBtn.style.display = "none";
 
     DOMUtils.querySelectorAll(`.${CSS_CLASSES.FIELD_ROW}`).forEach((row) =>
       FieldManager.updateLiveData(row),
     );
   },
 
-  enterEditMode(modeBtn, addBtn) {
+  enterEditMode(modeBtn, addBtn, addGroupBtn) {
     AppState.grid.enableMove(true);
     AppState.grid.enableResize(true);
     document.body.classList.remove(CSS_CLASSES.IS_LIVE);
     modeBtn.textContent = "Current: EDIT MODE";
     modeBtn.classList.remove(CSS_CLASSES.MODE_LIVE);
     addBtn.style.display = "block";
+    if (addGroupBtn) addGroupBtn.style.display = "block";
   },
 };

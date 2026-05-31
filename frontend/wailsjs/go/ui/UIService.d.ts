@@ -16,6 +16,10 @@ export function PrimeDataSource(arg1:string,arg2:Array<data.Location>):Promise<v
 
 export function PushCasparCGData(arg1:string,arg2:number,arg3:number,arg4:Record<string, any>,arg5:types.Sizing):Promise<void>;
 
+export function PushCasparCGDataGroup(arg1:Array<ui.CGDataGroup>):Promise<void>;
+
 export function SaveLayout(arg1:ui.LayoutConfig):Promise<void>;
 
 export function StopCasparCGData(arg1:string,arg2:number,arg3:number):Promise<void>;
+
+export function StopCasparCGDataGroup(arg1:Array<ui.CGDataGroup>):Promise<void>;
