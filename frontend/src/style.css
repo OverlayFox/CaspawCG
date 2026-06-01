@@ -679,6 +679,55 @@ body:not(.is-live) .live-only {
 }
 
 /* ============================================================
+   MEDIA WIDGET
+   ============================================================ */
+.media-widget-card {
+  background-color: var(--bg-widget-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+  height: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.media-info-panel {
+  background-color: var(--bg-field-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.media-info-placeholder {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.media-info-row {
+  display: flex;
+  gap: var(--spacing-sm);
+  align-items: baseline;
+}
+
+.media-info-label {
+  color: var(--text-muted);
+  min-width: 72px;
+  font-weight: 600;
+}
+
+.media-info-value {
+  color: var(--text-main);
+  word-break: break-all;
+}
+
+/* ============================================================
    ACCESSIBILITY
    ============================================================ */
 @media (prefers-reduced-motion: reduce) {

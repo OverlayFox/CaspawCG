@@ -6,6 +6,14 @@ export function ClearAll() {
   return window['go']['ui']['UIService']['ClearAll']();
 }
 
+export function GetCasparCGMedia() {
+  return window['go']['ui']['UIService']['GetCasparCGMedia']();
+}
+
+export function GetCasparCGMediaInfo(arg1) {
+  return window['go']['ui']['UIService']['GetCasparCGMediaInfo'](arg1);
+}
+
 export function GetCasparCGTemplates() {
   return window['go']['ui']['UIService']['GetCasparCGTemplates']();
 }
@@ -20,6 +28,10 @@ export function GetDataSources() {
 
 export function LoadLayout() {
   return window['go']['ui']['UIService']['LoadLayout']();
+}
+
+export function PlayCasparCGMedia(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['ui']['UIService']['PlayCasparCGMedia'](arg1, arg2, arg3, arg4, arg5);
 }
 
 export function PrimeDataSource(arg1, arg2) {
@@ -44,4 +56,8 @@ export function StopCasparCGData(arg1, arg2, arg3, arg4) {
 
 export function StopCasparCGDataGroup(arg1) {
   return window['go']['ui']['UIService']['StopCasparCGDataGroup'](arg1);
+}
+
+export function StopCasparCGMedia(arg1, arg2, arg3) {
+  return window['go']['ui']['UIService']['StopCasparCGMedia'](arg1, arg2, arg3);
 }

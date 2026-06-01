@@ -29,6 +29,19 @@ type WidgetConfig struct {
 	Fields   []FieldConfig `json:"fields"`
 }
 
+type MediaWidgetConfig struct {
+	ID       string `json:"id"`
+	X        int    `json:"x"`
+	Y        int    `json:"y"`
+	W        int    `json:"w"`
+	H        int    `json:"h"`
+	Filename string `json:"filename"`
+	Layer    int    `json:"layer"`
+	Channel  int    `json:"channel"`
+	Delay    int    `json:"delay,omitempty"`
+	Loop     bool   `json:"loop"`
+}
+
 type GroupConfig struct {
 	ID      string         `json:"id"`
 	X       int            `json:"x"`
@@ -40,9 +53,10 @@ type GroupConfig struct {
 }
 
 type LayoutConfig struct {
-	Version int            `json:"version"`
-	Widgets []WidgetConfig `json:"widgets"`
-	Groups  []GroupConfig  `json:"groups,omitempty"`
+	Version      int                 `json:"version"`
+	Widgets      []WidgetConfig      `json:"widgets"`
+	Groups       []GroupConfig       `json:"groups,omitempty"`
+	MediaWidgets []MediaWidgetConfig `json:"mediaWidgets,omitempty"`
 }
 
 const layoutFileName = "layout.json"

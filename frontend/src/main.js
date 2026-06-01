@@ -7,6 +7,7 @@ import { DOMUtils } from "./dom-utils.js";
 import { initLiveEvents } from "./events.js";
 import { GroupManager } from "./group-manager.js";
 import { LayoutManager } from "./layout.js";
+import { MediaWidgetManager } from "./media-widget-manager.js";
 import { ModeManager } from "./mode-manager.js";
 import { AppState } from "./state.js";
 import { WidgetManager } from "./widget-manager.js";
@@ -46,12 +47,21 @@ async function initializeApp() {
   initLiveEvents();
 
   LayoutManager.setGroupManager(GroupManager);
+  LayoutManager.setMediaWidgetManager(MediaWidgetManager);
   await LayoutManager.loadLayout(WidgetManager, GroupManager);
 
   DOMUtils.querySelector(SELECTORS.ADD_WIDGET_BTN)?.addEventListener(
     "click",
     async () => {
       await WidgetManager.create();
+      LayoutManager.scheduleAutoSave();
+    },
+  );
+
+  DOMUtils.querySelector(SELECTORS.ADD_MEDIA_BTN)?.addEventListener(
+    "click",
+    async () => {
+      await MediaWidgetManager.create();
       LayoutManager.scheduleAutoSave();
     },
   );

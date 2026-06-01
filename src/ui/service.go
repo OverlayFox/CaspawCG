@@ -3,6 +3,8 @@ package ui
 import (
 	"time"
 
+	"github.com/overlayfox/casparcg-amcp-go/types/responses"
+
 	"github.com/overlayfox/caspaw-cg/src/data"
 	"github.com/overlayfox/caspaw-cg/src/types"
 )
@@ -53,6 +55,31 @@ func (u *UIService) GetCasparCGTemplates() []string {
 		result = append(result, templates...)
 	}
 	return result
+}
+
+func (u *UIService) GetCasparCGMedia() []string {
+	result := make([]string, 0)
+	for _, client := range u.casparCGClients {
+		media, err := client.GetMedia()
+		if err != nil {
+			u.app.logger.Error().Err(err).Msg("Failed to get media from CasparCG client")
+			continue
+		}
+		result = append(result, media...)
+	}
+	return result
+}
+
+func (u *UIService) GetCasparCGMediaInfo(filename string) (responses.CINF, error) {
+	for _, client := range u.casparCGClients {
+		info, err := client.GetMediaInfo(filename)
+		if err != nil {
+			u.app.logger.Error().Err(err).Msgf("Failed to get media info for '%s' from CasparCG client", filename)
+			continue
+		}
+		return info, nil
+	}
+	return responses.CINF{}, nil
 }
 
 func (u *UIService) PushCasparCGData(template string, layer, channel int, data map[string]any, sizing types.Sizing, delay time.Duration) {
@@ -128,6 +155,28 @@ func (u *UIService) PushCasparCGDataGroup(dataGroups []CGDataGroup) {
 func (u *UIService) StopCasparCGDataGroup(dataGroups []CGDataGroup) {
 	for _, data := range dataGroups {
 		u.StopCasparCGData(data.Template, data.Layer, data.Channel, data.Delay)
+	}
+}
+
+func (u *UIService) PlayCasparCGMedia(filename string, layer, channel int, loop bool, delay time.Duration) {
+	for _, client := range u.casparCGClients {
+		go func(client types.CasparCGClient) {
+			err := client.PlayMedia(filename, layer, channel, loop, delay)
+			if err != nil {
+				u.app.logger.Error().Err(err).Msgf("Failed to play media '%s' on layer %d, channel %d", filename, layer, channel)
+			}
+		}(client)
+	}
+}
+
+func (u *UIService) StopCasparCGMedia(layer, channel int, delay time.Duration) {
+	for _, client := range u.casparCGClients {
+		go func(client types.CasparCGClient) {
+			err := client.StopMedia(layer, channel, delay)
+			if err != nil {
+				u.app.logger.Error().Err(err).Msgf("Failed to stop media on layer %d, channel %d", layer, channel)
+			}
+		}(client)
 	}
 }
 
