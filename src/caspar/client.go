@@ -166,6 +166,7 @@ func (c *client) ClearAll() {
 	c.logger.Debug().Msgf("Clearing all CG data on channel all channels")
 	for i := range 9999 {
 		c.caspar.Layer().Channel(i).Clear()
+		c.caspar.Mixer().Channel(i).Clear()
 	}
 }
 
