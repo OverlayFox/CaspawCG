@@ -274,10 +274,41 @@ export namespace ui {
 		    return a;
 		}
 	}
+	export class MediaWidgetConfig {
+	    id: string;
+	    x: number;
+	    y: number;
+	    w: number;
+	    h: number;
+	    filename: string;
+	    layer: number;
+	    channel: number;
+	    delay?: number;
+	    loop: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new MediaWidgetConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.x = source["x"];
+	        this.y = source["y"];
+	        this.w = source["w"];
+	        this.h = source["h"];
+	        this.filename = source["filename"];
+	        this.layer = source["layer"];
+	        this.channel = source["channel"];
+	        this.delay = source["delay"];
+	        this.loop = source["loop"];
+	    }
+	}
 	export class LayoutConfig {
 	    version: number;
 	    widgets: WidgetConfig[];
 	    groups?: GroupConfig[];
+	    mediaWidgets?: MediaWidgetConfig[];
 	
 	    static createFrom(source: any = {}) {
 	        return new LayoutConfig(source);
@@ -288,6 +319,7 @@ export namespace ui {
 	        this.version = source["version"];
 	        this.widgets = this.convertValues(source["widgets"], WidgetConfig);
 	        this.groups = this.convertValues(source["groups"], GroupConfig);
+	        this.mediaWidgets = this.convertValues(source["mediaWidgets"], MediaWidgetConfig);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -308,6 +340,7 @@ export namespace ui {
 		    return a;
 		}
 	}
+	
 
 }
 
