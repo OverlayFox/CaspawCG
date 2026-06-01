@@ -5,6 +5,8 @@ export const CSS_CLASSES = {
   MODE_LIVE: "mode-live",
   FIELD_ROW: "field-row",
   WIDGET_CARD: "widget-card",
+  MEDIA_WIDGET_CARD: "media-widget-card",
+  MEDIA_INFO_PANEL: "media-info-panel",
   CUSTOM_FIELDS: "custom-fields-container",
   DELETE_BTN: "delete-btn",
   ACTION_BTN: "action-btn",
@@ -14,6 +16,7 @@ export const CSS_CLASSES = {
 export const SELECTORS = {
   TOGGLE_MODE_BTN: "#toggle-mode-btn",
   ADD_WIDGET_BTN: "#add-widget-btn",
+  ADD_MEDIA_BTN: "#add-media-btn",
   ADD_GROUP_BTN: "#add-group-btn",
   CLEAR_ALL_BTN: "#clear-all-btn",
   FIELD_KEY: ".f-key",

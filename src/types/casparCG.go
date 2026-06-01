@@ -5,6 +5,7 @@ import (
 	"time"
 
 	casparTypes "github.com/overlayfox/casparcg-amcp-go/types"
+	"github.com/overlayfox/casparcg-amcp-go/types/responses"
 )
 
 type Sizing struct {
@@ -49,9 +50,16 @@ func (r Resolution) AspectRatio() float64 {
 type CasparCGClient interface {
 	Connect() error
 	GetTemplates() ([]string, error)
+	GetMedia() ([]string, error)
+	GetMediaInfo(filename string) (responses.CINF, error)
 
 	// Control functions for CG templates
 	PushCGData(template string, layer, channel int, data map[string]any, sizing Sizing, delay time.Duration) error
 	StopCGData(template string, layer, channel int, delay time.Duration) error
+
+	// Control functions for media playback
+	PlayMedia(filename string, layer, channel int, loop bool, delay time.Duration) error
+	StopMedia(layer, channel int, delay time.Duration) error
+
 	ClearAll()
 }

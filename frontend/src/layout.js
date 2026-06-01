@@ -2,6 +2,8 @@ import { AppState } from "./state.js";
 import { DOMUtils } from "./dom-utils.js";
 import { CSS_CLASSES, SELECTORS, GROUP_CONTAINER_CLASS, FIELD_TYPES } from "./constants.js";
 
+let _mediaWidgetManager = null;
+
 /**
  * LayoutManager — saves and restores the grid layout to/from the backend.
  *
@@ -16,6 +18,10 @@ export const LayoutManager = {
 
   setGroupManager(gm) {
     _groupManager = gm;
+  },
+
+  setMediaWidgetManager(mwm) {
+    _mediaWidgetManager = mwm;
   },
 
   serializeLayout() {
@@ -77,8 +83,39 @@ export const LayoutManager = {
       });
     });
 
+    const mediaWidgets = [];
+    grid.getGridItems().forEach((item) => {
+      if (item.classList.contains(GROUP_CONTAINER_CLASS)) return;
+
+      const mediaCard = DOMUtils.querySelector(`.${CSS_CLASSES.MEDIA_WIDGET_CARD}`, item);
+      if (!mediaCard) return;
+
+      const node = item.gridstackNode;
+      const widgetId =
+        item.getAttribute("data-media-widget-id") || `media-${Date.now()}-${Math.random()}`;
+
+      const dropdown = DOMUtils.querySelector(".media-dropdown", mediaCard);
+      const layerInput = DOMUtils.querySelector(".layer-input", mediaCard);
+      const channelInput = DOMUtils.querySelector(".channel-input", mediaCard);
+      const delayInput = DOMUtils.querySelector(".delay-input", mediaCard);
+      const loopInput = DOMUtils.querySelector(".loop-input", mediaCard);
+
+      mediaWidgets.push({
+        id: widgetId,
+        x: node.x,
+        y: node.y,
+        w: node.w,
+        h: node.h,
+        filename: dropdown?.value || "",
+        layer: parseInt(layerInput?.value, 10) || 1,
+        channel: parseInt(channelInput?.value, 10) || 1,
+        delay: delayInput?.value ? parseInt(delayInput.value, 10) : 0,
+        loop: loopInput?.checked ?? false,
+      });
+    });
+
     const groups = _groupManager ? _groupManager.serializeGroups() : [];
-    return { version: 1, widgets, groups };
+    return { version: 1, widgets, groups, mediaWidgets };
   },
 
   async saveLayout() {
@@ -102,6 +139,11 @@ export const LayoutManager = {
       if (layout?.groups?.length > 0) {
         for (const groupConfig of layout.groups) {
           await groupManager.createFromConfig(groupConfig);
+        }
+      }
+      if (layout?.mediaWidgets?.length > 0 && _mediaWidgetManager) {
+        for (const mediaConfig of layout.mediaWidgets) {
+          await _mediaWidgetManager.createFromConfig(mediaConfig);
         }
       }
     } catch (error) {

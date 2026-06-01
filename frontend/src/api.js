@@ -92,6 +92,40 @@ export const APIService = {
     }
   },
 
+  async getMediaOptions() {
+    try {
+      return await window.go.ui.UIService.GetCasparCGMedia();
+    } catch (error) {
+      console.error("Failed to fetch media options:", error);
+      return [];
+    }
+  },
+
+  async getMediaInfo(filename) {
+    try {
+      return await window.go.ui.UIService.GetCasparCGMediaInfo(filename);
+    } catch (error) {
+      console.error("Failed to fetch media info:", error);
+      return null;
+    }
+  },
+
+  async playMedia(filename, layer = 1, channel = 1, loop = false, delay = 0) {
+    try {
+      await window.go.ui.UIService.PlayCasparCGMedia(filename, layer, channel, loop, delay);
+    } catch (error) {
+      console.error("Failed to play media:", error);
+    }
+  },
+
+  async stopMedia(layer = 1, channel = 1, delay = 0) {
+    try {
+      await window.go.ui.UIService.StopCasparCGMedia(layer, channel, delay);
+    } catch (error) {
+      console.error("Failed to stop media:", error);
+    }
+  },
+
   async fetchLiveData(identifier, type, source) {
     const result = await window.go.ui.UIService.GetDataSourceValue(source, {
       Key: identifier,
