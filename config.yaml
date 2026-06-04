@@ -1,8 +1,0 @@
-data_source_manager:
-  google_sheet_data_sources:
-    - spreadsheet_id: "1ag__aae56azH_D4yqQpXXf4GXpsMespSlju_ed20vVo"
-      credentials_file_path: "./credentials.json"
-casparcg_clients:
-  - host: "localhost"
-    port: 5250
-    debug: true
