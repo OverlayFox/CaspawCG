@@ -5,3 +5,4 @@ data_source_manager:
 casparcg_clients:
   - host: "localhost"
     port: 5250
+    debug: true
