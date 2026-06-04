@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- fixed nil pointer when creating Datasource clients
 - cleaned up JavaScript front-end
 - fixed clear also now clearing mixer commands
 

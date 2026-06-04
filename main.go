@@ -39,7 +39,11 @@ func main() {
 	dataSourceManager := data.NewManager(cfg.DataSourceManager)
 	if cfg.DataSourceManager != nil && cfg.DataSourceManager.GoogleSheetDataSource != nil {
 		for _, dataSource := range cfg.DataSourceManager.GoogleSheetDataSource {
-			client := sheets.NewClient(ctx, logger, dataSource, eventsProcessor)
+			client, err := sheets.NewClient(ctx, logger, dataSource, eventsProcessor)
+			if err != nil {
+				logger.Error().Err(err).Msg("Failed to create Google Sheets client")
+				continue
+			}
 			dataSourceManager.AddDataSource(client)
 		}
 	}
