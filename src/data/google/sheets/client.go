@@ -40,28 +40,24 @@ type Dependencies struct {
 	CredentialsFilePath string
 }
 
-func NewClient(ctx context.Context, logger zerolog.Logger, cfg d.GoogleSheetDataSource, eventProcessor types.EventProcessor) d.DataSource {
+func NewClient(ctx context.Context, logger zerolog.Logger, cfg d.GoogleSheetDataSource, eventProcessor types.EventProcessor) (d.DataSource, error) {
 	absPath, err := filepath.Abs(cfg.CredentialsFilePath)
 	if err != nil {
-		logger.Error().Err(err).Msg("invalid credentials file path")
-		return nil
+		return nil, fmt.Errorf("failed to resolve absolute path for service account credentials file: %w", err)
 	}
 	jsonKey, err := os.ReadFile(absPath)
 	if err != nil {
-		logger.Error().Err(err).Msg("credentials file does not exist or is inaccessible")
-		return nil
+		return nil, fmt.Errorf("failed to read service account credentials file: %w", err)
 	}
 
 	jwtConfig, err := google.JWTConfigFromJSON(jsonKey, gs.SpreadsheetsScope)
 	if err != nil {
-		logger.Error().Err(err).Msg("failed to parse service account credentials")
-		return nil
+		return nil, fmt.Errorf("failed to parse service account credentials: %w", err)
 	}
 
 	service, err := gs.NewService(ctx, option.WithTokenSource(jwtConfig.TokenSource(ctx)))
 	if err != nil {
-		logger.Error().Err(err).Msg("failed to create Google Sheets service")
-		return nil
+		return nil, fmt.Errorf("failed to create Google Sheets service: %w", err)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
@@ -79,7 +75,7 @@ func NewClient(ctx context.Context, logger zerolog.Logger, cfg d.GoogleSheetData
 	}
 	client.updateDataFields() // start update cycle
 
-	return client
+	return client, nil
 }
 
 func (c *client) GetName() string {
