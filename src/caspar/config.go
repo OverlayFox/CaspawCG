@@ -7,8 +7,9 @@ import (
 )
 
 type Config struct {
-	Host string `mapstructure:"host"`
-	Port int    `mapstructure:"port"`
+	Debug bool   `mapstructure:"debug"`
+	Host  string `mapstructure:"host"`
+	Port  int    `mapstructure:"port"`
 }
 
 func (c *Config) Validate() error {
@@ -31,8 +32,9 @@ func (c *Config) Validate() error {
 
 func (c *Config) Default() {
 	def := Config{
-		Host: "127.0.0.1",
-		Port: 5250,
+		Host:  "127.0.0.1",
+		Port:  5250,
+		Debug: false,
 	}
 	*c = def
 }

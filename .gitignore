@@ -54,3 +54,4 @@ caspar/_media
 
 # Google Workspace
 credentials.json
+config.yaml

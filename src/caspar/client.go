@@ -176,13 +176,18 @@ func (c *client) keepAlive() {
 		defer c.wg.Done()
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
+
+		sentDebugMessage := false
 		for {
 			select {
 			case <-ticker.C:
 				var event types.CasparCGKeepAlive
 				_, err := c.caspar.Ping(nil)
 				if err != nil {
-					c.logger.Error().Err(err).Msg("Failed to ping CasparCG server")
+					if c.cfg.Debug && !sentDebugMessage {
+						c.logger.Error().Err(err).Msg("Failed to ping CasparCG server")
+						sentDebugMessage = true
+					}
 					event = types.CasparCGKeepAlive{
 						Host:    c.cfg.Host,
 						Port:    c.cfg.Port,
