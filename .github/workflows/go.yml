@@ -36,12 +36,24 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: ${{ matrix.go-version }}
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm install
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
       - name: Verify dependencies
         run: |
           go mod tidy
           git diff --exit-code # Fails if go mod tidy changed anything
-      - name: Build
-        run: go build -v ./...
+      - name: Build with Wails
+        run: wails build
       - name: Test with Race Detector
         run: go test -race -v ./...
 
