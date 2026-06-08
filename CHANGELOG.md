@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- #28 - added build and changelog pipelines
 - #20 - added media elements
 - #11 - properly added datasources into the front end and integrated google sheets as a datasource
 - #14 - added mixer commands to the UI and backend
