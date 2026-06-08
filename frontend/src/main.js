@@ -39,11 +39,18 @@ function parseChannelInput(raw) {
   return [...channels].sort((a, b) => a - b);
 }
 
-function showConfirm() {
+function showConfirm(channels) {
   return new Promise((resolve) => {
     const modal = document.getElementById("confirm-modal");
     const okBtn = document.getElementById("confirm-modal-ok");
     const cancelBtn = document.getElementById("confirm-modal-cancel");
+    const message = modal.querySelector(".modal-message");
+    if (message) {
+      message.textContent =
+        channels === null
+          ? "Are you sure you want to clear all Video Layers in CasparCG?"
+          : `Are you sure you want to clear everything on channel${channels.length > 1 ? "s" : ""} ${channels.join(", ")}?`;
+    }
 
     const cleanup = (result) => {
       modal.hidden = true;
@@ -118,7 +125,7 @@ async function initializeApp() {
         return;
       }
 
-      if (await showConfirm()) {
+      if (await showConfirm(channels)) {
         if (channels === null) {
           APIService.clearAll();
         } else {
