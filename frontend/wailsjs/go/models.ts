@@ -121,7 +121,7 @@ export namespace ui {
 	export class CGDataGroup {
 	    Template: string;
 	    Layer: number;
-	    Channel: number;
+	    Channels: number[];
 	    Data: Record<string, any>;
 	    Sizing: types.Sizing;
 	    Delay: number;
@@ -134,7 +134,7 @@ export namespace ui {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.Template = source["Template"];
 	        this.Layer = source["Layer"];
-	        this.Channel = source["Channel"];
+	        this.Channels = source["Channels"];
 	        this.Data = source["Data"];
 	        this.Sizing = this.convertValues(source["Sizing"], types.Sizing);
 	        this.Delay = source["Delay"];
@@ -185,6 +185,7 @@ export namespace ui {
 	    template: string;
 	    layer: number;
 	    channel: number;
+	    channelExpr?: string;
 	    posX?: number;
 	    posY?: number;
 	    sizeX?: number;
@@ -206,6 +207,7 @@ export namespace ui {
 	        this.template = source["template"];
 	        this.layer = source["layer"];
 	        this.channel = source["channel"];
+	        this.channelExpr = source["channelExpr"];
 	        this.posX = source["posX"];
 	        this.posY = source["posY"];
 	        this.sizeX = source["sizeX"];
@@ -283,6 +285,7 @@ export namespace ui {
 	    filename: string;
 	    layer: number;
 	    channel: number;
+	    channelExpr?: string;
 	    delay?: number;
 	    loop: boolean;
 	
@@ -300,6 +303,7 @@ export namespace ui {
 	        this.filename = source["filename"];
 	        this.layer = source["layer"];
 	        this.channel = source["channel"];
+	        this.channelExpr = source["channelExpr"];
 	        this.delay = source["delay"];
 	        this.loop = source["loop"];
 	    }

@@ -74,6 +74,7 @@ export const LayoutManager = {
         template: dropdown?.value || "",
         layer: parseInt(layerInput?.value, 10) || 1,
         channel: parseInt(channelInput?.value, 10) || 1,
+        channelExpr: channelInput?.value || "1",
         posX: posXInput?.value ? parseInt(posXInput.value, 10) : null,
         posY: posYInput?.value ? parseInt(posYInput.value, 10) : null,
         sizeX: sizeXInput?.value ? parseFloat(sizeXInput.value) : null,
@@ -109,6 +110,7 @@ export const LayoutManager = {
         filename: dropdown?.value || "",
         layer: parseInt(layerInput?.value, 10) || 1,
         channel: parseInt(channelInput?.value, 10) || 1,
+        channelExpr: channelInput?.value || "1",
         delay: delayInput?.value ? parseInt(delayInput.value, 10) : 0,
         loop: loopInput?.checked ?? false,
       });

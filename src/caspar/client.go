@@ -73,8 +73,8 @@ func (c *client) GetMediaInfo(filename string) (responses.CINF, error) {
 	return c.caspar.Query().CINF(filename)
 }
 
-func (c *client) PushCGData(template string, layer, channel int, data map[string]any, sizing types.Sizing, delay time.Duration) error {
-	c.logger.Debug().Msgf("Pushing data to template '%s' on layer %d, channel %d: %v with sizing: %+v and delay: %v", template, layer, channel, data, sizing, delay)
+func (c *client) PushCGData(template string, layer int, channels []int, data map[string]any, sizing types.Sizing, delay time.Duration) error {
+	c.logger.Debug().Msgf("Pushing data to template '%s' on layer %d, channels %v: %v with sizing: %+v and delay: %v", template, layer, channels, data, sizing, delay)
 
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -97,16 +97,23 @@ func (c *client) PushCGData(template string, layer, channel int, data map[string
 	if err != nil {
 		return err
 	}
-	c.logger.Debug().Msgf("Setting mixer for template '%s' on layer %d, channel %d with sizing: %+v and resolution: %+v", template, layer, channel, sizing, res)
-	if err = c.caspar.Mixer().Channel(channel).Layer(layer).SetFill(sizing.GetCasparMixerParams(res)); err != nil {
-		return err
+	for _, channel := range channels {
+		c.logger.Debug().Msgf("Setting mixer for template '%s' on layer %d, channel %d with sizing: %+v and resolution: %+v", template, layer, channel, sizing, res)
+		if err = c.caspar.Mixer().Channel(channel).Layer(layer).SetFill(sizing.GetCasparMixerParams(res)); err != nil {
+			return err
+		}
 	}
 
-	return c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Add(params)
+	for _, channel := range channels {
+		if err := c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Add(params); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (c *client) StopCGData(template string, layer, channel int, delay time.Duration) error {
-	c.logger.Debug().Msgf("Stopping template '%s' on layer %d, channel %d with delay: %v", template, layer, channel, delay)
+func (c *client) StopCGData(template string, layer int, channels []int, delay time.Duration) error {
+	c.logger.Debug().Msgf("Stopping template '%s' on layer %d, channels %v with delay: %v", template, layer, channels, delay)
 
 	if delay > 0 {
 		select {
@@ -117,7 +124,12 @@ func (c *client) StopCGData(template string, layer, channel int, delay time.Dura
 		}
 	}
 
-	return c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Stop()
+	for _, channel := range channels {
+		if err := c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Stop(); err != nil {
+			return err
+		}
+	}
+	return nil
 	// TODO: Once the information is available via the CasparCG-AMCP-Go library, we should wait as long as the outplay time of the template is reporting
 	// select {
 	// case <-time.After(6000 * time.Millisecond):
@@ -128,8 +140,8 @@ func (c *client) StopCGData(template string, layer, channel int, delay time.Dura
 	// }
 }
 
-func (c *client) PlayMedia(filename string, layer, channel int, loop bool, delay time.Duration) error {
-	c.logger.Debug().Msgf("Playing media '%s' on layer %d, channel %d (loop=%v) with delay: %v", filename, layer, channel, loop, delay)
+func (c *client) PlayMedia(filename string, layer int, channels []int, loop bool, delay time.Duration) error {
+	c.logger.Debug().Msgf("Playing media '%s' on layer %d, channels %v (loop=%v) with delay: %v", filename, layer, channels, loop, delay)
 
 	if delay > 0 {
 		select {
@@ -144,11 +156,16 @@ func (c *client) PlayMedia(filename string, layer, channel int, loop bool, delay
 		loopParams := []string{"LOOP"}
 		params.Parameters = &loopParams
 	}
-	return c.caspar.Layer().Channel(channel).Layer(layer).Play(params)
+	for _, channel := range channels {
+		if err := c.caspar.Layer().Channel(channel).Layer(layer).Play(params); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (c *client) StopMedia(layer, channel int, delay time.Duration) error {
-	c.logger.Debug().Msgf("Stopping media on layer %d, channel %d with delay: %v", layer, channel, delay)
+func (c *client) StopMedia(layer int, channels []int, delay time.Duration) error {
+	c.logger.Debug().Msgf("Stopping media on layer %d, channels %v with delay: %v", layer, channels, delay)
 
 	if delay > 0 {
 		select {
@@ -158,7 +175,12 @@ func (c *client) StopMedia(layer, channel int, delay time.Duration) error {
 		}
 	}
 
-	return c.caspar.Layer().Channel(channel).Layer(layer).Stop()
+	for _, channel := range channels {
+		if err := c.caspar.Layer().Channel(channel).Layer(layer).Stop(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *client) ClearChannels(channels []int) {

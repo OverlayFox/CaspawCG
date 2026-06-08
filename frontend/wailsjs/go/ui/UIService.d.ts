@@ -22,18 +22,18 @@ export function GetDataSources():Promise<Array<string>>;
 
 export function LoadLayout():Promise<ui.LayoutConfig>;
 
-export function PlayCasparCGMedia(arg1:string,arg2:number,arg3:number,arg4:boolean,arg5:time.Duration):Promise<void>;
+export function PlayCasparCGMedia(arg1:string,arg2:number,arg3:Array<number>,arg4:boolean,arg5:time.Duration):Promise<void>;
 
 export function PrimeDataSource(arg1:string,arg2:Array<data.Location>):Promise<void>;
 
-export function PushCasparCGData(arg1:string,arg2:number,arg3:number,arg4:Record<string, any>,arg5:types.Sizing,arg6:time.Duration):Promise<void>;
+export function PushCasparCGData(arg1:string,arg2:number,arg3:Array<number>,arg4:Record<string, any>,arg5:types.Sizing,arg6:time.Duration):Promise<void>;
 
 export function PushCasparCGDataGroup(arg1:Array<ui.CGDataGroup>):Promise<void>;
 
 export function SaveLayout(arg1:ui.LayoutConfig):Promise<void>;
 
-export function StopCasparCGData(arg1:string,arg2:number,arg3:number,arg4:time.Duration):Promise<void>;
+export function StopCasparCGData(arg1:string,arg2:number,arg3:Array<number>,arg4:time.Duration):Promise<void>;
 
 export function StopCasparCGDataGroup(arg1:Array<ui.CGDataGroup>):Promise<void>;
 
-export function StopCasparCGMedia(arg1:number,arg2:number,arg3:time.Duration):Promise<void>;
+export function StopCasparCGMedia(arg1:number,arg2:Array<number>,arg3:time.Duration):Promise<void>;
