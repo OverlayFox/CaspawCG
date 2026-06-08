@@ -13,6 +13,14 @@ export const APIService = {
     }
   },
 
+  async clearChannels(channels) {
+    try {
+      await window.go.ui.UIService.ClearChannels(channels);
+    } catch (error) {
+      console.error("Failed to clear channels:", error);
+    }
+  },
+
   async getTemplateOptions() {
     try {
       return await window.go.ui.UIService.GetCasparCGTemplates();
