@@ -120,7 +120,13 @@ export const APIService = {
 
   async playMedia(filename, layer = 1, channel = 1, loop = false, delay = 0) {
     try {
-      await window.go.ui.UIService.PlayCasparCGMedia(filename, layer, channel, loop, delay);
+      await window.go.ui.UIService.PlayCasparCGMedia(
+        filename,
+        layer,
+        channel,
+        loop,
+        delay,
+      );
     } catch (error) {
       console.error("Failed to play media:", error);
     }

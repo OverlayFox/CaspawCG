@@ -6,6 +6,10 @@ export function ClearAll() {
   return window['go']['ui']['UIService']['ClearAll']();
 }
 
+export function ClearChannels(arg1) {
+  return window['go']['ui']['UIService']['ClearChannels'](arg1);
+}
+
 export function GetCasparCGMedia() {
   return window['go']['ui']['UIService']['GetCasparCGMedia']();
 }

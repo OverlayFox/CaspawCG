@@ -8,6 +8,8 @@ import {types} from '../models';
 
 export function ClearAll():Promise<void>;
 
+export function ClearChannels(arg1:Array<number>):Promise<void>;
+
 export function GetCasparCGMedia():Promise<Array<string>>;
 
 export function GetCasparCGMediaInfo(arg1:string):Promise<responses.CINF>;

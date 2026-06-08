@@ -62,4 +62,5 @@ type CasparCGClient interface {
 	StopMedia(layer, channel int, delay time.Duration) error
 
 	ClearAll()
+	ClearChannels(channels []int)
 }

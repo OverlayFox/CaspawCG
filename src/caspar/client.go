@@ -161,6 +161,14 @@ func (c *client) StopMedia(layer, channel int, delay time.Duration) error {
 	return c.caspar.Layer().Channel(channel).Layer(layer).Stop()
 }
 
+func (c *client) ClearChannels(channels []int) {
+	c.logger.Debug().Msgf("Clearing CG data on channels: %v", channels)
+	for _, channel := range channels {
+		c.caspar.Layer().Channel(channel).Clear()
+		c.caspar.Mixer().Channel(channel).Clear()
+	}
+}
+
 // TODO: this is horrible and needs to be rethought, we shouldn't need to loop through all channels and layers to clear them....but it will do for now as a emergency stop.
 func (c *client) ClearAll() {
 	c.logger.Debug().Msgf("Clearing all CG data on channel all channels")

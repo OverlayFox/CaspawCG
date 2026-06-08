@@ -180,6 +180,14 @@ func (u *UIService) StopCasparCGMedia(layer, channel int, delay time.Duration) {
 	}
 }
 
+func (u *UIService) ClearChannels(channels []int) {
+	for _, client := range u.casparCGClients {
+		go func(client types.CasparCGClient) {
+			client.ClearChannels(channels)
+		}(client)
+	}
+}
+
 func (u *UIService) ClearAll() {
 	for _, client := range u.casparCGClients {
 		go func(client types.CasparCGClient) {
