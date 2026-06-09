@@ -10,13 +10,21 @@ import { LayoutManager } from "./layout.js";
 import { MediaWidgetManager } from "./media-widget-manager.js";
 import { ModeManager } from "./mode-manager.js";
 import { AppState } from "./state.js";
+import { parseChannelInput } from "./utils.js";
 import { WidgetManager } from "./widget-manager.js";
 
-function showConfirm() {
+function showConfirm(channels) {
   return new Promise((resolve) => {
     const modal = document.getElementById("confirm-modal");
     const okBtn = document.getElementById("confirm-modal-ok");
     const cancelBtn = document.getElementById("confirm-modal-cancel");
+    const message = modal.querySelector(".modal-message");
+    if (message) {
+      message.textContent =
+        channels === null
+          ? "Are you sure you want to clear all Video Layers in CasparCG?"
+          : `Are you sure you want to clear everything on channel${channels.length > 1 ? "s" : ""} ${channels.join(", ")}?`;
+    }
 
     const cleanup = (result) => {
       modal.hidden = true;
@@ -40,6 +48,9 @@ async function initializeApp() {
     cellHeight: 100,
     margin: 10,
     float: true,
+    disableOneColumnMode: true,
+    column: 12,
+    minRow: 1,
   });
 
   AppState.grid.on("change", () => LayoutManager.scheduleAutoSave());
@@ -82,8 +93,21 @@ async function initializeApp() {
   DOMUtils.querySelector(SELECTORS.CLEAR_ALL_BTN)?.addEventListener(
     "click",
     async () => {
-      if (await showConfirm()) {
-        APIService.clearAll();
+      const input = DOMUtils.querySelector(SELECTORS.CLEAR_CHANNELS_INPUT);
+      let channels;
+      try {
+        channels = parseChannelInput(input?.value ?? "");
+      } catch (e) {
+        alert(`Invalid channel input: ${e.message}`);
+        return;
+      }
+
+      if (await showConfirm(channels)) {
+        if (channels === null) {
+          APIService.clearAll();
+        } else {
+          APIService.clearChannels(channels);
+        }
       }
     },
   );

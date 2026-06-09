@@ -4,6 +4,7 @@ import { DOMUtils } from "./dom-utils.js";
 import { FieldManager } from "./field-manager.js";
 import { LayoutManager } from "./layout.js";
 import { AppState } from "./state.js";
+import { parseChannelInput } from "./utils.js";
 
 /**
  * WidgetManager — creates and manages dynamic element widget cards.
@@ -21,7 +22,7 @@ export const WidgetManager = {
   _buildInnerCardHTML(config, optionsHtml) {
     const template = config?.template || "";
     const layer = config?.layer || 1;
-    const channel = config?.channel || 1;
+    const channel = config?.channelExpr || config?.channel || 1;
     const posX = config?.posX ?? 0;
     const posY = config?.posY ?? 0;
     const sizeX = config?.sizeX ?? 100;
@@ -41,7 +42,7 @@ export const WidgetManager = {
         </div>
         <div class="input-group ${CSS_CLASSES.EDIT_ONLY}">
           <label>Channel:</label>
-          <input type="number" class="channel-input" min="1" max="9999" value="${channel}">
+          <input type="text" class="channel-input" placeholder="e.g. 1 or 1,2 or 1-3" value="${channel}">
         </div>
         <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="execute">Execute</button>
         <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="stop">Stop</button>
@@ -189,13 +190,18 @@ export const WidgetManager = {
     const layer =
       parseInt(DOMUtils.querySelector(".layer-input", widgetCard)?.value, 10) ||
       1;
-    const channel =
-      parseInt(
-        DOMUtils.querySelector(".channel-input", widgetCard)?.value,
-        10,
-      ) || 1;
 
-    APIService.stopCGData(template, layer, channel);
+    let channels;
+    try {
+      channels = parseChannelInput(
+        DOMUtils.querySelector(".channel-input", widgetCard)?.value ?? "1",
+      ) || [1];
+    } catch (e) {
+      alert(`Invalid channel input: ${e.message}`);
+      return;
+    }
+
+    APIService.stopCGData(template, layer, channels);
   },
 
   async collectWidgetData(widgetCard) {
@@ -205,11 +211,16 @@ export const WidgetManager = {
     const layer =
       parseInt(DOMUtils.querySelector(".layer-input", widgetCard)?.value, 10) ||
       1;
-    const channel =
-      parseInt(
-        DOMUtils.querySelector(".channel-input", widgetCard)?.value,
-        10,
-      ) || 1;
+
+    let channels;
+    try {
+      channels = parseChannelInput(
+        DOMUtils.querySelector(".channel-input", widgetCard)?.value ?? "1",
+      ) || [1];
+    } catch (e) {
+      alert(`Invalid channel input: ${e.message}`);
+      return null;
+    }
 
     const posXVal = DOMUtils.querySelector(".pos-x-input", widgetCard)?.value;
     const posYVal = DOMUtils.querySelector(".pos-y-input", widgetCard)?.value;
@@ -250,7 +261,7 @@ export const WidgetManager = {
       },
     );
 
-    return { template, layer, channel, data, sizing, delay };
+    return { template, layer, channels, data, sizing, delay };
   },
 
   async startWidgetAction(widgetCard) {
@@ -262,7 +273,7 @@ export const WidgetManager = {
     APIService.pushCGData(
       cgData.template,
       cgData.layer,
-      cgData.channel,
+      cgData.channels,
       cgData.data,
       cgData.sizing.posX,
       cgData.sizing.posY,

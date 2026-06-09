@@ -19,6 +19,7 @@ export const SELECTORS = {
   ADD_MEDIA_BTN: "#add-media-btn",
   ADD_GROUP_BTN: "#add-group-btn",
   CLEAR_ALL_BTN: "#clear-all-btn",
+  CLEAR_CHANNELS_INPUT: "#clear-channels-input",
   FIELD_KEY: ".f-key",
   FIELD_TYPE: ".f-type",
   FIELD_ID: ".f-id",

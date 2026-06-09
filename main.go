@@ -62,9 +62,11 @@ func main() {
 	}
 
 	err = wails.Run(&options.App{
-		Title:  "caspaw-cg",
-		Width:  1920,
-		Height: 1080,
+		Title:    "caspaw-cg",
+		Width:    1920,
+		Height:   1080,
+		MinWidth: 600,
+		MaxWidth: 7690,
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},

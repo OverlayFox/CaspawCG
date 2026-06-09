@@ -3,6 +3,7 @@ import { CSS_CLASSES } from "./constants.js";
 import { DOMUtils } from "./dom-utils.js";
 import { LayoutManager } from "./layout.js";
 import { AppState } from "./state.js";
+import { parseChannelInput } from "./utils.js";
 
 export const MediaWidgetManager = {
   async create() {
@@ -19,7 +20,7 @@ export const MediaWidgetManager = {
   _buildInnerCardHTML(config, optionsHtml) {
     const filename = config?.filename || "";
     const layer = config?.layer || 1;
-    const channel = config?.channel || 1;
+    const channel = config?.channelExpr || config?.channel || 1;
 
     return `
       <div class="widget-header">
@@ -35,7 +36,7 @@ export const MediaWidgetManager = {
         </div>
         <div class="input-group ${CSS_CLASSES.EDIT_ONLY}">
           <label>Channel:</label>
-          <input type="number" class="channel-input" min="1" max="9999" value="${channel}">
+          <input type="text" class="channel-input" placeholder="e.g. 1 or 1,2 or 1-3" value="${channel}">
         </div>
         <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="play">Play</button>
         <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="stop">Stop</button>
@@ -86,7 +87,10 @@ export const MediaWidgetManager = {
       const dropdown = DOMUtils.querySelector(".media-dropdown", mediaCard);
       if (dropdown) dropdown.value = config.filename;
 
-      const panel = DOMUtils.querySelector(`.${CSS_CLASSES.MEDIA_INFO_PANEL}`, mediaCard);
+      const panel = DOMUtils.querySelector(
+        `.${CSS_CLASSES.MEDIA_INFO_PANEL}`,
+        mediaCard,
+      );
       if (panel) {
         const info = await APIService.getMediaInfo(config.filename);
         this._renderMediaInfo(panel, info);
@@ -95,22 +99,29 @@ export const MediaWidgetManager = {
   },
 
   _attachCardListeners(mediaCard, onRemove) {
-    DOMUtils.querySelector(`.${CSS_CLASSES.DELETE_BTN}`, mediaCard)?.addEventListener(
-      "click",
-      onRemove,
-    );
+    DOMUtils.querySelector(
+      `.${CSS_CLASSES.DELETE_BTN}`,
+      mediaCard,
+    )?.addEventListener("click", onRemove);
 
-    DOMUtils.querySelectorAll(`.${CSS_CLASSES.ACTION_BTN}`, mediaCard).forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        if (e.target.dataset.action === "play") this.playMediaAction(mediaCard);
-        else if (e.target.dataset.action === "stop") this.stopMediaAction(mediaCard);
-      });
-    });
+    DOMUtils.querySelectorAll(`.${CSS_CLASSES.ACTION_BTN}`, mediaCard).forEach(
+      (btn) => {
+        btn.addEventListener("click", (e) => {
+          if (e.target.dataset.action === "play")
+            this.playMediaAction(mediaCard);
+          else if (e.target.dataset.action === "stop")
+            this.stopMediaAction(mediaCard);
+        });
+      },
+    );
 
     const dropdown = DOMUtils.querySelector(".media-dropdown", mediaCard);
     if (dropdown) {
       dropdown.addEventListener("change", async () => {
-        const panel = DOMUtils.querySelector(`.${CSS_CLASSES.MEDIA_INFO_PANEL}`, mediaCard);
+        const panel = DOMUtils.querySelector(
+          `.${CSS_CLASSES.MEDIA_INFO_PANEL}`,
+          mediaCard,
+        );
         if (panel && dropdown.value) {
           const info = await APIService.getMediaInfo(dropdown.value);
           this._renderMediaInfo(panel, info);
@@ -150,7 +161,10 @@ export const MediaWidgetManager = {
     }
 
     const gridItem = AppState.grid.addWidget(widgetElement, gridOptions);
-    const mediaCard = DOMUtils.querySelector(`.${CSS_CLASSES.MEDIA_WIDGET_CARD}`, gridItem);
+    const mediaCard = DOMUtils.querySelector(
+      `.${CSS_CLASSES.MEDIA_WIDGET_CARD}`,
+      gridItem,
+    );
 
     await this._restoreCardState(mediaCard, config);
 
@@ -164,30 +178,52 @@ export const MediaWidgetManager = {
 
   stopMediaAction(mediaCard) {
     const layer =
-      parseInt(DOMUtils.querySelector(".layer-input", mediaCard)?.value, 10) || 1;
-    const channel =
-      parseInt(DOMUtils.querySelector(".channel-input", mediaCard)?.value, 10) || 1;
+      parseInt(DOMUtils.querySelector(".layer-input", mediaCard)?.value, 10) ||
+      1;
     const delayVal = DOMUtils.querySelector(".delay-input", mediaCard)?.value;
     const delay = delayVal ? parseInt(delayVal, 10) * 1_000_000 : 0;
 
-    APIService.stopMedia(layer, channel, delay);
+    let channels;
+    try {
+      channels = parseChannelInput(
+        DOMUtils.querySelector(".channel-input", mediaCard)?.value ?? "1",
+      ) || [1];
+    } catch (e) {
+      alert(`Invalid channel input: ${e.message}`);
+      return;
+    }
+
+    APIService.stopMedia(layer, channels, delay);
   },
 
   playMediaAction(mediaCard) {
-    const filename = DOMUtils.querySelector(".media-dropdown", mediaCard)?.value;
+    const filename = DOMUtils.querySelector(
+      ".media-dropdown",
+      mediaCard,
+    )?.value;
     if (!filename) {
       console.error("No media file selected for playback.");
       return;
     }
 
     const layer =
-      parseInt(DOMUtils.querySelector(".layer-input", mediaCard)?.value, 10) || 1;
-    const channel =
-      parseInt(DOMUtils.querySelector(".channel-input", mediaCard)?.value, 10) || 1;
-    const loop = DOMUtils.querySelector(".loop-input", mediaCard)?.checked ?? false;
+      parseInt(DOMUtils.querySelector(".layer-input", mediaCard)?.value, 10) ||
+      1;
+    const loop =
+      DOMUtils.querySelector(".loop-input", mediaCard)?.checked ?? false;
     const delayVal = DOMUtils.querySelector(".delay-input", mediaCard)?.value;
     const delay = delayVal ? parseInt(delayVal, 10) * 1_000_000 : 0;
 
-    APIService.playMedia(filename, layer, channel, loop, delay);
+    let channels;
+    try {
+      channels = parseChannelInput(
+        DOMUtils.querySelector(".channel-input", mediaCard)?.value ?? "1",
+      ) || [1];
+    } catch (e) {
+      alert(`Invalid channel input: ${e.message}`);
+      return;
+    }
+
+    APIService.playMedia(filename, layer, channels, loop, delay);
   },
 };

@@ -13,6 +13,14 @@ export const APIService = {
     }
   },
 
+  async clearChannels(channels) {
+    try {
+      await window.go.ui.UIService.ClearChannels(channels);
+    } catch (error) {
+      console.error("Failed to clear channels:", error);
+    }
+  },
+
   async getTemplateOptions() {
     try {
       return await window.go.ui.UIService.GetCasparCGTemplates();
@@ -34,7 +42,7 @@ export const APIService = {
   async pushCGData(
     template,
     layer = 1,
-    channel = 1,
+    channels = [1],
     data,
     posX = null,
     posY = null,
@@ -53,7 +61,7 @@ export const APIService = {
       await window.go.ui.UIService.PushCasparCGData(
         template,
         layer,
-        channel,
+        channels,
         data,
         sizing,
         delay,
@@ -79,12 +87,12 @@ export const APIService = {
     }
   },
 
-  async stopCGData(template, layer = 1, channel = 1, delay = 0) {
+  async stopCGData(template, layer = 1, channels = [1], delay = 0) {
     try {
       await window.go.ui.UIService.StopCasparCGData(
         template,
         layer,
-        channel,
+        channels,
         delay,
       );
     } catch (error) {
@@ -110,17 +118,29 @@ export const APIService = {
     }
   },
 
-  async playMedia(filename, layer = 1, channel = 1, loop = false, delay = 0) {
+  async playMedia(
+    filename,
+    layer = 1,
+    channels = [1],
+    loop = false,
+    delay = 0,
+  ) {
     try {
-      await window.go.ui.UIService.PlayCasparCGMedia(filename, layer, channel, loop, delay);
+      await window.go.ui.UIService.PlayCasparCGMedia(
+        filename,
+        layer,
+        channels,
+        loop,
+        delay,
+      );
     } catch (error) {
       console.error("Failed to play media:", error);
     }
   },
 
-  async stopMedia(layer = 1, channel = 1, delay = 0) {
+  async stopMedia(layer = 1, channels = [1], delay = 0) {
     try {
-      await window.go.ui.UIService.StopCasparCGMedia(layer, channel, delay);
+      await window.go.ui.UIService.StopCasparCGMedia(layer, channels, delay);
     } catch (error) {
       console.error("Failed to stop media:", error);
     }

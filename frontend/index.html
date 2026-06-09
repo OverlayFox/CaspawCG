@@ -13,13 +13,12 @@
       <button id="add-media-btn">Add New Media</button>
       <button id="add-group-btn">Add Group</button>
       <button id="toggle-mode-btn" class="mode-edit">Current: EDIT MODE</button>
-      <button id="clear-all-btn" style="margin-left: auto">Clear All</button>
-      
+      <input id="clear-channels-input" type="text" placeholder="e.g. 1, 1-3, 1,3-5" title="Channels to clear (leave blank for all)" style="margin-left: auto; width: 160px" />
+      <button id="clear-all-btn">Clear</button>
     </div>
 
     <div class="grid-stack"></div>
     <script type= "module" src="./src/main.js"></script>
-
     <div id="confirm-modal" class="modal-overlay" hidden>
       <div class="modal-dialog">
         <p class="modal-message">Are you sure you want to clear all Video Layers in CasparCG?</p>

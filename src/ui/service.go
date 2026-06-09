@@ -82,25 +82,25 @@ func (u *UIService) GetCasparCGMediaInfo(filename string) (responses.CINF, error
 	return responses.CINF{}, nil
 }
 
-func (u *UIService) PushCasparCGData(template string, layer, channel int, data map[string]any, sizing types.Sizing, delay time.Duration) {
+func (u *UIService) PushCasparCGData(template string, layer int, channels []int, data map[string]any, sizing types.Sizing, delay time.Duration) {
 	for _, client := range u.casparCGClients {
 		// TODO: investigate if UIService can have a ctx and wait group setup so that we don't leak go routines here.
 		go func(client types.CasparCGClient) {
-			err := client.PushCGData(template, layer, channel, data, sizing, delay)
+			err := client.PushCGData(template, layer, channels, data, sizing, delay)
 			if err != nil {
-				u.app.logger.Error().Err(err).Msgf("Failed to push CG data to template '%s' on layer %d, channel %d", template, layer, channel)
+				u.app.logger.Error().Err(err).Msgf("Failed to push CG data to template '%s' on layer %d, channels %v", template, layer, channels)
 			}
 		}(client)
 	}
 }
 
-func (u *UIService) StopCasparCGData(template string, layer, channel int, delay time.Duration) {
+func (u *UIService) StopCasparCGData(template string, layer int, channels []int, delay time.Duration) {
 	for _, client := range u.casparCGClients {
 		// TODO: investigate if UIService can have a ctx and wait group setup so that we don't leak go routines here.
 		go func(client types.CasparCGClient) {
-			err := client.StopCGData(template, layer, channel, delay)
+			err := client.StopCGData(template, layer, channels, delay)
 			if err != nil {
-				u.app.logger.Error().Err(err).Msgf("Failed to stop CG data for template '%s' on layer %d, channel %d", template, layer, channel)
+				u.app.logger.Error().Err(err).Msgf("Failed to stop CG data for template '%s' on layer %d, channels %v", template, layer, channels)
 			}
 		}(client)
 	}
@@ -140,7 +140,7 @@ func (u *UIService) GetDataSourceValue(name string, location data.Location) (dat
 type CGDataGroup struct {
 	Template string
 	Layer    int
-	Channel  int
+	Channels []int
 	Data     map[string]any
 	Sizing   types.Sizing
 	Delay    time.Duration
@@ -148,34 +148,42 @@ type CGDataGroup struct {
 
 func (u *UIService) PushCasparCGDataGroup(dataGroups []CGDataGroup) {
 	for _, data := range dataGroups {
-		u.PushCasparCGData(data.Template, data.Layer, data.Channel, data.Data, data.Sizing, data.Delay)
+		u.PushCasparCGData(data.Template, data.Layer, data.Channels, data.Data, data.Sizing, data.Delay)
 	}
 }
 
 func (u *UIService) StopCasparCGDataGroup(dataGroups []CGDataGroup) {
 	for _, data := range dataGroups {
-		u.StopCasparCGData(data.Template, data.Layer, data.Channel, data.Delay)
+		u.StopCasparCGData(data.Template, data.Layer, data.Channels, data.Delay)
 	}
 }
 
-func (u *UIService) PlayCasparCGMedia(filename string, layer, channel int, loop bool, delay time.Duration) {
+func (u *UIService) PlayCasparCGMedia(filename string, layer int, channels []int, loop bool, delay time.Duration) {
 	for _, client := range u.casparCGClients {
 		go func(client types.CasparCGClient) {
-			err := client.PlayMedia(filename, layer, channel, loop, delay)
+			err := client.PlayMedia(filename, layer, channels, loop, delay)
 			if err != nil {
-				u.app.logger.Error().Err(err).Msgf("Failed to play media '%s' on layer %d, channel %d", filename, layer, channel)
+				u.app.logger.Error().Err(err).Msgf("Failed to play media '%s' on layer %d, channels %v", filename, layer, channels)
 			}
 		}(client)
 	}
 }
 
-func (u *UIService) StopCasparCGMedia(layer, channel int, delay time.Duration) {
+func (u *UIService) StopCasparCGMedia(layer int, channels []int, delay time.Duration) {
 	for _, client := range u.casparCGClients {
 		go func(client types.CasparCGClient) {
-			err := client.StopMedia(layer, channel, delay)
+			err := client.StopMedia(layer, channels, delay)
 			if err != nil {
-				u.app.logger.Error().Err(err).Msgf("Failed to stop media on layer %d, channel %d", layer, channel)
+				u.app.logger.Error().Err(err).Msgf("Failed to stop media on layer %d, channels %v", layer, channels)
 			}
+		}(client)
+	}
+}
+
+func (u *UIService) ClearChannels(channels []int) {
+	for _, client := range u.casparCGClients {
+		go func(client types.CasparCGClient) {
+			client.ClearChannels(channels)
 		}(client)
 	}
 }
