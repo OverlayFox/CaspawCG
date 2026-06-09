@@ -55,6 +55,11 @@
 /* ============================================================
    BASE STYLES
    ============================================================ */
+
+.grid-stack {
+  min-width: 0 !important;
+}
+
 body {
   margin: 0;
   padding-bottom: 35px; /* Space for status bar */
