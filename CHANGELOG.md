@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- change scaling of elements to give window a larger workarea and allow for more dynamic placement of elements
+- fixed a bug with WailsV2 where not setting `max-width` locks the max width of the spawning window
 - fixed nil pointer when creating Datasource clients
 - cleaned up JavaScript front-end
 - fixed clear also now clearing mixer commands
