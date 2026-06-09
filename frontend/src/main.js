@@ -45,12 +45,12 @@ function showConfirm(channels) {
 
 async function initializeApp() {
   AppState.grid = GridStack.init({
-    cellHeight: "auto",
-    cellHeightThrottle: 200,
+    cellHeight: 100,
     margin: 10,
     float: true,
-    disableOneColumnMode: false,
-    oneColumnSize: 600,
+    disableOneColumnMode: true,
+    column: 12,
+    minRow: 1,
   });
 
   AppState.grid.on("change", () => LayoutManager.scheduleAutoSave());

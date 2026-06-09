@@ -58,6 +58,11 @@
 
 .grid-stack {
   min-width: 0 !important;
+  padding: 10px;
+}
+
+.grid-stack-item {
+  max-width: 1000px !important;
 }
 
 body {
