@@ -27,10 +27,13 @@ export const WidgetManager = {
     const posY = config?.posY ?? 0;
     const sizeX = config?.sizeX ?? 100;
     const sizeY = config?.sizeY ?? 100;
+    const widgetName = config?.name || "Dynamic Element";
+    const escapedName = widgetName.replace(/"/g, "&quot;");
 
     return `
       <div class="widget-header">
-        <strong>Dynamic Element</strong>
+        <input type="text" class="widget-name-input ${CSS_CLASSES.EDIT_ONLY}" value="${escapedName}" placeholder="Element name">
+        <span class="widget-name-display ${CSS_CLASSES.LIVE_ONLY}">${widgetName}</span>
       </div>
       <div class="widget-header-controls">
         <select class="api-dropdown ${CSS_CLASSES.EDIT_ONLY}">
@@ -88,6 +91,14 @@ export const WidgetManager = {
   },
 
   _attachCardListeners(widgetCard, onRemove) {
+    const nameInput = widgetCard.querySelector(".widget-name-input");
+    const nameDisplay = widgetCard.querySelector(".widget-name-display");
+
+    nameInput?.addEventListener("input", () => {
+      if (nameDisplay) nameDisplay.textContent = nameInput.value;
+      LayoutManager.scheduleAutoSave();
+    });
+
     DOMUtils.querySelector(
       `.${CSS_CLASSES.DELETE_BTN}`,
       widgetCard,

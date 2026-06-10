@@ -1,6 +1,11 @@
-import { AppState } from "./state.js";
+import {
+  CSS_CLASSES,
+  FIELD_TYPES,
+  GROUP_CONTAINER_CLASS,
+  SELECTORS,
+} from "./constants.js";
 import { DOMUtils } from "./dom-utils.js";
-import { CSS_CLASSES, SELECTORS, GROUP_CONTAINER_CLASS, FIELD_TYPES } from "./constants.js";
+import { AppState } from "./state.js";
 
 let _mediaWidgetManager = null;
 
@@ -32,13 +37,21 @@ export const LayoutManager = {
       // Group containers are serialized by GroupManager, not here.
       if (item.classList.contains(GROUP_CONTAINER_CLASS)) return;
 
-      const widgetCard = DOMUtils.querySelector(`.${CSS_CLASSES.WIDGET_CARD}`, item);
+      const widgetCard = DOMUtils.querySelector(
+        `.${CSS_CLASSES.WIDGET_CARD}`,
+        item,
+      );
       if (!widgetCard) return;
 
       const node = item.gridstackNode;
       const widgetId =
-        item.getAttribute("data-widget-id") || `widget-${Date.now()}-${Math.random()}`;
+        item.getAttribute("data-widget-id") ||
+        `widget-${Date.now()}-${Math.random()}`;
 
+      const nameInput = DOMUtils.querySelector(
+        ".widget-name-input",
+        widgetCard,
+      );
       const dropdown = DOMUtils.querySelector(".api-dropdown", widgetCard);
       const layerInput = DOMUtils.querySelector(".layer-input", widgetCard);
       const channelInput = DOMUtils.querySelector(".channel-input", widgetCard);
@@ -49,11 +62,17 @@ export const LayoutManager = {
       const delayInput = DOMUtils.querySelector(".delay-input", widgetCard);
 
       const fields = [];
-      DOMUtils.querySelectorAll(`.${CSS_CLASSES.FIELD_ROW}`, widgetCard).forEach((row) => {
+      DOMUtils.querySelectorAll(
+        `.${CSS_CLASSES.FIELD_ROW}`,
+        widgetCard,
+      ).forEach((row) => {
         const keyInput = DOMUtils.querySelector(SELECTORS.FIELD_KEY, row);
         const typeSelect = DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row);
         const idInput = DOMUtils.querySelector(SELECTORS.FIELD_ID, row);
-        const sourceSelect = DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row);
+        const sourceSelect = DOMUtils.querySelector(
+          SELECTORS.FIELD_SOURCE,
+          row,
+        );
 
         if (keyInput?.value) {
           fields.push({
@@ -71,6 +90,7 @@ export const LayoutManager = {
         y: node.y,
         w: node.w,
         h: node.h,
+        name: nameInput?.value || "Dynamic Element",
         template: dropdown?.value || "",
         layer: parseInt(layerInput?.value, 10) || 1,
         channel: parseInt(channelInput?.value, 10) || 1,
@@ -88,13 +108,18 @@ export const LayoutManager = {
     grid.getGridItems().forEach((item) => {
       if (item.classList.contains(GROUP_CONTAINER_CLASS)) return;
 
-      const mediaCard = DOMUtils.querySelector(`.${CSS_CLASSES.MEDIA_WIDGET_CARD}`, item);
+      const mediaCard = DOMUtils.querySelector(
+        `.${CSS_CLASSES.MEDIA_WIDGET_CARD}`,
+        item,
+      );
       if (!mediaCard) return;
 
       const node = item.gridstackNode;
       const widgetId =
-        item.getAttribute("data-media-widget-id") || `media-${Date.now()}-${Math.random()}`;
+        item.getAttribute("data-media-widget-id") ||
+        `media-${Date.now()}-${Math.random()}`;
 
+      const nameInput = DOMUtils.querySelector(".widget-name-input", mediaCard);
       const dropdown = DOMUtils.querySelector(".media-dropdown", mediaCard);
       const layerInput = DOMUtils.querySelector(".layer-input", mediaCard);
       const channelInput = DOMUtils.querySelector(".channel-input", mediaCard);
@@ -107,6 +132,7 @@ export const LayoutManager = {
         y: node.y,
         w: node.w,
         h: node.h,
+        name: nameInput?.value || "Media Element",
         filename: dropdown?.value || "",
         layer: parseInt(layerInput?.value, 10) || 1,
         channel: parseInt(channelInput?.value, 10) || 1,

@@ -21,10 +21,13 @@ export const MediaWidgetManager = {
     const filename = config?.filename || "";
     const layer = config?.layer || 1;
     const channel = config?.channelExpr || config?.channel || 1;
+    const mediaName = config?.name || "Media Element";
+    const escapedName = mediaName.replace(/"/g, "&quot;");
 
     return `
       <div class="widget-header">
-        <strong>Media Element</strong>
+        <input type="text" class="widget-name-input ${CSS_CLASSES.EDIT_ONLY}" value="${escapedName}" placeholder="Element name">
+        <span class="widget-name-display ${CSS_CLASSES.LIVE_ONLY}">${mediaName}</span>
       </div>
       <div class="widget-header-controls">
         <select class="media-dropdown ${CSS_CLASSES.EDIT_ONLY}">
@@ -99,6 +102,14 @@ export const MediaWidgetManager = {
   },
 
   _attachCardListeners(mediaCard, onRemove) {
+    const nameInput = mediaCard.querySelector(".widget-name-input");
+    const nameDisplay = mediaCard.querySelector(".widget-name-display");
+
+    nameInput?.addEventListener("input", () => {
+      if (nameDisplay) nameDisplay.textContent = nameInput.value;
+      LayoutManager.scheduleAutoSave();
+    });
+
     DOMUtils.querySelector(
       `.${CSS_CLASSES.DELETE_BTN}`,
       mediaCard,

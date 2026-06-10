@@ -191,6 +191,8 @@ export const GroupManager = {
         const sizeXVal = DOMUtils.querySelector(".size-x-input", card)?.value;
         const sizeYVal = DOMUtils.querySelector(".size-y-input", card)?.value;
         const delayVal = DOMUtils.querySelector(".delay-input", card)?.value;
+        const nameInput = DOMUtils.querySelector(".widget-name-input", card);
+        const channelInput = DOMUtils.querySelector(".channel-input", card);
 
         widgets.push({
           id: widgetId,
@@ -198,15 +200,13 @@ export const GroupManager = {
           y: 0,
           w: 0,
           h: 0,
+          name: nameInput?.value || "Dynamic Element",
           template: DOMUtils.querySelector(".api-dropdown", card)?.value || "",
           layer:
             parseInt(DOMUtils.querySelector(".layer-input", card)?.value, 10) ||
             1,
-          channel:
-            parseInt(
-              DOMUtils.querySelector(".channel-input", card)?.value,
-              10,
-            ) || 1,
+          channel: parseInt(channelInput?.value, 10) || 1,
+          channelExpr: channelInput?.value || "1",
           posX: posXVal ? parseInt(posXVal, 10) : null,
           posY: posYVal ? parseInt(posYVal, 10) : null,
           sizeX: sizeXVal ? parseFloat(sizeXVal) : null,

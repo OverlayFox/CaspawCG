@@ -182,6 +182,7 @@ export namespace ui {
 	    y: number;
 	    w: number;
 	    h: number;
+	    name?: string;
 	    template: string;
 	    layer: number;
 	    channel: number;
@@ -204,6 +205,7 @@ export namespace ui {
 	        this.y = source["y"];
 	        this.w = source["w"];
 	        this.h = source["h"];
+	        this.name = source["name"];
 	        this.template = source["template"];
 	        this.layer = source["layer"];
 	        this.channel = source["channel"];
@@ -282,6 +284,7 @@ export namespace ui {
 	    y: number;
 	    w: number;
 	    h: number;
+	    name?: string;
 	    filename: string;
 	    layer: number;
 	    channel: number;
@@ -300,6 +303,7 @@ export namespace ui {
 	        this.y = source["y"];
 	        this.w = source["w"];
 	        this.h = source["h"];
+	        this.name = source["name"];
 	        this.filename = source["filename"];
 	        this.layer = source["layer"];
 	        this.channel = source["channel"];

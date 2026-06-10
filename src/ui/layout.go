@@ -18,6 +18,7 @@ type WidgetConfig struct {
 	Y           int           `json:"y"`
 	W           int           `json:"w"`
 	H           int           `json:"h"`
+	Name        string        `json:"name,omitempty"`
 	Template    string        `json:"template"`
 	Layer       int           `json:"layer"`
 	Channel     int           `json:"channel"`
@@ -36,6 +37,7 @@ type MediaWidgetConfig struct {
 	Y           int    `json:"y"`
 	W           int    `json:"w"`
 	H           int    `json:"h"`
+	Name        string `json:"name,omitempty"`
 	Filename    string `json:"filename"`
 	Layer       int    `json:"layer"`
 	Channel     int    `json:"channel"`
