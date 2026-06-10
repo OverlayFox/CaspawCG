@@ -7,6 +7,7 @@ import {
 } from "./constants.js";
 import { DOMUtils } from "./dom-utils.js";
 import { LayoutManager } from "./layout.js";
+import { MediaWidgetManager } from "./media-widget-manager.js";
 import { AppState } from "./state.js";
 import { WidgetManager } from "./widget-manager.js";
 
@@ -35,7 +36,8 @@ export const GroupManager = {
             <div class="group-header-actions">
               <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="execute-group">▶ Execute All</button>
               <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="stop-group">■ Stop All</button>
-              <button class="add-element-btn ${CSS_CLASSES.EDIT_ONLY}">+ Add Element</button>
+              <button class="add-element-btn ${CSS_CLASSES.EDIT_ONLY}">+ Add Dynamic Element</button>
+              <button class="add-media-btn ${CSS_CLASSES.EDIT_ONLY}">+ Add Media Element</button>
               <button class="${CSS_CLASSES.DELETE_BTN} ${CSS_CLASSES.EDIT_ONLY}" data-action="remove-group">Remove Group</button>
             </div>
           </div>
@@ -66,6 +68,13 @@ export const GroupManager = {
       }
     }
 
+    if (config?.mediaWidgets?.length > 0) {
+      for (const mediaConfig of config.mediaWidgets) {
+        const entry = await MediaWidgetManager.createForGroup(mediaConfig);
+        widgetsList.appendChild(entry);
+      }
+    }
+
     this._attachGroupListeners(gridItem, groupCard);
     return gridItem;
   },
@@ -84,6 +93,14 @@ export const GroupManager = {
       .querySelector(".add-element-btn")
       ?.addEventListener("click", async () => {
         const entry = await WidgetManager.createForGroup(null);
+        widgetsList.appendChild(entry);
+        LayoutManager.scheduleAutoSave();
+      });
+
+    groupCard
+      .querySelector(".add-media-btn")
+      ?.addEventListener("click", async () => {
+        const entry = await MediaWidgetManager.createForGroup(null);
         widgetsList.appendChild(entry);
         LayoutManager.scheduleAutoSave();
       });
@@ -108,41 +125,115 @@ export const GroupManager = {
   },
 
   async executeGroup(groupCard) {
-    const widgetCards = [
-      ...groupCard.querySelectorAll(
-        `.group-widgets-list .${CSS_CLASSES.WIDGET_CARD}`,
-      ),
+    const widgetEntries = [
+      ...groupCard.querySelectorAll(".group-widgets-list .group-widget-entry"),
     ];
 
-    const dataGroups = (
-      await Promise.all(
-        widgetCards.map((card) => WidgetManager.collectWidgetData(card)),
-      )
-    ).filter(Boolean);
+    const dynamicWidgetDataGroups = [];
+    const mediaWidgetDataGroups = [];
 
-    if (dataGroups.length === 0) return;
+    for (const entry of widgetEntries) {
+      const widgetType = entry.getAttribute("data-widget-type") || "dynamic";
 
-    console.log(`Executing group with ${dataGroups.length} elements`);
-    await APIService.pushCGDataGroup(dataGroups);
+      if (widgetType === "media") {
+        const mediaCard = entry.querySelector(
+          `.${CSS_CLASSES.MEDIA_WIDGET_CARD}`,
+        );
+        if (mediaCard) {
+          const mediaData = MediaWidgetManager.collectMediaData(mediaCard);
+          if (mediaData) {
+            mediaWidgetDataGroups.push(mediaData);
+          }
+        }
+      } else {
+        const widgetCard = entry.querySelector(`.${CSS_CLASSES.WIDGET_CARD}`);
+        if (widgetCard) {
+          const widgetData = await WidgetManager.collectWidgetData(widgetCard);
+          if (widgetData) {
+            dynamicWidgetDataGroups.push(widgetData);
+          }
+        }
+      }
+    }
+
+    // Execute dynamic widgets if any
+    if (dynamicWidgetDataGroups.length > 0) {
+      console.log(
+        `Executing group with ${dynamicWidgetDataGroups.length} dynamic elements`,
+      );
+      await APIService.pushCGDataGroup(dynamicWidgetDataGroups);
+    }
+
+    // Execute media widgets if any
+    if (mediaWidgetDataGroups.length > 0) {
+      console.log(
+        `Executing group with ${mediaWidgetDataGroups.length} media elements`,
+      );
+      for (const mediaData of mediaWidgetDataGroups) {
+        await APIService.playMedia(
+          mediaData.filename,
+          mediaData.layer,
+          mediaData.channels,
+          mediaData.loop,
+          mediaData.delay,
+        );
+      }
+    }
   },
 
   async stopGroup(groupCard) {
-    const widgetCards = [
-      ...groupCard.querySelectorAll(
-        `.group-widgets-list .${CSS_CLASSES.WIDGET_CARD}`,
-      ),
+    const widgetEntries = [
+      ...groupCard.querySelectorAll(".group-widgets-list .group-widget-entry"),
     ];
 
-    const dataGroups = (
-      await Promise.all(
-        widgetCards.map((card) => WidgetManager.collectWidgetData(card)),
-      )
-    ).filter(Boolean);
+    const dynamicWidgetDataGroups = [];
+    const mediaWidgetDataGroups = [];
 
-    if (dataGroups.length === 0) return;
+    for (const entry of widgetEntries) {
+      const widgetType = entry.getAttribute("data-widget-type") || "dynamic";
 
-    console.log(`Stopping group with ${dataGroups.length} elements`);
-    await APIService.stopCGDataGroup(dataGroups);
+      if (widgetType === "media") {
+        const mediaCard = entry.querySelector(
+          `.${CSS_CLASSES.MEDIA_WIDGET_CARD}`,
+        );
+        if (mediaCard) {
+          const mediaData = MediaWidgetManager.collectMediaData(mediaCard);
+          if (mediaData) {
+            mediaWidgetDataGroups.push(mediaData);
+          }
+        }
+      } else {
+        const widgetCard = entry.querySelector(`.${CSS_CLASSES.WIDGET_CARD}`);
+        if (widgetCard) {
+          const widgetData = await WidgetManager.collectWidgetData(widgetCard);
+          if (widgetData) {
+            dynamicWidgetDataGroups.push(widgetData);
+          }
+        }
+      }
+    }
+
+    // Stop dynamic widgets if any
+    if (dynamicWidgetDataGroups.length > 0) {
+      console.log(
+        `Stopping group with ${dynamicWidgetDataGroups.length} dynamic elements`,
+      );
+      await APIService.stopCGDataGroup(dynamicWidgetDataGroups);
+    }
+
+    // Stop media widgets if any
+    if (mediaWidgetDataGroups.length > 0) {
+      console.log(
+        `Stopping group with ${mediaWidgetDataGroups.length} media elements`,
+      );
+      for (const mediaData of mediaWidgetDataGroups) {
+        await APIService.stopMedia(
+          mediaData.layer,
+          mediaData.channels,
+          mediaData.delay,
+        );
+      }
+    }
   },
 
   serializeGroups() {
@@ -161,62 +252,102 @@ export const GroupManager = {
         groupCard.querySelector(".group-name-input")?.value?.trim() || "Group";
 
       const widgets = [];
+      const mediaWidgets = [];
       groupCard.querySelectorAll(".group-widget-entry").forEach((entry) => {
-        const card = entry.querySelector(`.${CSS_CLASSES.WIDGET_CARD}`);
-        if (!card) return;
-
         const widgetId =
           entry.getAttribute("data-widget-id") || `w-${Date.now()}`;
+        const widgetType = entry.getAttribute("data-widget-type") || "dynamic";
 
-        const fields = [];
-        DOMUtils.querySelectorAll(`.${CSS_CLASSES.FIELD_ROW}`, card).forEach(
-          (row) => {
-            const keyInput = DOMUtils.querySelector(SELECTORS.FIELD_KEY, row);
-            if (!keyInput?.value) return;
-            fields.push({
-              key: keyInput.value,
-              type:
-                DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row)?.value ||
-                FIELD_TYPES.STRING,
-              id: DOMUtils.querySelector(SELECTORS.FIELD_ID, row)?.value || "",
-              source:
-                DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row)?.value ||
-                "",
-            });
-          },
-        );
+        if (widgetType === "media") {
+          const card = entry.querySelector(`.${CSS_CLASSES.MEDIA_WIDGET_CARD}`);
+          if (!card) return;
 
-        const posXVal = DOMUtils.querySelector(".pos-x-input", card)?.value;
-        const posYVal = DOMUtils.querySelector(".pos-y-input", card)?.value;
-        const sizeXVal = DOMUtils.querySelector(".size-x-input", card)?.value;
-        const sizeYVal = DOMUtils.querySelector(".size-y-input", card)?.value;
-        const delayVal = DOMUtils.querySelector(".delay-input", card)?.value;
-        const nameInput = DOMUtils.querySelector(".widget-name-input", card);
-        const channelInput = DOMUtils.querySelector(".channel-input", card);
+          const filename = DOMUtils.querySelector(
+            ".media-dropdown",
+            card,
+          )?.value;
+          const nameInput = DOMUtils.querySelector(".widget-name-input", card);
+          const channelInput = DOMUtils.querySelector(".channel-input", card);
+          const loop =
+            DOMUtils.querySelector(".loop-input", card)?.checked ?? false;
+          const delayVal = DOMUtils.querySelector(".delay-input", card)?.value;
 
-        widgets.push({
-          id: widgetId,
-          x: 0,
-          y: 0,
-          w: 0,
-          h: 0,
-          name: nameInput?.value || "Dynamic Element",
-          template: DOMUtils.querySelector(".api-dropdown", card)?.value || "",
-          layer:
-            parseInt(DOMUtils.querySelector(".layer-input", card)?.value, 10) ||
-            1,
-          channel: parseInt(channelInput?.value, 10) || 1,
-          channelExpr: channelInput?.value || "1",
-          posX: posXVal ? parseInt(posXVal, 10) : null,
-          posY: posYVal ? parseInt(posYVal, 10) : null,
-          sizeX: sizeXVal ? parseFloat(sizeXVal) : null,
-          sizeY: sizeYVal ? parseFloat(sizeYVal) : null,
-          delay: delayVal ? parseInt(delayVal, 10) : 0,
-          fields,
-        });
+          mediaWidgets.push({
+            id: widgetId,
+            x: 0,
+            y: 0,
+            w: 0,
+            h: 0,
+            name: nameInput?.value || "Media Element",
+            filename: filename || "",
+            layer:
+              parseInt(
+                DOMUtils.querySelector(".layer-input", card)?.value,
+                10,
+              ) || 1,
+            channel: parseInt(channelInput?.value, 10) || 1,
+            channelExpr: channelInput?.value || "1",
+            loop: loop,
+            delay: delayVal ? parseInt(delayVal, 10) : 0,
+          });
+        } else {
+          const card = entry.querySelector(`.${CSS_CLASSES.WIDGET_CARD}`);
+          if (!card) return;
+
+          const fields = [];
+          DOMUtils.querySelectorAll(`.${CSS_CLASSES.FIELD_ROW}`, card).forEach(
+            (row) => {
+              const keyInput = DOMUtils.querySelector(SELECTORS.FIELD_KEY, row);
+              if (!keyInput?.value) return;
+              fields.push({
+                key: keyInput.value,
+                type:
+                  DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row)?.value ||
+                  FIELD_TYPES.STRING,
+                id:
+                  DOMUtils.querySelector(SELECTORS.FIELD_ID, row)?.value || "",
+                source:
+                  DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row)?.value ||
+                  "",
+              });
+            },
+          );
+
+          const posXVal = DOMUtils.querySelector(".pos-x-input", card)?.value;
+          const posYVal = DOMUtils.querySelector(".pos-y-input", card)?.value;
+          const sizeXVal = DOMUtils.querySelector(".size-x-input", card)?.value;
+          const sizeYVal = DOMUtils.querySelector(".size-y-input", card)?.value;
+          const delayVal = DOMUtils.querySelector(".delay-input", card)?.value;
+          const nameInput = DOMUtils.querySelector(".widget-name-input", card);
+          const channelInput = DOMUtils.querySelector(".channel-input", card);
+
+          widgets.push({
+            id: widgetId,
+            x: 0,
+            y: 0,
+            w: 0,
+            h: 0,
+            name: nameInput?.value || "Dynamic Element",
+            template:
+              DOMUtils.querySelector(".api-dropdown", card)?.value || "",
+            layer:
+              parseInt(
+                DOMUtils.querySelector(".layer-input", card)?.value,
+                10,
+              ) || 1,
+            channel: parseInt(channelInput?.value, 10) || 1,
+            channelExpr: channelInput?.value || "1",
+            posX: posXVal ? parseInt(posXVal, 10) : null,
+            posY: posYVal ? parseInt(posYVal, 10) : null,
+            sizeX: sizeXVal ? parseFloat(sizeXVal) : null,
+            sizeY: sizeYVal ? parseFloat(sizeYVal) : null,
+            delay: delayVal ? parseInt(delayVal, 10) : 0,
+            fields,
+          });
+        }
       });
 
-      groups.push({
+      const groupData = {
         id: groupId,
         x: node.x,
         y: node.y,
@@ -224,7 +355,14 @@ export const GroupManager = {
         h: node.h,
         name,
         widgets,
-      });
+      };
+
+      // Only add mediaWidgets if there are any
+      if (mediaWidgets.length > 0) {
+        groupData.mediaWidgets = mediaWidgets;
+      }
+
+      groups.push(groupData);
     });
 
     return groups;

@@ -47,13 +47,14 @@ type MediaWidgetConfig struct {
 }
 
 type GroupConfig struct {
-	ID      string         `json:"id"`
-	X       int            `json:"x"`
-	Y       int            `json:"y"`
-	W       int            `json:"w"`
-	H       int            `json:"h"`
-	Name    string         `json:"name"`
-	Widgets []WidgetConfig `json:"widgets"`
+	ID           string              `json:"id"`
+	X            int                 `json:"x"`
+	Y            int                 `json:"y"`
+	W            int                 `json:"w"`
+	H            int                 `json:"h"`
+	Name         string              `json:"name"`
+	Widgets      []WidgetConfig      `json:"widgets"`
+	MediaWidgets []MediaWidgetConfig `json:"mediaWidgets,omitempty"`
 }
 
 type LayoutConfig struct {
