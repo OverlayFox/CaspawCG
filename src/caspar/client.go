@@ -104,6 +104,15 @@ func (c *client) PushCGData(template string, layer int, channels []int, data map
 		}
 	}
 
+	if delay > 0 {
+		select {
+		case <-time.After(delay):
+			// continue to play the CG data after the delay
+		case <-c.ctx.Done():
+			return c.ctx.Err()
+		}
+	}
+
 	for _, channel := range channels {
 		if err := c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Add(params); err != nil {
 			return err

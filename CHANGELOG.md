@@ -7,13 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
+### Fixed
 
-- change scaling of elements to give window a larger workarea and allow for more dynamic placement of elements
+- #31 - delay is now respected when playing CG elements out
 - fixed a bug with WailsV2 where not setting `max-width` locks the max width of the spawning window
 - fixed nil pointer when creating Datasource clients
+- clear also now clears mixer commands
+
+### Changed
+
+- changed scaling of elements to give the workarea more space
 - cleaned up JavaScript front-end
-- fixed clear also now clearing mixer commands
 
 ### Added
 
