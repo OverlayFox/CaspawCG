@@ -276,6 +276,30 @@ button#clear-all-btn:hover {
   font-weight: 600;
 }
 
+.widget-name-input {
+  width: 100%;
+  padding: 4px var(--spacing-sm);
+  background-color: rgba(37, 99, 235, 0.15);
+  color: var(--text-main);
+  border: 1px solid rgba(37, 99, 235, 0.5);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  transition: border-color var(--transition-normal);
+}
+
+.widget-name-input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+}
+
+.widget-name-display {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #93c5fd;
+}
+
 .widget-header-controls {
   display: flex;
   gap: var(--spacing-sm);
