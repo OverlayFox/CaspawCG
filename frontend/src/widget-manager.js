@@ -177,6 +177,7 @@ export const WidgetManager = {
     const entry = document.createElement("div");
     entry.className = "group-widget-entry";
     entry.setAttribute("data-widget-id", widgetId);
+    entry.setAttribute("data-widget-type", "dynamic");
     entry.innerHTML = `<div class="${CSS_CLASSES.WIDGET_CARD}">${this._buildInnerCardHTML(config, optionsHtml)}</div>`;
 
     const widgetCard = entry.querySelector(`.${CSS_CLASSES.WIDGET_CARD}`);

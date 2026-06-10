@@ -176,6 +176,40 @@ export namespace ui {
 	        this.source = source["source"];
 	    }
 	}
+	export class MediaWidgetConfig {
+	    id: string;
+	    x: number;
+	    y: number;
+	    w: number;
+	    h: number;
+	    name?: string;
+	    filename: string;
+	    layer: number;
+	    channel: number;
+	    channelExpr?: string;
+	    delay?: number;
+	    loop: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new MediaWidgetConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.x = source["x"];
+	        this.y = source["y"];
+	        this.w = source["w"];
+	        this.h = source["h"];
+	        this.name = source["name"];
+	        this.filename = source["filename"];
+	        this.layer = source["layer"];
+	        this.channel = source["channel"];
+	        this.channelExpr = source["channelExpr"];
+	        this.delay = source["delay"];
+	        this.loop = source["loop"];
+	    }
+	}
 	export class WidgetConfig {
 	    id: string;
 	    x: number;
@@ -244,6 +278,7 @@ export namespace ui {
 	    h: number;
 	    name: string;
 	    widgets: WidgetConfig[];
+	    mediaWidgets?: MediaWidgetConfig[];
 	
 	    static createFrom(source: any = {}) {
 	        return new GroupConfig(source);
@@ -258,6 +293,7 @@ export namespace ui {
 	        this.h = source["h"];
 	        this.name = source["name"];
 	        this.widgets = this.convertValues(source["widgets"], WidgetConfig);
+	        this.mediaWidgets = this.convertValues(source["mediaWidgets"], MediaWidgetConfig);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -277,40 +313,6 @@ export namespace ui {
 		    }
 		    return a;
 		}
-	}
-	export class MediaWidgetConfig {
-	    id: string;
-	    x: number;
-	    y: number;
-	    w: number;
-	    h: number;
-	    name?: string;
-	    filename: string;
-	    layer: number;
-	    channel: number;
-	    channelExpr?: string;
-	    delay?: number;
-	    loop: boolean;
-	
-	    static createFrom(source: any = {}) {
-	        return new MediaWidgetConfig(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.x = source["x"];
-	        this.y = source["y"];
-	        this.w = source["w"];
-	        this.h = source["h"];
-	        this.name = source["name"];
-	        this.filename = source["filename"];
-	        this.layer = source["layer"];
-	        this.channel = source["channel"];
-	        this.channelExpr = source["channelExpr"];
-	        this.delay = source["delay"];
-	        this.loop = source["loop"];
-	    }
 	}
 	export class LayoutConfig {
 	    version: number;
