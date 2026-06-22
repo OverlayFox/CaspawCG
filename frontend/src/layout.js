@@ -1,6 +1,7 @@
 import {
   CSS_CLASSES,
   FIELD_TYPES,
+  INPUT_TYPES,
   GROUP_CONTAINER_CLASS,
   SELECTORS,
 } from "./constants.js";
@@ -68,18 +69,20 @@ export const LayoutManager = {
       ).forEach((row) => {
         const keyInput = DOMUtils.querySelector(SELECTORS.FIELD_KEY, row);
         const typeSelect = DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row);
+        const inputTypeSelect = DOMUtils.querySelector(SELECTORS.FIELD_INPUT_TYPE, row);
         const idInput = DOMUtils.querySelector(SELECTORS.FIELD_ID, row);
-        const sourceSelect = DOMUtils.querySelector(
-          SELECTORS.FIELD_SOURCE,
-          row,
-        );
+        const sourceSelect = DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row);
+        const directValueInput = DOMUtils.querySelector(SELECTORS.FIELD_DIRECT_VALUE, row);
 
         if (keyInput?.value) {
+          const inputType = inputTypeSelect?.value || INPUT_TYPES.DATASOURCE;
           fields.push({
             key: keyInput.value,
             type: typeSelect?.value || FIELD_TYPES.STRING,
-            id: idInput?.value || "",
-            source: sourceSelect?.value || "",
+            inputType,
+            id: inputType === INPUT_TYPES.DIRECT ? "" : (idInput?.value || ""),
+            source: inputType === INPUT_TYPES.DIRECT ? "" : (sourceSelect?.value || ""),
+            value: inputType === INPUT_TYPES.DIRECT ? (directValueInput?.value || "") : "",
           });
         }
       });

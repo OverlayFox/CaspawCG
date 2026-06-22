@@ -24,6 +24,10 @@ export const SELECTORS = {
   FIELD_TYPE: ".f-type",
   FIELD_ID: ".f-id",
   FIELD_SOURCE: ".f-source",
+  FIELD_INPUT_TYPE: ".f-input-type",
+  FIELD_DIRECT_VALUE: ".f-value",
+  FIELD_DATASOURCE_INPUTS: ".f-datasource-inputs",
+  FIELD_DIRECT_INPUTS: ".f-direct-inputs",
   LIVE_KEY_DISPLAY: ".live-key-display",
   LIVE_VALUE_DISPLAY: ".live-value-display",
 };
@@ -34,4 +38,9 @@ export const FIELD_TYPES = {
   STRING: "string",
   INT: "int",
   FLOAT: "float",
+};
+
+export const INPUT_TYPES = {
+  DATASOURCE: "datasource",
+  DIRECT: "direct",
 };

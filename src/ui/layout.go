@@ -6,10 +6,12 @@ import (
 )
 
 type FieldConfig struct {
-	Key    string `json:"key"`
-	Type   string `json:"type"`
-	ID     string `json:"id"`
-	Source string `json:"source"`
+	Key       string `json:"key"`
+	Type      string `json:"type"`
+	ID        string `json:"id"`
+	Source    string `json:"source"`
+	InputType string `json:"inputType,omitempty"`
+	Value     string `json:"value,omitempty"`
 }
 
 type WidgetConfig struct {

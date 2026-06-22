@@ -1,5 +1,5 @@
 import { APIService } from "./api.js";
-import { CSS_CLASSES, FIELD_TYPES, SELECTORS } from "./constants.js";
+import { CSS_CLASSES, FIELD_TYPES, INPUT_TYPES, SELECTORS } from "./constants.js";
 import { DOMUtils } from "./dom-utils.js";
 import { FieldManager } from "./field-manager.js";
 import { LayoutManager } from "./layout.js";
@@ -264,14 +264,21 @@ export const WidgetManager = {
         const type =
           DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row)?.value ||
           FIELD_TYPES.STRING;
-        const liveDisplay = DOMUtils.querySelector(
-          SELECTORS.LIVE_VALUE_DISPLAY,
-          row,
-        );
-        const identifier =
-          DOMUtils.querySelector(SELECTORS.FIELD_ID, row)?.value || "";
+        const inputType =
+          DOMUtils.querySelector(SELECTORS.FIELD_INPUT_TYPE, row)?.value ||
+          INPUT_TYPES.DATASOURCE;
 
-        const rawValue = liveDisplay?.textContent?.trim() || identifier;
+        let rawValue;
+        if (inputType === INPUT_TYPES.DIRECT) {
+          rawValue =
+            DOMUtils.querySelector(SELECTORS.FIELD_DIRECT_VALUE, row)?.value ?? "";
+        } else {
+          const liveDisplay = DOMUtils.querySelector(SELECTORS.LIVE_VALUE_DISPLAY, row);
+          const identifier =
+            DOMUtils.querySelector(SELECTORS.FIELD_ID, row)?.value || "";
+          rawValue = liveDisplay?.textContent?.trim() || identifier;
+        }
+
         let value = rawValue;
         if (type === FIELD_TYPES.INT) value = parseInt(value, 10) || 0;
         else if (type === FIELD_TYPES.FLOAT) value = parseFloat(value) || 0.0;

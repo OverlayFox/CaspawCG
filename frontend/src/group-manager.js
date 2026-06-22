@@ -2,6 +2,7 @@ import { APIService } from "./api.js";
 import {
   CSS_CLASSES,
   FIELD_TYPES,
+  INPUT_TYPES,
   GROUP_CONTAINER_CLASS,
   SELECTORS,
 } from "./constants.js";
@@ -299,16 +300,21 @@ export const GroupManager = {
             (row) => {
               const keyInput = DOMUtils.querySelector(SELECTORS.FIELD_KEY, row);
               if (!keyInput?.value) return;
+              const inputType =
+                DOMUtils.querySelector(SELECTORS.FIELD_INPUT_TYPE, row)?.value ||
+                INPUT_TYPES.DATASOURCE;
               fields.push({
                 key: keyInput.value,
                 type:
                   DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row)?.value ||
                   FIELD_TYPES.STRING,
-                id:
-                  DOMUtils.querySelector(SELECTORS.FIELD_ID, row)?.value || "",
-                source:
-                  DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row)?.value ||
-                  "",
+                inputType,
+                id: inputType === INPUT_TYPES.DIRECT ? "" :
+                  (DOMUtils.querySelector(SELECTORS.FIELD_ID, row)?.value || ""),
+                source: inputType === INPUT_TYPES.DIRECT ? "" :
+                  (DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row)?.value || ""),
+                value: inputType === INPUT_TYPES.DIRECT ?
+                  (DOMUtils.querySelector(SELECTORS.FIELD_DIRECT_VALUE, row)?.value || "") : "",
               });
             },
           );

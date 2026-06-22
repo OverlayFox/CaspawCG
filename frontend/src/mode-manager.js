@@ -1,6 +1,6 @@
 import { AppState } from "./state.js";
 import { DOMUtils } from "./dom-utils.js";
-import { CSS_CLASSES, SELECTORS } from "./constants.js";
+import { CSS_CLASSES, SELECTORS, INPUT_TYPES } from "./constants.js";
 import { FieldManager } from "./field-manager.js";
 
 /**
@@ -30,6 +30,9 @@ export const ModeManager = {
     const sourceMap = new Map();
 
     DOMUtils.querySelectorAll(`.${CSS_CLASSES.FIELD_ROW}`).forEach((row) => {
+      const inputType = DOMUtils.querySelector(SELECTORS.FIELD_INPUT_TYPE, row)?.value || INPUT_TYPES.DATASOURCE;
+      if (inputType === INPUT_TYPES.DIRECT) return;
+
       const locationKey = DOMUtils.querySelector(SELECTORS.FIELD_ID, row)?.value;
       const type = DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row)?.value || "string";
       const source = DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row)?.value;

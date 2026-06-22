@@ -397,6 +397,14 @@ button#clear-all-btn:hover {
   background-color: rgba(220, 38, 38, 0.1);
 }
 
+.f-datasource-inputs,
+.f-direct-inputs {
+  display: flex;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
 .add-field-btn {
   width: 100%;
   margin-top: var(--spacing-sm);
