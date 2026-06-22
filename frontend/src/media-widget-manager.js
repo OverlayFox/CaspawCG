@@ -161,8 +161,8 @@ export const MediaWidgetManager = {
     `;
 
     const gridOptions = {
-      w: config?.w || 5,
-      h: config?.h || 2,
+      w: config?.w || 3,
+      h: config?.h || 3,
       minW: 3,
       minH: 2,
     };

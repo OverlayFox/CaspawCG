@@ -47,9 +47,9 @@ export const GroupManager = {
     `;
 
     const gridOptions = {
-      w: config?.w || 14,
-      h: config?.h || 5,
-      minW: 6,
+      w: config?.w || 4,
+      h: config?.h || 3,
+      minW: 3,
       minH: 3,
     };
     if (config) {

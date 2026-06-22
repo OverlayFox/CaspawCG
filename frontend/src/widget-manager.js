@@ -52,25 +52,31 @@ export const WidgetManager = {
         <button class="${CSS_CLASSES.DELETE_BTN} ${CSS_CLASSES.EDIT_ONLY}" data-action="remove">Remove</button>
       </div>
       <div class="widget-position-size-controls">
-        <div class="input-group">
-          <label>Pos X (px):</label>
-          <input type="number" class="pos-x-input" min="0" max="1920" value="${posX}">
+        <div class="widget-controls-row">
+          <div class="input-group">
+            <label>Pos X (px):</label>
+            <input type="number" class="pos-x-input" min="0" max="1920" value="${posX}">
+          </div>
+          <div class="input-group">
+            <label>Pos Y (px):</label>
+            <input type="number" class="pos-y-input" min="0" max="1080" value="${posY}">
+          </div>
         </div>
-        <div class="input-group">
-          <label>Pos Y (px):</label>
-          <input type="number" class="pos-y-input" min="0" max="1080" value="${posY}">
+        <div class="widget-controls-row">
+          <div class="input-group">
+            <label>Size X (%):</label>
+            <input type="number" class="size-x-input" min="0" max="100" value="${sizeX}">
+          </div>
+          <div class="input-group">
+            <label>Size Y (%):</label>
+            <input type="number" class="size-y-input" min="0" max="100" value="${sizeY}">
+          </div>
         </div>
-        <div class="input-group">
-          <label>Size X (%):</label>
-          <input type="number" class="size-x-input" min="0" max="100" value="${sizeX}">
-        </div>
-        <div class="input-group">
-          <label>Size Y (%):</label>
-          <input type="number" class="size-y-input" min="0" max="100" value="${sizeY}">
-        </div>
-        <div class="input-group">
-          <label>Delay (ms):</label>
-          <input type="number" class="delay-input" min="0" max="60000" value="${config?.delay || 0}">
+        <div class="widget-controls-row">
+          <div class="input-group">
+            <label>Delay (ms):</label>
+            <input type="number" class="delay-input" min="0" max="60000" value="${config?.delay || 0}">
+          </div>
         </div>
       </div>
       <div class="${CSS_CLASSES.CUSTOM_FIELDS}"></div>
@@ -142,9 +148,9 @@ export const WidgetManager = {
     `;
 
     const gridOptions = {
-      w: config?.w || 6,
-      h: config?.h || 2,
-      minW: 6,
+      w: config?.w || 4,
+      h: config?.h || 3,
+      minW: 3,
       minH: 2,
     };
     if (config) {
