@@ -163,6 +163,8 @@ export namespace ui {
 	    type: string;
 	    id: string;
 	    source: string;
+	    inputType?: string;
+	    value?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new FieldConfig(source);
@@ -174,6 +176,8 @@ export namespace ui {
 	        this.type = source["type"];
 	        this.id = source["id"];
 	        this.source = source["source"];
+	        this.inputType = source["inputType"];
+	        this.value = source["value"];
 	    }
 	}
 	export class MediaWidgetConfig {
