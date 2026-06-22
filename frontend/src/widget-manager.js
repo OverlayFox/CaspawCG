@@ -142,9 +142,9 @@ export const WidgetManager = {
     `;
 
     const gridOptions = {
-      w: config?.w || 7,
+      w: config?.w || 6,
       h: config?.h || 2,
-      minW: 7,
+      minW: 6,
       minH: 2,
     };
     if (config) {

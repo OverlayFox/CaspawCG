@@ -163,7 +163,7 @@ export const MediaWidgetManager = {
     const gridOptions = {
       w: config?.w || 5,
       h: config?.h || 2,
-      minW: 5,
+      minW: 3,
       minH: 2,
     };
     if (config) {

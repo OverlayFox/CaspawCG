@@ -49,7 +49,7 @@ export const GroupManager = {
     const gridOptions = {
       w: config?.w || 14,
       h: config?.h || 5,
-      minW: 7,
+      minW: 6,
       minH: 3,
     };
     if (config) {
