@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- #35 - media element can now be used inside groups
 - #32 - any element can now be given a custom name by the user
 - #24 - added clearing and playing out elements to multiple channels at once
 - #28 - added build and changelog pipelines

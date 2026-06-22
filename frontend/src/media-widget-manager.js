@@ -187,6 +187,30 @@ export const MediaWidgetManager = {
     return gridItem;
   },
 
+  // Creates a media widget card for embedding inside a group container (no GridStack wrapper).
+  async createForGroup(config = null) {
+    const options = await APIService.getMediaOptions();
+    const optionsHtml = DOMUtils.createOptionsHTML(options);
+    const widgetId = config?.id || `m-${Date.now()}`;
+
+    const entry = document.createElement("div");
+    entry.className = "group-widget-entry";
+    entry.setAttribute("data-widget-id", widgetId);
+    entry.setAttribute("data-widget-type", "media");
+    entry.innerHTML = `<div class="${CSS_CLASSES.MEDIA_WIDGET_CARD}">${this._buildInnerCardHTML(config, optionsHtml)}</div>`;
+
+    const mediaCard = entry.querySelector(`.${CSS_CLASSES.MEDIA_WIDGET_CARD}`);
+
+    await this._restoreCardState(mediaCard, config);
+
+    this._attachCardListeners(mediaCard, () => {
+      entry.remove();
+      LayoutManager.scheduleAutoSave();
+    });
+
+    return entry;
+  },
+
   stopMediaAction(mediaCard) {
     const layer =
       parseInt(DOMUtils.querySelector(".layer-input", mediaCard)?.value, 10) ||
@@ -207,15 +231,12 @@ export const MediaWidgetManager = {
     APIService.stopMedia(layer, channels, delay);
   },
 
-  playMediaAction(mediaCard) {
+  collectMediaData(mediaCard) {
     const filename = DOMUtils.querySelector(
       ".media-dropdown",
       mediaCard,
     )?.value;
-    if (!filename) {
-      console.error("No media file selected for playback.");
-      return;
-    }
+    if (!filename) return null;
 
     const layer =
       parseInt(DOMUtils.querySelector(".layer-input", mediaCard)?.value, 10) ||
@@ -232,9 +253,25 @@ export const MediaWidgetManager = {
       ) || [1];
     } catch (e) {
       alert(`Invalid channel input: ${e.message}`);
+      return null;
+    }
+
+    return { filename, layer, channels, loop, delay };
+  },
+
+  playMediaAction(mediaCard) {
+    const mediaData = this.collectMediaData(mediaCard);
+    if (!mediaData) {
+      console.error("No media file selected for playback.");
       return;
     }
 
-    APIService.playMedia(filename, layer, channels, loop, delay);
+    APIService.playMedia(
+      mediaData.filename,
+      mediaData.layer,
+      mediaData.channels,
+      mediaData.loop,
+      mediaData.delay,
+    );
   },
 };

@@ -202,13 +202,15 @@ button#clear-all-btn:hover {
   white-space: nowrap;
 }
 
-.add-element-btn {
+.add-element-btn,
+.add-media-btn {
   background-color: rgba(124, 58, 237, 0.3);
   border: 1px solid rgba(124, 58, 237, 0.6);
   color: #c4b5fd;
 }
 
-.add-element-btn:hover {
+.add-element-btn:hover,
+.add-media-btn:hover {
   background-color: rgba(124, 58, 237, 0.5);
 }
 
