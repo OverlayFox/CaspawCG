@@ -412,10 +412,14 @@ button#clear-all-btn:hover {
 
 .widget-position-size-controls {
   display: flex;
+  flex-direction: column;
   gap: var(--spacing-sm);
   margin-bottom: var(--spacing-md);
-  flex-wrap: nowrap;
-  overflow-x: auto;
+}
+
+.widget-controls-row {
+  display: flex;
+  gap: var(--spacing-sm);
 }
 
 .widget-position-size-controls .input-group {

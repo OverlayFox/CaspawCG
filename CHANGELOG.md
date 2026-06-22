@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- #39 - elements can not be placed next to each other
 - #31 - delay is now respected when playing CG elements out
 - fixed a bug with WailsV2 where not setting `max-width` locks the max width of the spawning window
 - fixed nil pointer when creating Datasource clients
