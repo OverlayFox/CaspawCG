@@ -44,11 +44,12 @@ func NewClient(ctx context.Context, logger zerolog.Logger, cfg *Config, eventPro
 }
 
 func (c *client) Connect() error {
+	defer c.keepAlive()
+
 	err := c.caspar.Connect(c.ctx)
 	if err != nil {
 		return err
 	}
-	c.keepAlive()
 	return nil
 }
 
