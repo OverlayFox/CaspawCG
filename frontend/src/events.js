@@ -28,6 +28,11 @@ const ANIMATION_DURATION = 300;
 const HIGHLIGHT_COLOR = "#2ecc71";
 
 /**
+ * Import ConnectionStateManager to handle reconnection logic
+ */
+import { ConnectionStateManager } from "./api.js";
+
+/**
  * DOM Utilities for event handling
  */
 const EventDOMUtils = {
@@ -114,6 +119,8 @@ const DataUpdateHandler = {
  * CasparCG Status Manager - handles CasparCG client status updates
  */
 const CasparStatusManager = {
+  _connectionStates: new Map(), // Track per-client connection state
+
   update(clientData) {
     if (!this.validateClientData(clientData)) {
       console.error("Invalid client data received:", clientData);
@@ -131,6 +138,9 @@ const CasparStatusManager = {
     }
 
     const clientId = this.generateClientId(host, port);
+    const wasConnected = this._connectionStates.get(clientId) || false;
+    this._connectionStates.set(clientId, isAlive);
+
     let chip = document.getElementById(clientId);
 
     if (!chip) {
@@ -138,6 +148,14 @@ const CasparStatusManager = {
       container.appendChild(chip);
     } else {
       this.updateClientStatus(chip, isAlive);
+    }
+
+    // Notify ConnectionStateManager of state change
+    // (it will handle reconnection logic and data refresh)
+    if (!wasConnected && isAlive) {
+      ConnectionStateManager.handleConnectionChange(isAlive);
+    } else if (wasConnected && !isAlive) {
+      ConnectionStateManager.handleConnectionChange(isAlive);
     }
   },
 

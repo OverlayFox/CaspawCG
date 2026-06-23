@@ -1,5 +1,10 @@
-import { APIService } from "./api.js";
-import { CSS_CLASSES, FIELD_TYPES, INPUT_TYPES, SELECTORS } from "./constants.js";
+import { APIService, ConnectionStateManager } from "./api.js";
+import {
+  CSS_CLASSES,
+  FIELD_TYPES,
+  INPUT_TYPES,
+  SELECTORS,
+} from "./constants.js";
 import { DOMUtils } from "./dom-utils.js";
 import { FieldManager } from "./field-manager.js";
 import { LayoutManager } from "./layout.js";
@@ -136,7 +141,9 @@ export const WidgetManager = {
 
   async createFromConfig(config = null) {
     const options = await APIService.getTemplateOptions();
-    const optionsHtml = DOMUtils.createOptionsHTML(options);
+    // Ensure saved template is in options even if server is offline
+    const mergedOptions = this._mergeWithSavedValue(options, config?.template);
+    const optionsHtml = DOMUtils.createOptionsHTML(mergedOptions);
     const widgetId = config?.id || Date.now();
 
     const widgetElement = `
@@ -177,7 +184,9 @@ export const WidgetManager = {
   // Creates a widget card for embedding inside a group container (no GridStack wrapper).
   async createForGroup(config = null) {
     const options = await APIService.getTemplateOptions();
-    const optionsHtml = DOMUtils.createOptionsHTML(options);
+    // Ensure saved template is in options even if server is offline
+    const mergedOptions = this._mergeWithSavedValue(options, config?.template);
+    const optionsHtml = DOMUtils.createOptionsHTML(mergedOptions);
     const widgetId = config?.id || `w-${Date.now()}`;
 
     const entry = document.createElement("div");
@@ -271,9 +280,13 @@ export const WidgetManager = {
         let rawValue;
         if (inputType === INPUT_TYPES.DIRECT) {
           rawValue =
-            DOMUtils.querySelector(SELECTORS.FIELD_DIRECT_VALUE, row)?.value ?? "";
+            DOMUtils.querySelector(SELECTORS.FIELD_DIRECT_VALUE, row)?.value ??
+            "";
         } else {
-          const liveDisplay = DOMUtils.querySelector(SELECTORS.LIVE_VALUE_DISPLAY, row);
+          const liveDisplay = DOMUtils.querySelector(
+            SELECTORS.LIVE_VALUE_DISPLAY,
+            row,
+          );
           const identifier =
             DOMUtils.querySelector(SELECTORS.FIELD_ID, row)?.value || "";
           rawValue = liveDisplay?.textContent?.trim() || identifier;
@@ -306,5 +319,54 @@ export const WidgetManager = {
       cgData.sizing.sizeY,
       cgData.delay,
     );
+  },
+
+  /**
+   * Merge saved template with available options.
+   * Ensures the saved selection is always available in the dropdown.
+   */
+  _mergeWithSavedValue(options, savedValue) {
+    if (!savedValue) return options;
+    if (options.includes(savedValue)) return options;
+    // Add saved value at the beginning so it's preserved
+    return [savedValue, ...options];
+  },
+
+  /**
+   * Initialize connection monitoring - call this once on app startup.
+   */
+  init() {
+    ConnectionStateManager.subscribe((data) => {
+      if (data.templates && data.templates.length > 0) {
+        this.refreshAllTemplateDropdowns(data.templates);
+      }
+    });
+  },
+
+  /**
+   * Refresh all template dropdowns with new options.
+   * Preserves currently selected values if they still exist.
+   */
+  refreshAllTemplateDropdowns(templates) {
+    const allDropdowns = document.querySelectorAll(
+      `.${CSS_CLASSES.WIDGET_CARD} .api-dropdown`,
+    );
+
+    allDropdowns.forEach((dropdown) => {
+      const currentValue = dropdown.value;
+      const optionsHtml = DOMUtils.createOptionsHTML(templates);
+      dropdown.innerHTML = optionsHtml;
+
+      // Restore previous selection if it still exists
+      if (currentValue && templates.includes(currentValue)) {
+        dropdown.value = currentValue;
+      }
+    });
+
+    if (allDropdowns.length > 0) {
+      console.log(
+        `Refreshed ${allDropdowns.length} template dropdown(s) with ${templates.length} template(s)`,
+      );
+    }
   },
 };

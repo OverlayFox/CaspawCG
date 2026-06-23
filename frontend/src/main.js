@@ -57,6 +57,10 @@ async function initializeApp() {
 
   initLiveEvents();
 
+  // Initialize connection monitoring for auto-refresh on reconnect
+  WidgetManager.init();
+  MediaWidgetManager.init();
+
   LayoutManager.setGroupManager(GroupManager);
   LayoutManager.setMediaWidgetManager(MediaWidgetManager);
   await LayoutManager.loadLayout(WidgetManager, GroupManager);
