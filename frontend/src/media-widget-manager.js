@@ -1,4 +1,4 @@
-import { APIService } from "./api.js";
+import { APIService, ConnectionStateManager } from "./api.js";
 import { CSS_CLASSES } from "./constants.js";
 import { DOMUtils } from "./dom-utils.js";
 import { LayoutManager } from "./layout.js";
@@ -149,7 +149,9 @@ export const MediaWidgetManager = {
 
   async createFromConfig(config = null) {
     const options = await APIService.getMediaOptions();
-    const optionsHtml = DOMUtils.createOptionsHTML(options);
+    // Ensure saved filename is in options even if server is offline
+    const mergedOptions = this._mergeWithSavedValue(options, config?.filename);
+    const optionsHtml = DOMUtils.createOptionsHTML(mergedOptions);
     const widgetId = config?.id || Date.now();
 
     const widgetElement = `
@@ -190,7 +192,9 @@ export const MediaWidgetManager = {
   // Creates a media widget card for embedding inside a group container (no GridStack wrapper).
   async createForGroup(config = null) {
     const options = await APIService.getMediaOptions();
-    const optionsHtml = DOMUtils.createOptionsHTML(options);
+    // Ensure saved filename is in options even if server is offline
+    const mergedOptions = this._mergeWithSavedValue(options, config?.filename);
+    const optionsHtml = DOMUtils.createOptionsHTML(mergedOptions);
     const widgetId = config?.id || `m-${Date.now()}`;
 
     const entry = document.createElement("div");
@@ -273,5 +277,54 @@ export const MediaWidgetManager = {
       mediaData.loop,
       mediaData.delay,
     );
+  },
+
+  /**
+   * Merge saved filename with available options.
+   * Ensures the saved selection is always available in the dropdown.
+   */
+  _mergeWithSavedValue(options, savedValue) {
+    if (!savedValue) return options;
+    if (options.includes(savedValue)) return options;
+    // Add saved value at the beginning so it's preserved
+    return [savedValue, ...options];
+  },
+
+  /**
+   * Initialize connection monitoring - call this once on app startup.
+   */
+  init() {
+    ConnectionStateManager.subscribe((data) => {
+      if (data.media && data.media.length > 0) {
+        this.refreshAllMediaDropdowns(data.media);
+      }
+    });
+  },
+
+  /**
+   * Refresh all media dropdowns with new options.
+   * Preserves currently selected values if they still exist.
+   */
+  refreshAllMediaDropdowns(media) {
+    const allDropdowns = document.querySelectorAll(
+      `.${CSS_CLASSES.MEDIA_WIDGET_CARD} .media-dropdown`,
+    );
+
+    allDropdowns.forEach((dropdown) => {
+      const currentValue = dropdown.value;
+      const optionsHtml = DOMUtils.createOptionsHTML(media);
+      dropdown.innerHTML = optionsHtml;
+
+      // Restore previous selection if it still exists
+      if (currentValue && media.includes(currentValue)) {
+        dropdown.value = currentValue;
+      }
+    });
+
+    if (allDropdowns.length > 0) {
+      console.log(
+        `Refreshed ${allDropdowns.length} media dropdown(s) with ${media.length} file(s)`,
+      );
+    }
   },
 };

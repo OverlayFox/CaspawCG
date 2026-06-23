@@ -1,4 +1,92 @@
 /**
+ * ConnectionStateManager — tracks CasparCG connection state and caches data.
+ * Automatically refreshes templates/media when server reconnects.
+ */
+export const ConnectionStateManager = {
+  _isConnected: false,
+  _cachedTemplates: [],
+  _cachedMedia: [],
+  _subscribers: [],
+
+  /**
+   * Subscribe to data refresh events.
+   * Callback receives { templates: [], media: [] } when data is updated.
+   */
+  subscribe(callback) {
+    this._subscribers.push(callback);
+  },
+
+  unsubscribe(callback) {
+    this._subscribers = this._subscribers.filter((cb) => cb !== callback);
+  },
+
+  _notifySubscribers() {
+    const data = {
+      templates: this._cachedTemplates,
+      media: this._cachedMedia,
+    };
+    this._subscribers.forEach((callback) => {
+      try {
+        callback(data);
+      } catch (error) {
+        console.error("Error in ConnectionStateManager subscriber:", error);
+      }
+    });
+  },
+
+  /**
+   * Called when CasparCG connection state changes.
+   * If transitioning from offline to online, refreshes cached data.
+   */
+  async handleConnectionChange(isConnected) {
+    const wasConnected = this._isConnected;
+    this._isConnected = isConnected;
+
+    // Server came back online - refresh data
+    if (!wasConnected && isConnected) {
+      console.log("CasparCG reconnected - refreshing templates and media");
+      await this.refreshAllData();
+    }
+  },
+
+  /**
+   * Fetches latest templates and media, updates cache, and notifies subscribers.
+   */
+  async refreshAllData() {
+    try {
+      const [templates, media] = await Promise.all([
+        window.go.ui.UIService.GetCasparCGTemplates(),
+        window.go.ui.UIService.GetCasparCGMedia(),
+      ]);
+
+      // Only update and notify if we got actual data
+      if (templates && templates.length > 0) {
+        this._cachedTemplates = templates;
+      }
+      if (media && media.length > 0) {
+        this._cachedMedia = media;
+      }
+
+      // Always notify subscribers even if one is empty
+      // (the other might have data)
+      if ((templates && templates.length > 0) || (media && media.length > 0)) {
+        this._notifySubscribers();
+      }
+    } catch (error) {
+      console.error("Failed to refresh CasparCG data:", error);
+    }
+  },
+
+  getCachedTemplates() {
+    return this._cachedTemplates;
+  },
+
+  getCachedMedia() {
+    return this._cachedMedia;
+  },
+};
+
+/**
  * APIService — all communication with the Wails Go backend.
  *
  * Every method logs its own errors and returns a safe default so callers
@@ -23,10 +111,21 @@ export const APIService = {
 
   async getTemplateOptions() {
     try {
-      return await window.go.ui.UIService.GetCasparCGTemplates();
+      const templates = await window.go.ui.UIService.GetCasparCGTemplates();
+      // Update cache if we got data
+      if (templates && templates.length > 0) {
+        ConnectionStateManager._cachedTemplates = templates;
+      }
+      // Return cached data if available, otherwise return what we got (might be empty)
+      return ConnectionStateManager._cachedTemplates.length > 0
+        ? ConnectionStateManager._cachedTemplates
+        : templates;
     } catch (error) {
       console.error("Failed to fetch template options:", error);
-      return [];
+      // Return cached data if available, otherwise empty array
+      return ConnectionStateManager._cachedTemplates.length > 0
+        ? ConnectionStateManager._cachedTemplates
+        : [];
     }
   },
 
@@ -102,10 +201,21 @@ export const APIService = {
 
   async getMediaOptions() {
     try {
-      return await window.go.ui.UIService.GetCasparCGMedia();
+      const media = await window.go.ui.UIService.GetCasparCGMedia();
+      // Update cache if we got data
+      if (media && media.length > 0) {
+        ConnectionStateManager._cachedMedia = media;
+      }
+      // Return cached data if available, otherwise return what we got (might be empty)
+      return ConnectionStateManager._cachedMedia.length > 0
+        ? ConnectionStateManager._cachedMedia
+        : media;
     } catch (error) {
       console.error("Failed to fetch media options:", error);
-      return [];
+      // Return cached data if available, otherwise empty array
+      return ConnectionStateManager._cachedMedia.length > 0
+        ? ConnectionStateManager._cachedMedia
+        : [];
     }
   },
 
