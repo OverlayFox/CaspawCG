@@ -40,7 +40,6 @@ func NewClient(ctx context.Context, logger zerolog.Logger, cfg *Config, eventPro
 		ctx:    c,
 		cancel: cancel,
 	}
-	client.keepAlive()
 	return client
 }
 
@@ -210,9 +209,7 @@ func (c *client) ClearAll() {
 }
 
 func (c *client) keepAlive() {
-	c.wg.Add(1)
-	go func() {
-		defer c.wg.Done()
+	c.wg.Go(func() {
 		ticker := time.NewTicker(1 * time.Second)
 		defer ticker.Stop()
 
@@ -223,8 +220,8 @@ func (c *client) keepAlive() {
 				var event types.CasparCGKeepAlive
 				_, err := c.caspar.Ping(nil)
 				if err != nil {
-					if c.cfg.Debug && !sentDebugMessage {
-						c.logger.Error().Err(err).Msg("Failed to ping CasparCG server")
+					if !sentDebugMessage {
+						c.logger.Debug().Err(err).Msg("Failed to ping CasparCG server")
 						sentDebugMessage = true
 					}
 					event = types.CasparCGKeepAlive{
@@ -232,7 +229,12 @@ func (c *client) keepAlive() {
 						Port:    c.cfg.Port,
 						IsAlive: false,
 					}
+					err := c.caspar.Connect(c.ctx)
+					if err == nil {
+						c.logger.Debug().Msg("Reconnected to CasparCG server")
+					}
 				} else {
+					sentDebugMessage = false
 					event = types.CasparCGKeepAlive{
 						Host:    c.cfg.Host,
 						Port:    c.cfg.Port,
@@ -244,5 +246,5 @@ func (c *client) keepAlive() {
 				return
 			}
 		}
-	}()
+	})
 }
