@@ -53,6 +53,7 @@ export const WidgetManager = {
           <input type="text" class="channel-input" placeholder="e.g. 1 or 1,2 or 1-3" value="${channel}">
         </div>
         <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="execute">Execute</button>
+        <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="next">Next</button>
         <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="stop">Stop</button>
         <button class="${CSS_CLASSES.DELETE_BTN} ${CSS_CLASSES.EDIT_ONLY}" data-action="remove">Remove</button>
       </div>
@@ -120,6 +121,8 @@ export const WidgetManager = {
         btn.addEventListener("click", (e) => {
           if (e.target.dataset.action === "execute")
             this.startWidgetAction(widgetCard);
+          else if (e.target.dataset.action === "next")
+            this.nextWidgetAction(widgetCard);
           else if (e.target.dataset.action === "stop")
             this.stopWidgetAction(widgetCard);
         });
@@ -229,6 +232,33 @@ export const WidgetManager = {
     }
 
     APIService.stopCGData(template, layer, channels);
+  },
+
+  nextWidgetAction(widgetCard) {
+    const template = DOMUtils.querySelector(".api-dropdown", widgetCard)?.value;
+    if (!template) {
+      console.error("No template selected for next.");
+      return;
+    }
+
+    const layer =
+      parseInt(DOMUtils.querySelector(".layer-input", widgetCard)?.value, 10) ||
+      1;
+
+    let channels;
+    try {
+      channels = parseChannelInput(
+        DOMUtils.querySelector(".channel-input", widgetCard)?.value ?? "1",
+      ) || [1];
+    } catch (e) {
+      alert(`Invalid channel input: ${e.message}`);
+      return;
+    }
+
+    const delayVal = DOMUtils.querySelector(".delay-input", widgetCard)?.value;
+    const delay = delayVal ? parseInt(delayVal, 10) * 1_000_000 : 0;
+
+    APIService.nextCGData(template, layer, channels, delay);
   },
 
   async collectWidgetData(widgetCard) {

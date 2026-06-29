@@ -170,6 +170,24 @@ export const APIService = {
     }
   },
 
+  async nextCGData(
+    template,
+    layer = 1,
+    channels = [1],
+    delay = 0, // delay in nanoseconds as time.Duration is represented in Go as nanoseconds
+  ) {
+    try {
+      await window.go.ui.UIService.NextCasparCGData(
+        template,
+        layer,
+        channels,
+        delay,
+      );
+    } catch (error) {
+      console.error("Failed to next CG data:", error);
+    }
+  },
+
   async pushCGDataGroup(dataGroups) {
     try {
       await window.go.ui.UIService.PushCasparCGDataGroup(dataGroups);

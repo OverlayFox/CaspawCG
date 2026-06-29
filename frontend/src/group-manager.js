@@ -2,8 +2,8 @@ import { APIService } from "./api.js";
 import {
   CSS_CLASSES,
   FIELD_TYPES,
-  INPUT_TYPES,
   GROUP_CONTAINER_CLASS,
+  INPUT_TYPES,
   SELECTORS,
 } from "./constants.js";
 import { DOMUtils } from "./dom-utils.js";
@@ -36,6 +36,7 @@ export const GroupManager = {
             <span class="group-name-display ${CSS_CLASSES.LIVE_ONLY}">${groupName}</span>
             <div class="group-header-actions">
               <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="execute-group">▶ Execute All</button>
+              <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="next-group">⏭ Next All</button>
               <button class="${CSS_CLASSES.ACTION_BTN} ${CSS_CLASSES.LIVE_ONLY}" data-action="stop-group">■ Stop All</button>
               <button class="add-element-btn ${CSS_CLASSES.EDIT_ONLY}">+ Add Dynamic Element</button>
               <button class="add-media-btn ${CSS_CLASSES.EDIT_ONLY}">+ Add Media Element</button>
@@ -117,6 +118,11 @@ export const GroupManager = {
       .querySelector(`[data-action="execute-group"]`)
       ?.addEventListener("click", () => {
         this.executeGroup(groupCard);
+      });
+    groupCard
+      .querySelector(`[data-action="next-group"]`)
+      ?.addEventListener("click", () => {
+        this.nextGroup(groupCard);
       });
     groupCard
       .querySelector(`[data-action="stop-group"]`)
@@ -237,6 +243,30 @@ export const GroupManager = {
     }
   },
 
+  async nextGroup(groupCard) {
+    const widgetEntries = [
+      ...groupCard.querySelectorAll(".group-widgets-list .group-widget-entry"),
+    ];
+
+    for (const entry of widgetEntries) {
+      if ((entry.getAttribute("data-widget-type") || "dynamic") !== "dynamic")
+        continue;
+
+      const widgetCard = entry.querySelector(`.${CSS_CLASSES.WIDGET_CARD}`);
+      if (!widgetCard) continue;
+
+      const cgData = await WidgetManager.collectWidgetData(widgetCard);
+      if (!cgData) continue;
+
+      await APIService.nextCGData(
+        cgData.template,
+        cgData.layer,
+        cgData.channels,
+        cgData.delay,
+      );
+    }
+  },
+
   serializeGroups() {
     const groups = [];
 
@@ -301,20 +331,29 @@ export const GroupManager = {
               const keyInput = DOMUtils.querySelector(SELECTORS.FIELD_KEY, row);
               if (!keyInput?.value) return;
               const inputType =
-                DOMUtils.querySelector(SELECTORS.FIELD_INPUT_TYPE, row)?.value ||
-                INPUT_TYPES.DATASOURCE;
+                DOMUtils.querySelector(SELECTORS.FIELD_INPUT_TYPE, row)
+                  ?.value || INPUT_TYPES.DATASOURCE;
               fields.push({
                 key: keyInput.value,
                 type:
                   DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row)?.value ||
                   FIELD_TYPES.STRING,
                 inputType,
-                id: inputType === INPUT_TYPES.DIRECT ? "" :
-                  (DOMUtils.querySelector(SELECTORS.FIELD_ID, row)?.value || ""),
-                source: inputType === INPUT_TYPES.DIRECT ? "" :
-                  (DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row)?.value || ""),
-                value: inputType === INPUT_TYPES.DIRECT ?
-                  (DOMUtils.querySelector(SELECTORS.FIELD_DIRECT_VALUE, row)?.value || "") : "",
+                id:
+                  inputType === INPUT_TYPES.DIRECT
+                    ? ""
+                    : DOMUtils.querySelector(SELECTORS.FIELD_ID, row)?.value ||
+                      "",
+                source:
+                  inputType === INPUT_TYPES.DIRECT
+                    ? ""
+                    : DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row)
+                        ?.value || "",
+                value:
+                  inputType === INPUT_TYPES.DIRECT
+                    ? DOMUtils.querySelector(SELECTORS.FIELD_DIRECT_VALUE, row)
+                        ?.value || ""
+                    : "",
               });
             },
           );

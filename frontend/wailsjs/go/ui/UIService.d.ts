@@ -22,6 +22,8 @@ export function GetDataSources():Promise<Array<string>>;
 
 export function LoadLayout():Promise<ui.LayoutConfig>;
 
+export function NextCasparCGData(arg1:string,arg2:number,arg3:Array<number>,arg4:time.Duration):Promise<void>;
+
 export function PlayCasparCGMedia(arg1:string,arg2:number,arg3:Array<number>,arg4:boolean,arg5:time.Duration):Promise<void>;
 
 export function PrimeDataSource(arg1:string,arg2:Array<data.Location>):Promise<void>;
