@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- #33 - `Add media` button now disappears when entering live mode
 - fixed reconnection logic to casparCG-server and fixed frontend to relist elements once the server comes available again
 - #39 - elements can not be placed next to each other
 - #31 - delay is now respected when playing CG elements out
@@ -23,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- #45 - added next button to templates and groups
 - #38 - allow for direct string input into `custom fields`
 - #35 - media element can now be used inside groups
 - #32 - any element can now be given a custom name by the user
