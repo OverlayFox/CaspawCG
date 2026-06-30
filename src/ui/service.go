@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"context"
+	"sync"
 	"time"
 
 	"github.com/overlayfox/casparcg-amcp-go/types/responses"
@@ -14,13 +16,21 @@ type UIService struct {
 	app               *App
 	datasourceManager data.DatasourceManager
 	casparCGClients   []types.CasparCGClient
+
+	wg     sync.WaitGroup
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
-func NewUIService(app *App, datasourceManager data.DatasourceManager, casparCGClients []types.CasparCGClient) *UIService {
+func NewUIService(upstreamCtx context.Context, app *App, datasourceManager data.DatasourceManager, casparCGClients []types.CasparCGClient) *UIService {
+	ctx, cancel := context.WithCancel(upstreamCtx)
 	return &UIService{
 		app:               app,
 		datasourceManager: datasourceManager,
 		casparCGClients:   casparCGClients,
+
+		ctx:    ctx,
+		cancel: cancel,
 	}
 }
 
@@ -84,8 +94,10 @@ func (u *UIService) GetCasparCGMediaInfo(filename string) (responses.CINF, error
 
 func (u *UIService) PushCasparCGData(template string, layer int, channels []int, data map[string]any, sizing types.Sizing, delay time.Duration) {
 	for _, client := range u.casparCGClients {
+		u.wg.Add(1)
 		go func(client types.CasparCGClient) {
-			err := client.PushCGData(template, layer, channels, data, sizing, delay)
+			defer u.wg.Done()
+			err := client.AddCGData(template, layer, channels, data, sizing, delay)
 			if err != nil {
 				u.app.logger.Error().Err(err).Msgf("Failed to push CG data to template '%s' on layer %d, channels %v", template, layer, channels)
 			}
@@ -95,7 +107,9 @@ func (u *UIService) PushCasparCGData(template string, layer int, channels []int,
 
 func (u *UIService) StopCasparCGData(template string, layer int, channels []int, delay time.Duration) {
 	for _, client := range u.casparCGClients {
+		u.wg.Add(1)
 		go func(client types.CasparCGClient) {
+			defer u.wg.Done()
 			err := client.StopCGData(template, layer, channels, delay)
 			if err != nil {
 				u.app.logger.Error().Err(err).Msgf("Failed to stop CG data for template '%s' on layer %d, channels %v", template, layer, channels)
@@ -106,13 +120,36 @@ func (u *UIService) StopCasparCGData(template string, layer int, channels []int,
 
 func (u *UIService) NextCasparCGData(template string, layer int, channels []int, delay time.Duration) {
 	for _, client := range u.casparCGClients {
+		u.wg.Add(1)
 		go func(client types.CasparCGClient) {
+			defer u.wg.Done()
 			err := client.NextCGData(template, layer, channels, delay)
 			if err != nil {
 				u.app.logger.Error().Err(err).Msgf("Failed to go to next CG data for template '%s' on layer %d, channels %v", template, layer, channels)
 			}
 		}(client)
 	}
+}
+
+func (u *UIService) updateCasparCGData(template string, layer int, channels []int, data map[string]any) {
+	for _, client := range u.casparCGClients {
+		u.wg.Add(1)
+		go func(client types.CasparCGClient) {
+			defer u.wg.Done()
+			err := client.UpdateCGData(template, layer, channels, data)
+			if err != nil {
+				u.app.logger.Error().Err(err).Msgf("Failed to update CG data for template '%s' on layer %d, channels %v", template, layer, channels)
+			}
+		}(client)
+	}
+}
+
+type UpdateData struct {
+	UID       int
+	CasparKey string
+	Type      string
+	Range     string
+	Offset    string
 }
 
 func (u *UIService) PrimeDataSource(name string, locations []data.Location) error {
@@ -169,7 +206,9 @@ func (u *UIService) StopCasparCGDataGroup(dataGroups []CGDataGroup) {
 
 func (u *UIService) PlayCasparCGMedia(filename string, layer int, channels []int, loop bool, delay time.Duration) {
 	for _, client := range u.casparCGClients {
+		u.wg.Add(1)
 		go func(client types.CasparCGClient) {
+			defer u.wg.Done()
 			err := client.PlayMedia(filename, layer, channels, loop, delay)
 			if err != nil {
 				u.app.logger.Error().Err(err).Msgf("Failed to play media '%s' on layer %d, channels %v", filename, layer, channels)
@@ -180,7 +219,9 @@ func (u *UIService) PlayCasparCGMedia(filename string, layer int, channels []int
 
 func (u *UIService) StopCasparCGMedia(layer int, channels []int, delay time.Duration) {
 	for _, client := range u.casparCGClients {
+		u.wg.Add(1)
 		go func(client types.CasparCGClient) {
+			defer u.wg.Done()
 			err := client.StopMedia(layer, channels, delay)
 			if err != nil {
 				u.app.logger.Error().Err(err).Msgf("Failed to stop media on layer %d, channels %v", layer, channels)
@@ -191,7 +232,9 @@ func (u *UIService) StopCasparCGMedia(layer int, channels []int, delay time.Dura
 
 func (u *UIService) ClearChannels(channels []int) {
 	for _, client := range u.casparCGClients {
+		u.wg.Add(1)
 		go func(client types.CasparCGClient) {
+			defer u.wg.Done()
 			client.ClearChannels(channels)
 		}(client)
 	}
@@ -199,8 +242,15 @@ func (u *UIService) ClearChannels(channels []int) {
 
 func (u *UIService) ClearAll() {
 	for _, client := range u.casparCGClients {
+		u.wg.Add(1)
 		go func(client types.CasparCGClient) {
+			defer u.wg.Done()
 			client.ClearAll()
 		}(client)
 	}
+}
+
+func (u *UIService) Close() {
+	u.cancel()
+	u.wg.Wait()
 }

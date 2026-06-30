@@ -50,4 +50,6 @@ type DatasourceManager interface {
 	// UI functions
 	// GetDataSourceNames returns the names of all datasources
 	GetDataSourceNames() []string
+
+	Close()
 }

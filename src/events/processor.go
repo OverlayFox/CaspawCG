@@ -66,7 +66,7 @@ func (p *processor) CloseChannel(ch <-chan types.Event) {
 	}
 }
 
-func (p *processor) Cancel() {
+func (p *processor) Close() {
 	p.cancel()
 
 	p.mtx.Lock()

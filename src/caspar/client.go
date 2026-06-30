@@ -73,8 +73,8 @@ func (c *client) GetMediaInfo(filename string) (responses.CINF, error) {
 	return c.caspar.Query().CINF(filename)
 }
 
-func (c *client) PushCGData(template string, layer int, channels []int, data map[string]any, sizing types.Sizing, delay time.Duration) error {
-	c.logger.Debug().Msgf("Pushing data to template '%s' on layer %d, channels %v: %v with sizing: %+v and delay: %v", template, layer, channels, data, sizing, delay)
+func (c *client) AddCGData(template string, layer int, channels []int, data map[string]any, sizing types.Sizing, delay time.Duration) error {
+	c.logger.Debug().Msgf("Adding data to template '%s' on layer %d, channels %v: %v with sizing: %+v and delay: %v", template, layer, channels, data, sizing, delay)
 
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -163,6 +163,24 @@ func (c *client) NextCGData(template string, layer int, channels []int, delay ti
 
 	for _, channel := range channels {
 		if err := c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Next(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (c *client) UpdateCGData(template string, layer int, channels []int, data map[string]any) error {
+	c.logger.Debug().Msgf("Updating data for template '%s' on layer %d, channels %v: %v", template, layer, channels, data)
+
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		c.logger.Error().Err(err).Msgf("Failed to marshal data for template '%s'", template)
+		return err
+	}
+	jsonStr := string(jsonData)
+
+	for _, channel := range channels {
+		if err := c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Update(jsonStr); err != nil {
 			return err
 		}
 	}
@@ -268,4 +286,10 @@ func (c *client) keepAlive() {
 			}
 		}
 	})
+}
+
+func (c *client) Close() {
+	c.cancel()
+	c.wg.Wait()
+	c.caspar.Close()
 }

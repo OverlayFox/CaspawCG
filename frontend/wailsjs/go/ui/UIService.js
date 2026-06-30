@@ -10,6 +10,10 @@ export function ClearChannels(arg1) {
   return window['go']['ui']['UIService']['ClearChannels'](arg1);
 }
 
+export function Close() {
+  return window['go']['ui']['UIService']['Close']();
+}
+
 export function GetCasparCGMedia() {
   return window['go']['ui']['UIService']['GetCasparCGMedia']();
 }

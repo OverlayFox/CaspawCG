@@ -71,3 +71,13 @@ func (m *manager) GetDataSourceNames() []string {
 
 	return names
 }
+
+func (m *manager) Close() {
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+
+	for _, ds := range m.dataSources {
+		ds.Close()
+	}
+	m.dataSources = nil
+}

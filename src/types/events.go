@@ -55,5 +55,5 @@ type EventProcessor interface {
 	CloseChannel(ch <-chan Event)
 
 	// Cancel closes the Event Processor
-	Cancel()
+	Close()
 }
