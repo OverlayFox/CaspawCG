@@ -56,6 +56,7 @@ type CasparCGClient interface {
 	// Control functions for CG templates
 	PushCGData(template string, layer int, channels []int, data map[string]any, sizing Sizing, delay time.Duration) error
 	StopCGData(template string, layer int, channels []int, delay time.Duration) error
+	NextCGData(template string, layer int, channels []int, delay time.Duration) error
 
 	// Control functions for media playback
 	PlayMedia(filename string, layer int, channels []int, loop bool, delay time.Duration) error

@@ -84,7 +84,6 @@ func (u *UIService) GetCasparCGMediaInfo(filename string) (responses.CINF, error
 
 func (u *UIService) PushCasparCGData(template string, layer int, channels []int, data map[string]any, sizing types.Sizing, delay time.Duration) {
 	for _, client := range u.casparCGClients {
-		// TODO: investigate if UIService can have a ctx and wait group setup so that we don't leak go routines here.
 		go func(client types.CasparCGClient) {
 			err := client.PushCGData(template, layer, channels, data, sizing, delay)
 			if err != nil {
@@ -96,11 +95,21 @@ func (u *UIService) PushCasparCGData(template string, layer int, channels []int,
 
 func (u *UIService) StopCasparCGData(template string, layer int, channels []int, delay time.Duration) {
 	for _, client := range u.casparCGClients {
-		// TODO: investigate if UIService can have a ctx and wait group setup so that we don't leak go routines here.
 		go func(client types.CasparCGClient) {
 			err := client.StopCGData(template, layer, channels, delay)
 			if err != nil {
 				u.app.logger.Error().Err(err).Msgf("Failed to stop CG data for template '%s' on layer %d, channels %v", template, layer, channels)
+			}
+		}(client)
+	}
+}
+
+func (u *UIService) NextCasparCGData(template string, layer int, channels []int, delay time.Duration) {
+	for _, client := range u.casparCGClients {
+		go func(client types.CasparCGClient) {
+			err := client.NextCGData(template, layer, channels, delay)
+			if err != nil {
+				u.app.logger.Error().Err(err).Msgf("Failed to go to next CG data for template '%s' on layer %d, channels %v", template, layer, channels)
 			}
 		}(client)
 	}

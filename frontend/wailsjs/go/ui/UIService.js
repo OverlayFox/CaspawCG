@@ -34,6 +34,10 @@ export function LoadLayout() {
   return window['go']['ui']['UIService']['LoadLayout']();
 }
 
+export function NextCasparCGData(arg1, arg2, arg3, arg4) {
+  return window['go']['ui']['UIService']['NextCasparCGData'](arg1, arg2, arg3, arg4);
+}
+
 export function PlayCasparCGMedia(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['ui']['UIService']['PlayCasparCGMedia'](arg1, arg2, arg3, arg4, arg5);
 }

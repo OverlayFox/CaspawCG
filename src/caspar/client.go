@@ -149,6 +149,26 @@ func (c *client) StopCGData(template string, layer int, channels []int, delay ti
 	// }
 }
 
+func (c *client) NextCGData(template string, layer int, channels []int, delay time.Duration) error {
+	c.logger.Debug().Msgf("Nexting template '%s' on layer %d, channels %v with delay: %v", template, layer, channels, delay)
+
+	if delay > 0 {
+		select {
+		case <-time.After(delay):
+			// continue to next the CG data after the delay
+		case <-c.ctx.Done():
+			return c.ctx.Err()
+		}
+	}
+
+	for _, channel := range channels {
+		if err := c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Next(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (c *client) PlayMedia(filename string, layer int, channels []int, loop bool, delay time.Duration) error {
 	c.logger.Debug().Msgf("Playing media '%s' on layer %d, channels %v (loop=%v) with delay: %v", filename, layer, channels, loop, delay)
 
