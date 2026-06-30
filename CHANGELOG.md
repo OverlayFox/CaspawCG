@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- added AI disclosure to the README.md
 - #45 - added next button to templates and groups
 - #38 - allow for direct string input into `custom fields`
 - #35 - media element can now be used inside groups

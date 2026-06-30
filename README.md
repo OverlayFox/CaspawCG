@@ -4,24 +4,11 @@ A GoLang + Wails application designed to integrate the CasparCG server with dyna
 
 CaspawCG enables real-time graphics control for live broadcasting by connecting CasparCG Server with external data sources like Google Sheets, providing a UI inspired by CharacterWorks.
 
-- [CaspawCG](#caspawcg)
-  - [Features](#features)
-- [For Developers](#for-developers)
-  - [Prerequisites](#prerequisites)
-  - [Development](#development)
-  - [Configuration](#configuration)
-  - [How to get Google `credentials.json`?](#how-to-get-google-credentialsjson)
-  - [Contributing](#contributing)
-  - [License](#license)
-  - [Acknowledgments](#acknowledgments)
-  - [Support](#support)
-
 ## Features
 
 - 🎨 **Live Graphics Control** - Real-time control of CasparCG graphics and templates
-- 📊 **Data Source Integration** - Pull data from Google Sheets and other sources
+- 📊 **Data Source Integration** - Pull data from Google Sheets
 - 🖥️ **Modern UI** - Built with Wails for a native desktop experience
-- ⚡ **Real-time Updates** - Event-driven architecture for instant data synchronization
 - 🎯 **Layout Management** - Flexible layout configuration system
 - 🔧 **Multi-Server Support** - Connect to multiple CasparCG servers simultaneously
 
@@ -135,15 +122,18 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+## AI Disclosure
+
+Parts of this codebase were written with the help of code generation AIs, like Claude and Copilot. <br>
+Specifically the front-end code was written with the help of AI, as at the moment no front-end developers are available to support this project.
+
+No part of this code was fully written by AI, every line needs to be understood by the human before its pushed upstream.
+
+We try to reduce the reliance on Gen-AI as much as possible and are open to support in the front end area of this project, as we need support in making it cleaner and easier to maintain.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- [CasparCG Server](https://github.com/CasparCG/server) - Open-source graphics server
-- [Wails](https://wails.io/) - Go + Web UI framework
-- [Google Sheets API](https://developers.google.com/sheets/api) - Data source integration
 
 ## Support
 
@@ -151,4 +141,3 @@ For issues, questions, or suggestions:
 
 - Open an issue on GitHub
 - Check the [CasparCG documentation](http://casparcg.com/wiki/)
-- Visit the [Wails documentation](https://wails.io/docs/introduction)
