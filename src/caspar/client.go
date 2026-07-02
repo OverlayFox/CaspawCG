@@ -2,7 +2,6 @@ package casparcg
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -76,18 +75,18 @@ func (c *client) GetMediaInfo(filename string) (responses.CINF, error) {
 func (c *client) AddCGData(template string, layer int, channels []int, data map[string]any, sizing types.Sizing, delay time.Duration) error {
 	c.logger.Debug().Msgf("Adding data to template '%s' on layer %d, channels %v: %v with sizing: %+v and delay: %v", template, layer, channels, data, sizing, delay)
 
-	jsonData, err := json.Marshal(data)
+	jsonStr, err := c.marshalJSONNoEscape(data)
 	if err != nil {
 		c.logger.Error().Err(err).Msgf("Failed to marshal data for template '%s'", template)
 		return err
 	}
-	jsonStr := string(jsonData)
 
 	params := casparTypes.CGAdd{
 		Template:   template,
 		PlayOnLoad: true,
 		Data:       &jsonStr,
 	}
+	c.logger.Debug().Msgf("CGAdd json data for template '%s': %+v", template, jsonStr)
 
 	info, err := c.caspar.Query().Info().Generic()
 	if err != nil {
@@ -172,12 +171,11 @@ func (c *client) NextCGData(template string, layer int, channels []int, delay ti
 func (c *client) UpdateCGData(template string, layer int, channels []int, data map[string]any) error {
 	c.logger.Debug().Msgf("Updating data for template '%s' on layer %d, channels %v: %v", template, layer, channels, data)
 
-	jsonData, err := json.Marshal(data)
+	jsonStr, err := c.marshalJSONNoEscape(data)
 	if err != nil {
 		c.logger.Error().Err(err).Msgf("Failed to marshal data for template '%s'", template)
 		return err
 	}
-	jsonStr := string(jsonData)
 
 	for _, channel := range channels {
 		if err := c.caspar.CG().Channel(channel).Layer(layer).CGLayer(1).Update(jsonStr); err != nil {

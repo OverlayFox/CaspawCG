@@ -319,7 +319,7 @@ export const WidgetManager = {
           );
           const identifier =
             DOMUtils.querySelector(SELECTORS.FIELD_ID, row)?.value || "";
-          rawValue = liveDisplay?.textContent?.trim() || identifier;
+          rawValue = liveDisplay ? liveDisplay.textContent.trim() : identifier;
         }
 
         let value = rawValue;
