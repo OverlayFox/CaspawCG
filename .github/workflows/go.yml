@@ -61,6 +61,13 @@ jobs:
         run: wails build -tags webkit2_41
       - name: Test with Race Detector
         run: go test -race -v ./...
+      - name: Upload build artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: caspaw-cg-linux
+          path: build/bin/caspaw-cg
+          retention-days: 7
 
   golangci:
     needs: build
@@ -80,3 +87,84 @@ jobs:
         with:
           version: v2.11.2
           only-new-issues: true
+
+  release:
+    needs: [build, golangci]
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Read version
+        id: version
+        run: echo "version=$(jq -r .info.productVersion wails.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Check if this version was already released
+        id: check
+        run: |
+          if git ls-remote --tags origin "refs/tags/v${{ steps.version.outputs.version }}" | grep -q .; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download build artifact
+        if: steps.check.outputs.exists == 'false'
+        uses: actions/download-artifact@v4
+        with:
+          name: caspaw-cg-linux
+          path: dist
+
+      - name: Promote Unreleased section in CHANGELOG.md
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          DATE=$(date +%F)
+          awk -v version="$VERSION" -v date="$DATE" '
+            /^## \[Unreleased\]/ {
+              print
+              print ""
+              print "## [" version "] - " date
+              next
+            }
+            { print }
+          ' CHANGELOG.md > CHANGELOG.md.tmp && mv CHANGELOG.md.tmp CHANGELOG.md
+
+      - name: Extract release notes for this version
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          awk '/^## \[${{ steps.version.outputs.version }}\]/{flag=1;next}/^## \[/{flag=0}flag' CHANGELOG.md > release-notes.md
+
+      - name: Commit CHANGELOG.md
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "chore: release v${{ steps.version.outputs.version }} [skip ci]"
+          git push origin HEAD:main
+
+      - name: Package artifact
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          chmod +x dist/caspaw-cg
+          tar -czf caspaw-cg-linux-amd64-v${{ steps.version.outputs.version }}.tar.gz -C dist caspaw-cg
+
+      - name: Tag release
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          git tag "v${{ steps.version.outputs.version }}"
+          git push origin "v${{ steps.version.outputs.version }}"
+
+      - name: Create GitHub Release
+        if: steps.check.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ steps.version.outputs.version }}"
+          name: "v${{ steps.version.outputs.version }}"
+          body_path: release-notes.md
+          files: caspaw-cg-linux-amd64-v${{ steps.version.outputs.version }}.tar.gz
