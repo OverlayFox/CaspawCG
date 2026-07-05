@@ -80,6 +80,7 @@ jobs:
 
   golangci:
     needs: build
+    if: always() && needs.build.result == 'success'
     name: lint
     runs-on: ubuntu-latest
     steps:
@@ -99,7 +100,7 @@ jobs:
 
   release:
     needs: [build, golangci]
-    if: success() && github.ref == 'refs/heads/main'
+    if: always() && needs.build.result == 'success' && needs.golangci.result == 'success' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
