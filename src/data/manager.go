@@ -4,24 +4,26 @@ import (
 	"fmt"
 	"slices"
 	"sync"
+
+	"github.com/overlayfox/caspaw-cg/src/types"
 )
 
 // manager manages all datasources given to the application
 type manager struct {
 	cfg *Config
 
-	dataSources []DataSource
+	dataSources []types.DataSource
 	mtx         sync.RWMutex
 }
 
-func NewManager(cfg *Config) DatasourceManager {
+func NewManager(cfg *Config) types.DatasourceManager {
 	return &manager{
 		cfg:         cfg,
-		dataSources: make([]DataSource, 0),
+		dataSources: make([]types.DataSource, 0),
 	}
 }
 
-func (m *manager) AddDataSource(ds DataSource) error {
+func (m *manager) AddDataSource(ds types.DataSource) error {
 	names := m.GetDataSourceNames()
 	if slices.Contains(names, ds.GetName()) {
 		return fmt.Errorf("datasource with name '%s' already exists", ds.GetName())
@@ -48,7 +50,7 @@ func (m *manager) RemoveDataSource(name string) error {
 	return fmt.Errorf("datasource with name '%s' not found", name)
 }
 
-func (m *manager) GetDataSource(name string) (DataSource, error) {
+func (m *manager) GetDataSource(name string) (types.DataSource, error) {
 	m.mtx.RLock()
 	defer m.mtx.RUnlock()
 
@@ -70,4 +72,14 @@ func (m *manager) GetDataSourceNames() []string {
 	m.mtx.RUnlock()
 
 	return names
+}
+
+func (m *manager) Close() {
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+
+	for _, ds := range m.dataSources {
+		ds.Close()
+	}
+	m.dataSources = nil
 }

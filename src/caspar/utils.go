@@ -1,6 +1,8 @@
 package casparcg
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -21,4 +23,17 @@ func VideoModeToResolution(mode casparTypes.VideoMode) (types.Resolution, error)
 	default:
 		return types.Resolution{}, fmt.Errorf("unsupported video mode: %s", mode)
 	}
+}
+
+func (c *client) marshalJSONNoEscape(data map[string]any) (string, error) {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+
+	if err := enc.Encode(data); err != nil {
+		return "", err
+	}
+
+	jsonBytes := bytes.TrimSuffix(buf.Bytes(), []byte("\n"))
+	return string(jsonBytes), nil
 }

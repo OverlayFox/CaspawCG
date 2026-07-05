@@ -28,6 +28,9 @@ export const SELECTORS = {
   FIELD_DIRECT_VALUE: ".f-value",
   FIELD_DATASOURCE_INPUTS: ".f-datasource-inputs",
   FIELD_DIRECT_INPUTS: ".f-direct-inputs",
+  FIELD_RANGE_INPUTS: ".f-range-inputs",
+  FIELD_RANGE: ".f-range",
+  FIELD_OFFSET: ".f-offset",
   LIVE_KEY_DISPLAY: ".live-key-display",
   LIVE_VALUE_DISPLAY: ".live-value-display",
 };
@@ -43,4 +46,5 @@ export const FIELD_TYPES = {
 export const INPUT_TYPES = {
   DATASOURCE: "datasource",
   DIRECT: "direct",
+  RANGE: "range",
 };

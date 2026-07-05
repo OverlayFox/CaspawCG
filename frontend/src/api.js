@@ -170,6 +170,42 @@ export const APIService = {
     }
   },
 
+  async updateCGData(
+    template,
+    layer = 1,
+    channels = [1],
+    data,
+    rangeFields = [],
+    sizing,
+    delay = 0, // delay in nanoseconds as time.Duration is represented in Go as nanoseconds
+    updateInterval = 0, // update interval in nanoseconds
+  ) {
+    try {
+      return await window.go.ui.UIService.UpdateCasparCGData(
+        template,
+        layer,
+        channels,
+        data,
+        rangeFields,
+        sizing,
+        delay,
+        updateInterval,
+      );
+    } catch (error) {
+      console.error("Failed to start update job:", error);
+      return "";
+    }
+  },
+
+  async removeUpdateJob(uuid) {
+    if (!uuid) return;
+    try {
+      await window.go.ui.UIService.RemoveUpdateJob(uuid);
+    } catch (error) {
+      console.error("Failed to remove update job:", error);
+    }
+  },
+
   async nextCGData(
     template,
     layer = 1,

@@ -12,25 +12,28 @@ type FieldConfig struct {
 	Source    string `json:"source"`
 	InputType string `json:"inputType,omitempty"`
 	Value     string `json:"value,omitempty"`
+	Range     string `json:"range,omitempty"`
+	Offset    int    `json:"offset,omitempty"`
 }
 
 type WidgetConfig struct {
-	ID          string        `json:"id"`
-	X           int           `json:"x"`
-	Y           int           `json:"y"`
-	W           int           `json:"w"`
-	H           int           `json:"h"`
-	Name        string        `json:"name,omitempty"`
-	Template    string        `json:"template"`
-	Layer       int           `json:"layer"`
-	Channel     int           `json:"channel"`
-	ChannelExpr string        `json:"channelExpr,omitempty"`
-	PosX        *int          `json:"posX,omitempty"`
-	PosY        *int          `json:"posY,omitempty"`
-	SizeX       *float64      `json:"sizeX,omitempty"`
-	SizeY       *float64      `json:"sizeY,omitempty"`
-	Delay       int           `json:"delay,omitempty"`
-	Fields      []FieldConfig `json:"fields"`
+	ID             string        `json:"id"`
+	X              int           `json:"x"`
+	Y              int           `json:"y"`
+	W              int           `json:"w"`
+	H              int           `json:"h"`
+	Name           string        `json:"name,omitempty"`
+	Template       string        `json:"template"`
+	Layer          int           `json:"layer"`
+	Channel        int           `json:"channel"`
+	ChannelExpr    string        `json:"channelExpr,omitempty"`
+	PosX           *int          `json:"posX,omitempty"`
+	PosY           *int          `json:"posY,omitempty"`
+	SizeX          *float64      `json:"sizeX,omitempty"`
+	SizeY          *float64      `json:"sizeY,omitempty"`
+	Delay          int           `json:"delay,omitempty"`
+	UpdateInterval int           `json:"updateInterval,omitempty"`
+	Fields         []FieldConfig `json:"fields"`
 }
 
 type MediaWidgetConfig struct {

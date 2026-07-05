@@ -10,6 +10,10 @@ export function ClearChannels(arg1) {
   return window['go']['ui']['UIService']['ClearChannels'](arg1);
 }
 
+export function Close() {
+  return window['go']['ui']['UIService']['Close']();
+}
+
 export function GetCasparCGMedia() {
   return window['go']['ui']['UIService']['GetCasparCGMedia']();
 }
@@ -54,6 +58,10 @@ export function PushCasparCGDataGroup(arg1) {
   return window['go']['ui']['UIService']['PushCasparCGDataGroup'](arg1);
 }
 
+export function RemoveUpdateJob(arg1) {
+  return window['go']['ui']['UIService']['RemoveUpdateJob'](arg1);
+}
+
 export function SaveLayout(arg1) {
   return window['go']['ui']['UIService']['SaveLayout'](arg1);
 }
@@ -68,4 +76,8 @@ export function StopCasparCGDataGroup(arg1) {
 
 export function StopCasparCGMedia(arg1, arg2, arg3) {
   return window['go']['ui']['UIService']['StopCasparCGMedia'](arg1, arg2, arg3);
+}
+
+export function UpdateCasparCGData(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
+  return window['go']['ui']['UIService']['UpdateCasparCGData'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
 }

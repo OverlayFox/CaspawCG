@@ -1,38 +1,3 @@
-export namespace data {
-	
-	export class Data {
-	    Key: string;
-	    Type: string;
-	    Value: any;
-	
-	    static createFrom(source: any = {}) {
-	        return new Data(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.Key = source["Key"];
-	        this.Type = source["Type"];
-	        this.Value = source["Value"];
-	    }
-	}
-	export class Location {
-	    Key: string;
-	    Type: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new Location(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.Key = source["Key"];
-	        this.Type = source["Type"];
-	    }
-	}
-
-}
-
 export namespace responses {
 	
 	export class CINF {
@@ -81,6 +46,22 @@ export namespace responses {
 
 export namespace types {
 	
+	export class Data {
+	    Key: string;
+	    Type: string;
+	    Value: any;
+	
+	    static createFrom(source: any = {}) {
+	        return new Data(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.Key = source["Key"];
+	        this.Type = source["Type"];
+	        this.Value = source["Value"];
+	    }
+	}
 	export class FrameRate {
 	    Num: number;
 	    Den: number;
@@ -93,6 +74,20 @@ export namespace types {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.Num = source["Num"];
 	        this.Den = source["Den"];
+	    }
+	}
+	export class Location {
+	    Key: string;
+	    Type: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Location(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.Key = source["Key"];
+	        this.Type = source["Type"];
 	    }
 	}
 	export class Sizing {
@@ -165,6 +160,8 @@ export namespace ui {
 	    source: string;
 	    inputType?: string;
 	    value?: string;
+	    range?: string;
+	    offset?: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new FieldConfig(source);
@@ -178,6 +175,8 @@ export namespace ui {
 	        this.source = source["source"];
 	        this.inputType = source["inputType"];
 	        this.value = source["value"];
+	        this.range = source["range"];
+	        this.offset = source["offset"];
 	    }
 	}
 	export class MediaWidgetConfig {
@@ -230,6 +229,7 @@ export namespace ui {
 	    sizeX?: number;
 	    sizeY?: number;
 	    delay?: number;
+	    updateInterval?: number;
 	    fields: FieldConfig[];
 	
 	    static createFrom(source: any = {}) {
@@ -253,6 +253,7 @@ export namespace ui {
 	        this.sizeX = source["sizeX"];
 	        this.sizeY = source["sizeY"];
 	        this.delay = source["delay"];
+	        this.updateInterval = source["updateInterval"];
 	        this.fields = this.convertValues(source["fields"], FieldConfig);
 	    }
 	
@@ -355,6 +356,26 @@ export namespace ui {
 		}
 	}
 	
+	export class RangeField {
+	    CasparKey: string;
+	    Type: string;
+	    Source: string;
+	    Range: string;
+	    Offset: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new RangeField(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.CasparKey = source["CasparKey"];
+	        this.Type = source["Type"];
+	        this.Source = source["Source"];
+	        this.Range = source["Range"];
+	        this.Offset = source["Offset"];
+	    }
+	}
 
 }
 

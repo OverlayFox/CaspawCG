@@ -1,26 +1,37 @@
 package ui
 
 import (
+	"context"
+	"maps"
+	"sync"
 	"time"
 
 	"github.com/overlayfox/casparcg-amcp-go/types/responses"
 
-	"github.com/overlayfox/caspaw-cg/src/data"
 	"github.com/overlayfox/caspaw-cg/src/types"
 )
 
 // UIService bridges the UI with the GoLang system
 type UIService struct {
 	app               *App
-	datasourceManager data.DatasourceManager
-	casparCGClients   []types.CasparCGClient
+	datasourceManager types.DatasourceManager
+	casparCGClient    types.CasparCGClient
+	updateHandler     *UpdateHandler
+
+	wg     sync.WaitGroup
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
-func NewUIService(app *App, datasourceManager data.DatasourceManager, casparCGClients []types.CasparCGClient) *UIService {
+func NewUIService(upstreamCtx context.Context, app *App, datasourceManager types.DatasourceManager, casparCGClients types.CasparCGClient) *UIService {
+	ctx, cancel := context.WithCancel(upstreamCtx)
 	return &UIService{
 		app:               app,
 		datasourceManager: datasourceManager,
-		casparCGClients:   casparCGClients,
+		casparCGClient:    casparCGClients,
+		updateHandler:     NewUpdateHandler(ctx, app.logger, datasourceManager, casparCGClients),
+		ctx:               ctx,
+		cancel:            cancel,
 	}
 }
 
@@ -45,77 +56,117 @@ func (u *UIService) GetDataSources() []string {
 }
 
 func (u *UIService) GetCasparCGTemplates() []string {
-	result := make([]string, 0)
-	for _, client := range u.casparCGClients {
-		templates, err := client.GetTemplates()
-		if err != nil {
-			u.app.logger.Error().Err(err).Msg("Failed to get templates from CasparCG client")
-			continue
-		}
-		result = append(result, templates...)
+	templates, err := u.casparCGClient.GetTemplates()
+	if err != nil {
+		u.app.logger.Error().Err(err).Msg("Failed to get templates from CasparCG client")
+		return nil
 	}
-	return result
+	return templates
 }
 
 func (u *UIService) GetCasparCGMedia() []string {
-	result := make([]string, 0)
-	for _, client := range u.casparCGClients {
-		media, err := client.GetMedia()
-		if err != nil {
-			u.app.logger.Error().Err(err).Msg("Failed to get media from CasparCG client")
-			continue
-		}
-		result = append(result, media...)
+	media, err := u.casparCGClient.GetMedia()
+	if err != nil {
+		u.app.logger.Error().Err(err).Msg("Failed to get media from CasparCG client")
+		return nil
 	}
-	return result
+	return media
 }
 
 func (u *UIService) GetCasparCGMediaInfo(filename string) (responses.CINF, error) {
-	for _, client := range u.casparCGClients {
-		info, err := client.GetMediaInfo(filename)
-		if err != nil {
-			u.app.logger.Error().Err(err).Msgf("Failed to get media info for '%s' from CasparCG client", filename)
-			continue
-		}
-		return info, nil
+	info, err := u.casparCGClient.GetMediaInfo(filename)
+	if err != nil {
+		u.app.logger.Error().Err(err).Msgf("Failed to get media info for '%s' from CasparCG client", filename)
+		return responses.CINF{}, err
 	}
-	return responses.CINF{}, nil
+	return info, nil
 }
 
 func (u *UIService) PushCasparCGData(template string, layer int, channels []int, data map[string]any, sizing types.Sizing, delay time.Duration) {
-	for _, client := range u.casparCGClients {
-		go func(client types.CasparCGClient) {
-			err := client.PushCGData(template, layer, channels, data, sizing, delay)
-			if err != nil {
-				u.app.logger.Error().Err(err).Msgf("Failed to push CG data to template '%s' on layer %d, channels %v", template, layer, channels)
-			}
-		}(client)
-	}
+	u.wg.Go(func() {
+		err := u.casparCGClient.AddCGData(template, layer, channels, data, sizing, delay)
+		if err != nil {
+			u.app.logger.Error().Err(err).Msgf("Failed to push CG data to template '%s' on layer %d, channels %v", template, layer, channels)
+		}
+	})
 }
 
 func (u *UIService) StopCasparCGData(template string, layer int, channels []int, delay time.Duration) {
-	for _, client := range u.casparCGClients {
-		go func(client types.CasparCGClient) {
-			err := client.StopCGData(template, layer, channels, delay)
-			if err != nil {
-				u.app.logger.Error().Err(err).Msgf("Failed to stop CG data for template '%s' on layer %d, channels %v", template, layer, channels)
-			}
-		}(client)
-	}
+	u.wg.Go(func() {
+		err := u.casparCGClient.StopCGData(template, layer, channels, delay)
+		if err != nil {
+			u.app.logger.Error().Err(err).Msgf("Failed to stop CG data for template '%s' on layer %d, channels %v", template, layer, channels)
+		}
+	})
 }
 
 func (u *UIService) NextCasparCGData(template string, layer int, channels []int, delay time.Duration) {
-	for _, client := range u.casparCGClients {
-		go func(client types.CasparCGClient) {
-			err := client.NextCGData(template, layer, channels, delay)
-			if err != nil {
-				u.app.logger.Error().Err(err).Msgf("Failed to go to next CG data for template '%s' on layer %d, channels %v", template, layer, channels)
-			}
-		}(client)
-	}
+	u.wg.Go(func() {
+		err := u.casparCGClient.NextCGData(template, layer, channels, delay)
+		if err != nil {
+			u.app.logger.Error().Err(err).Msgf("Failed to go to next CG data for template '%s' on layer %d, channels %v", template, layer, channels)
+		}
+	})
 }
 
-func (u *UIService) PrimeDataSource(name string, locations []data.Location) error {
+// RangeField describes a single template field that should be continuously
+// resolved from a range of locations in a data source.
+type RangeField struct {
+	CasparKey string
+	Type      types.DataType
+	Source    string
+	Range     string
+	Offset    int
+}
+
+// UpdateCasparCGData pushes an initial snapshot of literalData plus the current values of
+// rangeFields, then starts an update job that continuously re-resolves rangeFields from their
+// data sources and pushes the results to the template at the specified interval.
+//
+// It returns a unique identifier for the update job.
+func (u *UIService) UpdateCasparCGData(template string, layer int, channels []int, literalData map[string]any, rangeFields []RangeField, sizing types.Sizing, playInDelay, updateInterval time.Duration) (uuid string, err error) {
+	casparMaps := make(map[string]*Resolver, len(rangeFields))
+	for _, rf := range rangeFields {
+		dataRange, err := types.NewRange(rf.Range)
+		if err != nil {
+			u.app.logger.Error().Err(err).Str("range", rf.Range).Msg("Failed to parse range")
+			return "", err
+		}
+		for i := range dataRange.Locations {
+			dataRange.Locations[i].Type = rf.Type
+		}
+
+		ds, err := u.datasourceManager.GetDataSource(rf.Source)
+		if err != nil {
+			u.app.logger.Error().Err(err).Msgf("Failed to get datasource '%s'", rf.Source)
+			return "", err
+		}
+
+		resolver := NewResolver(ds, dataRange, rf.Offset)
+		casparMaps[rf.CasparKey] = &resolver
+	}
+
+	resolvedData := make(map[string]any, len(literalData)+len(casparMaps))
+	maps.Copy(resolvedData, literalData)
+	for casparKey, resolver := range casparMaps {
+		value, err := resolver.GetData()
+		if err != nil {
+			u.app.logger.Error().Err(err).Str("casparKey", casparKey).Msg("Failed to get data from datasource")
+		}
+		resolvedData[casparKey] = value
+	}
+	u.PushCasparCGData(template, layer, channels, resolvedData, sizing, playInDelay)
+
+	uuid = u.updateHandler.AddUpdateJob(template, layer, channels, u.casparCGClient, casparMaps, updateInterval)
+	return uuid, nil
+}
+
+// RemoveUpdateJob stops and removes the update job identified by uuid.
+func (u *UIService) RemoveUpdateJob(uuid string) error {
+	return u.updateHandler.RemoveUpdateJob(uuid)
+}
+
+func (u *UIService) PrimeDataSource(name string, locations []types.Location) error {
 	ds, err := u.datasourceManager.GetDataSource(name)
 	if err != nil {
 		u.app.logger.Error().Err(err).Msgf("Failed to get datasource '%s'", name)
@@ -130,11 +181,11 @@ func (u *UIService) PrimeDataSource(name string, locations []data.Location) erro
 	return nil
 }
 
-func (u *UIService) GetDataSourceValue(name string, location data.Location) (data.Data, error) {
+func (u *UIService) GetDataSourceValue(name string, location types.Location) (types.Data, error) {
 	ds, err := u.datasourceManager.GetDataSource(name)
 	if err != nil {
 		u.app.logger.Error().Err(err).Msgf("Failed to get datasource '%s'", name)
-		return data.Data{}, err
+		return types.Data{}, err
 	}
 
 	u.app.logger.Info().Msgf("Getting value from datasource '%s' for location: %v", name, location)
@@ -168,39 +219,36 @@ func (u *UIService) StopCasparCGDataGroup(dataGroups []CGDataGroup) {
 }
 
 func (u *UIService) PlayCasparCGMedia(filename string, layer int, channels []int, loop bool, delay time.Duration) {
-	for _, client := range u.casparCGClients {
-		go func(client types.CasparCGClient) {
-			err := client.PlayMedia(filename, layer, channels, loop, delay)
-			if err != nil {
-				u.app.logger.Error().Err(err).Msgf("Failed to play media '%s' on layer %d, channels %v", filename, layer, channels)
-			}
-		}(client)
-	}
+	u.wg.Go(func() {
+		err := u.casparCGClient.PlayMedia(filename, layer, channels, loop, delay)
+		if err != nil {
+			u.app.logger.Error().Err(err).Msgf("Failed to play media '%s' on layer %d, channels %v", filename, layer, channels)
+		}
+	})
 }
 
 func (u *UIService) StopCasparCGMedia(layer int, channels []int, delay time.Duration) {
-	for _, client := range u.casparCGClients {
-		go func(client types.CasparCGClient) {
-			err := client.StopMedia(layer, channels, delay)
-			if err != nil {
-				u.app.logger.Error().Err(err).Msgf("Failed to stop media on layer %d, channels %v", layer, channels)
-			}
-		}(client)
-	}
+	u.wg.Go(func() {
+		err := u.casparCGClient.StopMedia(layer, channels, delay)
+		if err != nil {
+			u.app.logger.Error().Err(err).Msgf("Failed to stop media on layer %d, channels %v", layer, channels)
+		}
+	})
 }
 
 func (u *UIService) ClearChannels(channels []int) {
-	for _, client := range u.casparCGClients {
-		go func(client types.CasparCGClient) {
-			client.ClearChannels(channels)
-		}(client)
-	}
+	u.wg.Go(func() {
+		u.casparCGClient.ClearChannels(channels)
+	})
 }
 
 func (u *UIService) ClearAll() {
-	for _, client := range u.casparCGClients {
-		go func(client types.CasparCGClient) {
-			client.ClearAll()
-		}(client)
-	}
+	u.wg.Go(func() {
+		u.casparCGClient.ClearAll()
+	})
+}
+
+func (u *UIService) Close() {
+	u.cancel()
+	u.wg.Wait()
 }

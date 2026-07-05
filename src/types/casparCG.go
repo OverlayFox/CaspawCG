@@ -54,9 +54,10 @@ type CasparCGClient interface {
 	GetMediaInfo(filename string) (responses.CINF, error)
 
 	// Control functions for CG templates
-	PushCGData(template string, layer int, channels []int, data map[string]any, sizing Sizing, delay time.Duration) error
+	AddCGData(template string, layer int, channels []int, data map[string]any, sizing Sizing, delay time.Duration) error
 	StopCGData(template string, layer int, channels []int, delay time.Duration) error
 	NextCGData(template string, layer int, channels []int, delay time.Duration) error
+	UpdateCGData(template string, layer int, channels []int, data map[string]any) error
 
 	// Control functions for media playback
 	PlayMedia(filename string, layer int, channels []int, loop bool, delay time.Duration) error
@@ -64,4 +65,6 @@ type CasparCGClient interface {
 
 	ClearAll()
 	ClearChannels(channels []int)
+
+	Close()
 }

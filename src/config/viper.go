@@ -13,8 +13,8 @@ import (
 )
 
 type Config struct {
-	DataSourceManager *data.Config       `mapstructure:"data_source_manager"`
-	CasparCGClients   []*casparcg.Config `mapstructure:"casparcg_clients"`
+	DataSourceManager *data.Config     `mapstructure:"data_source_manager"`
+	CasparCGClient    *casparcg.Config `mapstructure:"casparcg_client"`
 }
 
 type Defaulter interface {
@@ -25,6 +25,8 @@ type Validator interface {
 	Validate() error
 }
 
+var defaulterType = reflect.TypeOf((*Defaulter)(nil)).Elem()
+
 // applyDefaults checks the main struct and its immediate fields for the Defaulter interface
 func applyDefaults(target any) {
 	if d, ok := target.(Defaulter); ok {
@@ -34,6 +36,21 @@ func applyDefaults(target any) {
 	if v.Kind() == reflect.Struct {
 		for i := range v.NumField() {
 			field := v.Field(i)
+			if !field.CanSet() {
+				continue
+			}
+			if field.Kind() == reflect.Pointer {
+				if field.IsNil() {
+					if !field.Type().Implements(defaulterType) {
+						continue
+					}
+					field.Set(reflect.New(field.Type().Elem()))
+				}
+				if d, ok := field.Interface().(Defaulter); ok {
+					d.Default()
+				}
+				continue
+			}
 			if field.CanAddr() {
 				if d, ok := field.Addr().Interface().(Defaulter); ok {
 					d.Default()
