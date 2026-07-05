@@ -29,6 +29,75 @@ type Range struct {
 	Locations []Location
 }
 
+func NewRange(input string) (Range, error) {
+	splitStr := strings.Split(input, ":")
+	if len(splitStr) != 2 {
+		return Range{}, fmt.Errorf("invalid range format: %s", input)
+	}
+
+	startCol, startRow, ok := parseCellRef(splitStr[0])
+	if !ok {
+		return Range{}, fmt.Errorf("invalid range format: %s", input)
+	}
+
+	endCol, endRow, ok := parseCellRef(splitStr[1])
+	if !ok {
+		return Range{}, fmt.Errorf("invalid range format: %s", input)
+	}
+
+	if startCol != endCol {
+		return Range{}, fmt.Errorf("invalid range format: %s (range must span a single column)", input)
+	}
+
+	if endRow < startRow {
+		return Range{}, fmt.Errorf("invalid range format: %s (end row before start row)", input)
+	}
+
+	locations := make([]Location, 0, endRow-startRow+1)
+	for row := startRow; row <= endRow; row++ {
+		locations = append(locations, Location{Key: fmt.Sprintf("%s%d", startCol, row)})
+	}
+
+	return Range{Locations: locations}, nil
+}
+
+// parseCellRef parses a cell reference such as "A1" into its column letters and row number.
+func parseCellRef(cell string) (string, int, bool) {
+	if cell == "" {
+		return "", 0, false
+	}
+
+	i := 0
+	for i < len(cell) && unicode.IsLetter(rune(cell[i])) {
+		i++
+	}
+	if i == 0 || i == len(cell) {
+		return "", 0, false
+	}
+
+	var colSb strings.Builder
+	for _, ch := range cell[:i] {
+		if ch >= 'a' && ch <= 'z' {
+			ch = ch - ('a' - 'A')
+		}
+		colSb.WriteRune(ch)
+	}
+	col := colSb.String()
+
+	for _, ch := range cell[i:] {
+		if !unicode.IsDigit(ch) {
+			return "", 0, false
+		}
+	}
+
+	row, err := strconv.Atoi(cell[i:])
+	if err != nil || row <= 0 {
+		return "", 0, false
+	}
+
+	return col, row, true
+}
+
 func (r Range) Key() string {
 	if len(r.Locations) == 0 {
 		return ""
@@ -55,52 +124,12 @@ func (r Range) Key() string {
 		return out
 	}
 
-	parseCell := func(cell string) (string, int, bool) {
-		if cell == "" {
-			return "", 0, false
-		}
-
-		i := 0
-		for i < len(cell) && unicode.IsLetter(rune(cell[i])) {
-			i++
-		}
-		if i == 0 || i == len(cell) {
-			return "", 0, false
-		}
-
-		col := ""
-		var colSb71 strings.Builder
-		for _, ch := range cell[:i] {
-			if !unicode.IsLetter(ch) {
-				return "", 0, false
-			}
-			if ch >= 'a' && ch <= 'z' {
-				ch = ch - ('a' - 'A')
-			}
-			colSb71.WriteString(string(ch))
-		}
-		col += colSb71.String()
-
-		for _, ch := range cell[i:] {
-			if !unicode.IsDigit(ch) {
-				return "", 0, false
-			}
-		}
-
-		row, err := strconv.Atoi(cell[i:])
-		if err != nil || row <= 0 {
-			return "", 0, false
-		}
-
-		return col, row, true
-	}
-
 	minCol, maxCol := 0, 0
 	minRow, maxRow := 0, 0
 	found := false
 
 	for _, loc := range r.Locations {
-		col, row, ok := parseCell(loc.Key)
+		col, row, ok := parseCellRef(loc.Key)
 		if !ok {
 			continue
 		}

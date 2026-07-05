@@ -108,8 +108,23 @@ func (u *UIService) NextCasparCGData(template string, layer int, channels []int,
 	})
 }
 
-func (u *UIService) UpdateCasparCGData(template string, layer int, channels []int, data map[string]any, delay time.Duration) {
+// UpdateCasparCGData starts an update job that continuously updates the specified template with data from the provided data source mappings at the specified interval.
+//
+// It returns a unique identifier for the update job.
+func (u *UIService) UpdateCasparCGData(template string, layer int, channels []int, data map[string]Resolver, sizing types.Sizing, playInDelay, updateInterval time.Duration) (uuid string) {
 	// push templates live
+	resolvedData := make(map[string]any, len(data))
+	for casparKey, resolver := range data {
+		value, err := resolver.datasource.Get(resolver.dataRange.Locations[resolver.offset].Key)
+		if err != nil {
+			u.app.logger.Error().Err(err).Str("key", resolver.dataRange.Locations[resolver.offset].Key).Msg("Failed to get data from datasource")
+		}
+		resolvedData[casparKey] = value.Value
+	}
+	u.PushCasparCGData(template, layer, channels, resolvedData, sizing, playInDelay)
+
+	u.updateHandler.AddUpdateJob(template, layer, channels, u.casparCGClient, data, updateInterval)
+	return uuid
 }
 
 type UpdateData struct {
