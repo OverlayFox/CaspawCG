@@ -52,8 +52,7 @@ func NewApp(upstreamCtx context.Context, logger zerolog.Logger, config *config.C
 	casparClient := casparcg.NewClient(ctx, logger, config.CasparCGClient, eventsProcessor)
 	err := casparClient.Connect()
 	if err != nil {
-		cancel()
-		return nil, err
+		logger.Warn().Err(err).Msg("Failed to connect to CasparCG server")
 	} else {
 		logger.Debug().Str("host", config.CasparCGClient.Host).Int("port", config.CasparCGClient.Port).Msg("Connected to CasparCG server")
 	}
