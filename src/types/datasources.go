@@ -104,7 +104,7 @@ func parseCellRef(cell string) (string, int, bool) {
 	var colSb strings.Builder
 	for _, ch := range cell[:i] {
 		if ch >= 'a' && ch <= 'z' {
-			ch = ch - ('a' - 'A')
+			ch -= 'a' - 'A'
 		}
 		colSb.WriteRune(ch)
 	}
