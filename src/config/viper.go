@@ -13,8 +13,8 @@ import (
 )
 
 type Config struct {
-	DataSourceManager *data.Config       `mapstructure:"data_source_manager"`
-	CasparCGClients   []*casparcg.Config `mapstructure:"casparcg_clients"`
+	DataSourceManager *data.Config     `mapstructure:"data_source_manager"`
+	CasparCGClient    *casparcg.Config `mapstructure:"casparcg_client"`
 }
 
 type Defaulter interface {

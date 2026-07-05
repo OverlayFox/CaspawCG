@@ -97,7 +97,7 @@ type UpdateHandler struct {
 	logger zerolog.Logger
 
 	datasourceManager types.DatasourceManager
-	casparCGClients   []types.CasparCGClient
+	casparCGClients   types.CasparCGClient
 
 	cycles map[string]types.UpdateJob
 
@@ -105,7 +105,7 @@ type UpdateHandler struct {
 	cancel context.CancelFunc
 }
 
-func NewUpdateHandler(upstreamCtx context.Context, logger zerolog.Logger, datasourceManager types.DatasourceManager, casparCGClients []types.CasparCGClient) *UpdateHandler {
+func NewUpdateHandler(upstreamCtx context.Context, logger zerolog.Logger, datasourceManager types.DatasourceManager, casparCGClients types.CasparCGClient) *UpdateHandler {
 	ctx, cancel := context.WithCancel(upstreamCtx)
 	return &UpdateHandler{
 		logger: logger.With().Str("component", "update-handler").Logger(),

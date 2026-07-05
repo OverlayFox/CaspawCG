@@ -21,7 +21,7 @@ type App struct {
 
 	UIService         *UIService
 	dataSourceManager types.DatasourceManager
-	casparCGClients   []types.CasparCGClient
+	casparCGClient    types.CasparCGClient
 	eventProcessor    types.EventProcessor
 
 	wailsCtx context.Context // opaque key for identifying with Wails runtime
@@ -49,16 +49,13 @@ func NewApp(upstreamCtx context.Context, logger zerolog.Logger, config *config.C
 		}
 	}
 
-	casparCGClients := make([]types.CasparCGClient, 0, len(config.CasparCGClients))
-	for _, clientCfg := range config.CasparCGClients {
-		client := casparcg.NewClient(ctx, logger, clientCfg, eventsProcessor)
-		casparCGClients = append(casparCGClients, client)
-		err := client.Connect()
-		if err != nil {
-			logger.Error().Err(err).Str("host", clientCfg.Host).Int("port", clientCfg.Port).Msg("Failed to connect to CasparCG server")
-		} else {
-			logger.Debug().Str("host", clientCfg.Host).Int("port", clientCfg.Port).Msg("Connected to CasparCG server")
-		}
+	casparClient := casparcg.NewClient(ctx, logger, config.CasparCGClient, eventsProcessor)
+	err := casparClient.Connect()
+	if err != nil {
+		cancel()
+		return nil, err
+	} else {
+		logger.Debug().Str("host", config.CasparCGClient.Host).Int("port", config.CasparCGClient.Port).Msg("Connected to CasparCG server")
 	}
 
 	a := &App{
@@ -66,12 +63,12 @@ func NewApp(upstreamCtx context.Context, logger zerolog.Logger, config *config.C
 
 		eventProcessor:    eventsProcessor,
 		dataSourceManager: datasourceManager,
-		casparCGClients:   casparCGClients,
+		casparCGClient:    casparClient,
 
 		ctx:    ctx,
 		cancel: cancel,
 	}
-	a.UIService = NewUIService(ctx, a, datasourceManager, casparCGClients)
+	a.UIService = NewUIService(ctx, a, datasourceManager, casparClient)
 
 	return a, nil
 }
@@ -86,9 +83,7 @@ func (a *App) Shutdown() {
 
 	a.eventProcessor.Close()
 	a.dataSourceManager.Close()
-	for _, client := range a.casparCGClients {
-		client.Close()
-	}
+	a.casparCGClient.Close()
 	a.UIService.Close()
 
 	a.wg.Wait()
