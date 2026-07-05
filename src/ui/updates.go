@@ -46,7 +46,7 @@ type Update struct {
 	layer          int
 	videoChannels  []int
 
-	casparMaps map[string]Resolver // map[casparKey]Resolver
+	casparMaps map[string]*Resolver // map[casparKey]*Resolver
 
 	updateInterval time.Duration
 
@@ -55,7 +55,7 @@ type Update struct {
 	cancel context.CancelFunc
 }
 
-func NewUpdate(upstreamCtx context.Context, logger zerolog.Logger, template string, layer int, videoChannels []int, casparCGClient types.CasparCGClient, casparMaps map[string]Resolver, updateInterval time.Duration) types.UpdateJob {
+func NewUpdate(upstreamCtx context.Context, logger zerolog.Logger, template string, layer int, videoChannels []int, casparCGClient types.CasparCGClient, casparMaps map[string]*Resolver, updateInterval time.Duration) types.UpdateJob {
 	ctx, cancel := context.WithCancel(upstreamCtx)
 	return &Update{
 		logger: logger.With().Str("component", "update").Str("template", template).Logger(),
@@ -83,11 +83,11 @@ func (u *Update) Start() error {
 			case <-time.After(u.updateInterval):
 				casparData := make(map[string]any)
 				for casparKey, resolver := range u.casparMaps {
-					data, err := resolver.datasource.Get(resolver.dataRange.Locations[resolver.offset].Key)
+					value, err := resolver.GetData()
 					if err != nil {
-						u.logger.Error().Err(err).Str("key", resolver.dataRange.Locations[resolver.offset].Key).Msg("Failed to get data from datasource")
+						u.logger.Error().Err(err).Str("casparKey", casparKey).Msg("Failed to get data from datasource")
 					}
-					casparData[casparKey] = data.Value
+					casparData[casparKey] = value
 
 					resolver.offset++
 					if resolver.offset >= len(resolver.dataRange.Locations) {
@@ -138,7 +138,7 @@ func NewUpdateHandler(upstreamCtx context.Context, logger zerolog.Logger, dataso
 	}
 }
 
-func (u *UpdateHandler) AddUpdateJob(template string, layer int, videoChannels []int, casparCGClient types.CasparCGClient, casparMaps map[string]Resolver, updateInterval time.Duration) (uuid string) {
+func (u *UpdateHandler) AddUpdateJob(template string, layer int, videoChannels []int, casparCGClient types.CasparCGClient, casparMaps map[string]*Resolver, updateInterval time.Duration) (uuid string) {
 	uuid = guuid.NewString()
 	u.logger.Debug().Str("uuid", uuid).Msg("Adding update job")
 

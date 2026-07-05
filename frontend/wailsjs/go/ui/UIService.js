@@ -58,6 +58,10 @@ export function PushCasparCGDataGroup(arg1) {
   return window['go']['ui']['UIService']['PushCasparCGDataGroup'](arg1);
 }
 
+export function RemoveUpdateJob(arg1) {
+  return window['go']['ui']['UIService']['RemoveUpdateJob'](arg1);
+}
+
 export function SaveLayout(arg1) {
   return window['go']['ui']['UIService']['SaveLayout'](arg1);
 }
@@ -72,4 +76,8 @@ export function StopCasparCGDataGroup(arg1) {
 
 export function StopCasparCGMedia(arg1, arg2, arg3) {
   return window['go']['ui']['UIService']['StopCasparCGMedia'](arg1, arg2, arg3);
+}
+
+export function UpdateCasparCGData(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
+  return window['go']['ui']['UIService']['UpdateCasparCGData'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
 }

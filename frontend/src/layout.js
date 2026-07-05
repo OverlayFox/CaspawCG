@@ -61,6 +61,7 @@ export const LayoutManager = {
       const sizeXInput = DOMUtils.querySelector(".size-x-input", widgetCard);
       const sizeYInput = DOMUtils.querySelector(".size-y-input", widgetCard);
       const delayInput = DOMUtils.querySelector(".delay-input", widgetCard);
+      const updateIntervalInput = DOMUtils.querySelector(".update-interval-input", widgetCard);
 
       const fields = [];
       DOMUtils.querySelectorAll(
@@ -71,18 +72,25 @@ export const LayoutManager = {
         const typeSelect = DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row);
         const inputTypeSelect = DOMUtils.querySelector(SELECTORS.FIELD_INPUT_TYPE, row);
         const idInput = DOMUtils.querySelector(SELECTORS.FIELD_ID, row);
-        const sourceSelect = DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row);
+        const datasourceSourceSelect = DOMUtils.querySelector(`${SELECTORS.FIELD_DATASOURCE_INPUTS} .f-source`, row);
+        const rangeSourceSelect = DOMUtils.querySelector(`${SELECTORS.FIELD_RANGE_INPUTS} .f-source`, row);
         const directValueInput = DOMUtils.querySelector(SELECTORS.FIELD_DIRECT_VALUE, row);
+        const rangeInput = DOMUtils.querySelector(SELECTORS.FIELD_RANGE, row);
+        const offsetInput = DOMUtils.querySelector(SELECTORS.FIELD_OFFSET, row);
 
         if (keyInput?.value) {
           const inputType = inputTypeSelect?.value || INPUT_TYPES.DATASOURCE;
+          const isRange = inputType === INPUT_TYPES.RANGE;
+          const isDirect = inputType === INPUT_TYPES.DIRECT;
           fields.push({
             key: keyInput.value,
             type: typeSelect?.value || FIELD_TYPES.STRING,
             inputType,
-            id: inputType === INPUT_TYPES.DIRECT ? "" : (idInput?.value || ""),
-            source: inputType === INPUT_TYPES.DIRECT ? "" : (sourceSelect?.value || ""),
-            value: inputType === INPUT_TYPES.DIRECT ? (directValueInput?.value || "") : "",
+            id: isDirect || isRange ? "" : (idInput?.value || ""),
+            source: isDirect ? "" : (isRange ? rangeSourceSelect?.value : datasourceSourceSelect?.value) || "",
+            value: isDirect ? (directValueInput?.value || "") : "",
+            range: isRange ? (rangeInput?.value || "") : "",
+            offset: isRange ? (parseInt(offsetInput?.value, 10) || 0) : 0,
           });
         }
       });
@@ -103,6 +111,7 @@ export const LayoutManager = {
         sizeX: sizeXInput?.value ? parseFloat(sizeXInput.value) : null,
         sizeY: sizeYInput?.value ? parseFloat(sizeYInput.value) : null,
         delay: delayInput?.value ? parseInt(delayInput.value, 10) : 0,
+        updateInterval: updateIntervalInput?.value ? parseInt(updateIntervalInput.value, 10) : 0,
         fields,
       });
     });

@@ -30,7 +30,12 @@ type Range struct {
 }
 
 func NewRange(input string) (Range, error) {
-	splitStr := strings.Split(input, ":")
+	sheet, body, ok := splitSheetPrefix(input)
+	if !ok {
+		return Range{}, fmt.Errorf("invalid range format: %s (missing sheet name, expected e.g. 'Sheet1!A1:A10')", input)
+	}
+
+	splitStr := strings.Split(body, ":")
 	if len(splitStr) != 2 {
 		return Range{}, fmt.Errorf("invalid range format: %s", input)
 	}
@@ -55,10 +60,31 @@ func NewRange(input string) (Range, error) {
 
 	locations := make([]Location, 0, endRow-startRow+1)
 	for row := startRow; row <= endRow; row++ {
-		locations = append(locations, Location{Key: fmt.Sprintf("%s%d", startCol, row)})
+		locations = append(locations, Location{Key: sheetQualifiedKey(sheet, fmt.Sprintf("%s%d", startCol, row))})
 	}
 
 	return Range{Locations: locations}, nil
+}
+
+// splitSheetPrefix splits a "Sheet1!A1:A10"-style (optionally quoted, e.g. "'CG-System'!A1:A10")
+// string into its bare (unquoted) sheet name and the remaining cell-reference body.
+// ok is false if no "!"-qualified sheet name is present.
+func splitSheetPrefix(input string) (sheet string, body string, ok bool) {
+	idx := strings.Index(input, "!")
+	if idx <= 0 {
+		return "", "", false
+	}
+	sheet = input[:idx]
+	if len(sheet) >= 2 && sheet[0] == '\'' && sheet[len(sheet)-1] == '\'' {
+		sheet = sheet[1 : len(sheet)-1]
+	}
+	return sheet, input[idx+1:], true
+}
+
+// sheetQualifiedKey builds a Sheets-API-safe A1 range/cell reference, quoting the sheet
+// name since Google rejects unquoted sheet names containing characters like "-" or spaces.
+func sheetQualifiedKey(sheet, cellRef string) string {
+	return fmt.Sprintf("'%s'!%s", sheet, cellRef)
 }
 
 // parseCellRef parses a cell reference such as "A1" into its column letters and row number.
@@ -127,9 +153,16 @@ func (r Range) Key() string {
 	minCol, maxCol := 0, 0
 	minRow, maxRow := 0, 0
 	found := false
+	sheet := ""
 
 	for _, loc := range r.Locations {
-		col, row, ok := parseCellRef(loc.Key)
+		locSheet, body, ok := splitSheetPrefix(loc.Key)
+		if !ok {
+			continue
+		}
+		sheet = locSheet
+
+		col, row, ok := parseCellRef(body)
 		if !ok {
 			continue
 		}
@@ -163,10 +196,10 @@ func (r Range) Key() string {
 	start := fmt.Sprintf("%s%d", numToCol(minCol), minRow)
 	end := fmt.Sprintf("%s%d", numToCol(maxCol), maxRow)
 	if start == end {
-		return start
+		return sheetQualifiedKey(sheet, start)
 	}
 
-	return start + ":" + end
+	return sheetQualifiedKey(sheet, start+":"+end)
 }
 
 // Data represents a piece of data retrieved from a data source, including its location and value.

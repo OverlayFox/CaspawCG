@@ -2,6 +2,7 @@ import { AppState } from "./state.js";
 import { DOMUtils } from "./dom-utils.js";
 import { CSS_CLASSES, SELECTORS, INPUT_TYPES } from "./constants.js";
 import { FieldManager } from "./field-manager.js";
+import { parseRange } from "./range-utils.js";
 
 /**
  * ModeManager — switches the UI between Edit and Live mode.
@@ -33,9 +34,28 @@ export const ModeManager = {
       const inputType = DOMUtils.querySelector(SELECTORS.FIELD_INPUT_TYPE, row)?.value || INPUT_TYPES.DATASOURCE;
       if (inputType === INPUT_TYPES.DIRECT) return;
 
-      const locationKey = DOMUtils.querySelector(SELECTORS.FIELD_ID, row)?.value;
       const type = DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row)?.value || "string";
-      const source = DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row)?.value;
+
+      if (inputType === INPUT_TYPES.RANGE) {
+        const rangeStr = DOMUtils.querySelector(SELECTORS.FIELD_RANGE, row)?.value;
+        const source = DOMUtils.querySelector(`${SELECTORS.FIELD_RANGE_INPUTS} .f-source`, row)?.value;
+        if (!rangeStr || !source) return;
+
+        let keys;
+        try {
+          keys = parseRange(rangeStr);
+        } catch (error) {
+          console.error(`Invalid range in field row:`, error);
+          return;
+        }
+
+        if (!sourceMap.has(source)) sourceMap.set(source, []);
+        keys.forEach((key) => sourceMap.get(source).push({ Key: key, Type: type }));
+        return;
+      }
+
+      const locationKey = DOMUtils.querySelector(SELECTORS.FIELD_ID, row)?.value;
+      const source = DOMUtils.querySelector(`${SELECTORS.FIELD_DATASOURCE_INPUTS} .f-source`, row)?.value;
 
       if (!locationKey || !source) return;
 

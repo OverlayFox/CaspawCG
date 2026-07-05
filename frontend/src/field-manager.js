@@ -2,6 +2,7 @@ import { APIService } from "./api.js";
 import { DOMUtils } from "./dom-utils.js";
 import { CSS_CLASSES, SELECTORS, FIELD_TYPES, INPUT_TYPES } from "./constants.js";
 import { LayoutManager } from "./layout.js";
+import { parseRange } from "./range-utils.js";
 
 /**
  * FieldManager — creates and manages the custom field rows inside each widget.
@@ -30,8 +31,12 @@ export const FieldManager = {
     const source = config?.source || sources[0] || "";
     const inputType = config?.inputType || INPUT_TYPES.DATASOURCE;
     const value = config?.value || "";
+    const range = config?.range || "";
+    const offset = config?.offset ?? 0;
 
     const isDirect = inputType === INPUT_TYPES.DIRECT;
+    const isRange = inputType === INPUT_TYPES.RANGE;
+    const isDatasource = !isDirect && !isRange;
 
     const row = DOMUtils.createElement("div", CSS_CLASSES.FIELD_ROW);
     row.innerHTML = `
@@ -43,10 +48,11 @@ export const FieldManager = {
           <option value="${FIELD_TYPES.FLOAT}" ${type === FIELD_TYPES.FLOAT ? "selected" : ""}>Float</option>
         </select>
         <select class="f-input-type">
-          <option value="${INPUT_TYPES.DATASOURCE}" ${!isDirect ? "selected" : ""}>Data Source</option>
+          <option value="${INPUT_TYPES.DATASOURCE}" ${isDatasource ? "selected" : ""}>Data Source</option>
           <option value="${INPUT_TYPES.DIRECT}" ${isDirect ? "selected" : ""}>Direct Input</option>
+          <option value="${INPUT_TYPES.RANGE}" ${isRange ? "selected" : ""}>Data Source Range</option>
         </select>
-        <div class="f-datasource-inputs" style="${isDirect ? "display:none" : ""}">
+        <div class="f-datasource-inputs" style="${isDatasource ? "" : "display:none"}">
           <input type="text" placeholder="Location" class="f-id" value="${id}">
           <select class="f-source">
             ${sourcesHtml}
@@ -54,6 +60,13 @@ export const FieldManager = {
         </div>
         <div class="f-direct-inputs" style="${isDirect ? "" : "display:none"}">
           <input type="text" placeholder="Value" class="f-value" value="${value}">
+        </div>
+        <div class="f-range-inputs" style="${isRange ? "" : "display:none"}">
+          <input type="text" placeholder="Range e.g. Sheet1!A1:A10" class="f-range" value="${range}">
+          <select class="f-source">
+            ${sourcesHtml}
+          </select>
+          <input type="number" placeholder="Offset" class="f-offset" min="0" value="${offset}">
         </div>
         <button class="delete-row-btn" aria-label="Remove field">❌</button>
       </div>
@@ -64,15 +77,17 @@ export const FieldManager = {
     `;
 
     if (source) {
-      const sourceSelect = DOMUtils.querySelector(".f-source", row);
-      if (sourceSelect) sourceSelect.value = source;
+      DOMUtils.querySelectorAll(".f-source", row).forEach((sourceSelect) => {
+        sourceSelect.value = source;
+      });
     }
 
     const inputTypeSelect = DOMUtils.querySelector(SELECTORS.FIELD_INPUT_TYPE, row);
     inputTypeSelect?.addEventListener("change", () => {
-      const direct = inputTypeSelect.value === INPUT_TYPES.DIRECT;
-      DOMUtils.querySelector(SELECTORS.FIELD_DATASOURCE_INPUTS, row).style.display = direct ? "none" : "";
-      DOMUtils.querySelector(SELECTORS.FIELD_DIRECT_INPUTS, row).style.display = direct ? "" : "none";
+      const mode = inputTypeSelect.value;
+      DOMUtils.querySelector(SELECTORS.FIELD_DATASOURCE_INPUTS, row).style.display = mode === INPUT_TYPES.DATASOURCE ? "" : "none";
+      DOMUtils.querySelector(SELECTORS.FIELD_DIRECT_INPUTS, row).style.display = mode === INPUT_TYPES.DIRECT ? "" : "none";
+      DOMUtils.querySelector(SELECTORS.FIELD_RANGE_INPUTS, row).style.display = mode === INPUT_TYPES.RANGE ? "" : "none";
       LayoutManager.scheduleAutoSave();
     });
 
@@ -106,10 +121,37 @@ export const FieldManager = {
       if (inputType === INPUT_TYPES.DIRECT) {
         const directInput = DOMUtils.querySelector(SELECTORS.FIELD_DIRECT_VALUE, row);
         valueDisplay.textContent = directInput?.value ?? "";
+      } else if (inputType === INPUT_TYPES.RANGE) {
+        const type = typeSelect.value;
+        const rangeInput = DOMUtils.querySelector(SELECTORS.FIELD_RANGE, row);
+        const offsetInput = DOMUtils.querySelector(SELECTORS.FIELD_OFFSET, row);
+        const sourceSelect = DOMUtils.querySelector(`${SELECTORS.FIELD_RANGE_INPUTS} .f-source`, row);
+        if (!rangeInput || !sourceSelect) return;
+
+        const source = sourceSelect.value;
+        const offset = parseInt(offsetInput?.value, 10) || 0;
+
+        valueDisplay.textContent = "Fetching...";
+        try {
+          const keys = parseRange(rangeInput.value);
+          const identifier = keys[offset];
+          if (identifier === undefined) {
+            valueDisplay.textContent = "Offset out of range";
+            return;
+          }
+          valueDisplay.textContent = await APIService.fetchLiveData(
+            identifier,
+            type,
+            source,
+          );
+        } catch (error) {
+          console.error("Failed to fetch live range data:", error);
+          valueDisplay.textContent = "Error loading data";
+        }
       } else {
         const type = typeSelect.value;
         const idInput = DOMUtils.querySelector(SELECTORS.FIELD_ID, row);
-        const sourceSelect = DOMUtils.querySelector(SELECTORS.FIELD_SOURCE, row);
+        const sourceSelect = DOMUtils.querySelector(`${SELECTORS.FIELD_DATASOURCE_INPUTS} .f-source`, row);
         if (!idInput || !sourceSelect) return;
 
         const identifier = idInput.value;

@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"maps"
 	"sync"
 	"time"
 
@@ -108,31 +109,61 @@ func (u *UIService) NextCasparCGData(template string, layer int, channels []int,
 	})
 }
 
-// UpdateCasparCGData starts an update job that continuously updates the specified template with data from the provided data source mappings at the specified interval.
+// RangeField describes a single template field that should be continuously
+// resolved from a range of locations in a data source.
+type RangeField struct {
+	CasparKey string
+	Type      types.DataType
+	Source    string
+	Range     string
+	Offset    int
+}
+
+// UpdateCasparCGData pushes an initial snapshot of literalData plus the current values of
+// rangeFields, then starts an update job that continuously re-resolves rangeFields from their
+// data sources and pushes the results to the template at the specified interval.
 //
 // It returns a unique identifier for the update job.
-func (u *UIService) UpdateCasparCGData(template string, layer int, channels []int, data map[string]Resolver, sizing types.Sizing, playInDelay, updateInterval time.Duration) (uuid string) {
-	// push templates live
-	resolvedData := make(map[string]any, len(data))
-	for casparKey, resolver := range data {
-		value, err := resolver.datasource.Get(resolver.dataRange.Locations[resolver.offset].Key)
+func (u *UIService) UpdateCasparCGData(template string, layer int, channels []int, literalData map[string]any, rangeFields []RangeField, sizing types.Sizing, playInDelay, updateInterval time.Duration) (uuid string, err error) {
+	casparMaps := make(map[string]*Resolver, len(rangeFields))
+	for _, rf := range rangeFields {
+		dataRange, err := types.NewRange(rf.Range)
 		if err != nil {
-			u.app.logger.Error().Err(err).Str("key", resolver.dataRange.Locations[resolver.offset].Key).Msg("Failed to get data from datasource")
+			u.app.logger.Error().Err(err).Str("range", rf.Range).Msg("Failed to parse range")
+			return "", err
 		}
-		resolvedData[casparKey] = value.Value
+		for i := range dataRange.Locations {
+			dataRange.Locations[i].Type = rf.Type
+		}
+
+		ds, err := u.datasourceManager.GetDataSource(rf.Source)
+		if err != nil {
+			u.app.logger.Error().Err(err).Msgf("Failed to get datasource '%s'", rf.Source)
+			return "", err
+		}
+
+		resolver := NewResolver(ds, dataRange, rf.Offset)
+		casparMaps[rf.CasparKey] = &resolver
+	}
+
+	resolvedData := make(map[string]any, len(literalData)+len(casparMaps))
+	maps.Copy(resolvedData, literalData)
+	for casparKey, resolver := range casparMaps {
+		value, err := resolver.GetData()
+		if err != nil {
+			u.app.logger.Error().Err(err).Str("casparKey", casparKey).Msg("Failed to get data from datasource")
+		}
+		resolvedData[casparKey] = value
 	}
 	u.PushCasparCGData(template, layer, channels, resolvedData, sizing, playInDelay)
 
-	u.updateHandler.AddUpdateJob(template, layer, channels, u.casparCGClient, data, updateInterval)
-	return uuid
+	uuid = u.updateHandler.AddUpdateJob(template, layer, channels, u.casparCGClient, casparMaps, updateInterval)
+	return uuid, nil
 }
 
-type UpdateData struct {
-	UID       int
-	CasparKey string
-	Type      string
-	Range     string
-	Offset    string
+// RemoveUpdateJob stops and removes the update job identified by uuid.
+func (u *UIService) RemoveUpdateJob(uuid string) error {
+	return u.updateHandler.RemoveUpdateJob(uuid)
 }
 
 func (u *UIService) PrimeDataSource(name string, locations []types.Location) error {

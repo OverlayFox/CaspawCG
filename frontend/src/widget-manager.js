@@ -83,6 +83,10 @@ export const WidgetManager = {
             <label>Delay (ms):</label>
             <input type="number" class="delay-input" min="0" max="60000" value="${config?.delay || 0}">
           </div>
+          <div class="input-group">
+            <label>Update Interval (ms):</label>
+            <input type="number" class="update-interval-input" min="0" max="600000" value="${config?.updateInterval || 1000}">
+          </div>
         </div>
       </div>
       <div class="${CSS_CLASSES.CUSTOM_FIELDS}"></div>
@@ -177,6 +181,9 @@ export const WidgetManager = {
     await this._restoreCardState(widgetCard, config);
 
     this._attachCardListeners(widgetCard, () => {
+      if (widgetCard.dataset.updateJobUuid) {
+        APIService.removeUpdateJob(widgetCard.dataset.updateJobUuid);
+      }
       AppState.grid.removeWidget(gridItem);
       LayoutManager.scheduleAutoSave();
     });
@@ -203,6 +210,9 @@ export const WidgetManager = {
     await this._restoreCardState(widgetCard, config);
 
     this._attachCardListeners(widgetCard, () => {
+      if (widgetCard.dataset.updateJobUuid) {
+        APIService.removeUpdateJob(widgetCard.dataset.updateJobUuid);
+      }
       entry.remove();
       LayoutManager.scheduleAutoSave();
     });
@@ -210,7 +220,7 @@ export const WidgetManager = {
     return entry;
   },
 
-  stopWidgetAction(widgetCard) {
+  async stopWidgetAction(widgetCard) {
     const template = DOMUtils.querySelector(".api-dropdown", widgetCard)?.value;
     if (!template) {
       console.error("No template selected for stopping.");
@@ -232,6 +242,11 @@ export const WidgetManager = {
     }
 
     APIService.stopCGData(template, layer, channels);
+
+    if (widgetCard.dataset.updateJobUuid) {
+      await APIService.removeUpdateJob(widgetCard.dataset.updateJobUuid);
+      delete widgetCard.dataset.updateJobUuid;
+    }
   },
 
   nextWidgetAction(widgetCard) {
@@ -284,6 +299,7 @@ export const WidgetManager = {
     const sizeXVal = DOMUtils.querySelector(".size-x-input", widgetCard)?.value;
     const sizeYVal = DOMUtils.querySelector(".size-y-input", widgetCard)?.value;
     const delayVal = DOMUtils.querySelector(".delay-input", widgetCard)?.value;
+    const updateIntervalVal = DOMUtils.querySelector(".update-interval-input", widgetCard)?.value;
 
     const sizing = {
       posX: posXVal ? parseInt(posXVal, 10) : 0,
@@ -292,8 +308,10 @@ export const WidgetManager = {
       sizeY: sizeYVal ? parseFloat(sizeYVal) : 100,
     };
     const delay = delayVal ? parseInt(delayVal, 10) * 1_000_000 : 0;
+    const updateInterval = updateIntervalVal ? parseInt(updateIntervalVal, 10) * 1_000_000 : 0;
 
     const data = {};
+    const rangeFields = [];
     DOMUtils.querySelectorAll(`.${CSS_CLASSES.FIELD_ROW}`, widgetCard).forEach(
       (row) => {
         const keyInput = DOMUtils.querySelector(SELECTORS.FIELD_KEY, row);
@@ -306,6 +324,24 @@ export const WidgetManager = {
         const inputType =
           DOMUtils.querySelector(SELECTORS.FIELD_INPUT_TYPE, row)?.value ||
           INPUT_TYPES.DATASOURCE;
+
+        if (inputType === INPUT_TYPES.RANGE) {
+          const rangeVal =
+            DOMUtils.querySelector(SELECTORS.FIELD_RANGE, row)?.value || "";
+          const offsetVal =
+            DOMUtils.querySelector(SELECTORS.FIELD_OFFSET, row)?.value;
+          const source =
+            DOMUtils.querySelector(`${SELECTORS.FIELD_RANGE_INPUTS} .f-source`, row)
+              ?.value || "";
+          rangeFields.push({
+            CasparKey: key,
+            Type: type,
+            Source: source,
+            Range: rangeVal,
+            Offset: parseInt(offsetVal, 10) || 0,
+          });
+          return;
+        }
 
         let rawValue;
         if (inputType === INPUT_TYPES.DIRECT) {
@@ -329,7 +365,7 @@ export const WidgetManager = {
       },
     );
 
-    return { template, layer, channels, data, sizing, delay };
+    return { template, layer, channels, data, rangeFields, sizing, delay, updateInterval };
   },
 
   async startWidgetAction(widgetCard) {
@@ -338,6 +374,26 @@ export const WidgetManager = {
       console.error("No template selected for execution.");
       return;
     }
+
+    if (cgData.rangeFields.length > 0) {
+      if (widgetCard.dataset.updateJobUuid) {
+        await APIService.removeUpdateJob(widgetCard.dataset.updateJobUuid);
+        delete widgetCard.dataset.updateJobUuid;
+      }
+      const uuid = await APIService.updateCGData(
+        cgData.template,
+        cgData.layer,
+        cgData.channels,
+        cgData.data,
+        cgData.rangeFields,
+        cgData.sizing,
+        cgData.delay,
+        cgData.updateInterval,
+      );
+      if (uuid) widgetCard.dataset.updateJobUuid = uuid;
+      return;
+    }
+
     APIService.pushCGData(
       cgData.template,
       cgData.layer,

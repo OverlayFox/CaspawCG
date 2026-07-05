@@ -157,26 +157,28 @@ func (c *client) batchFetch(emptyData []types.Location) ([]*types.Data, error) {
 		return nil, err
 	}
 
+	if len(resp.ValueRanges) != len(emptyData) {
+		return nil, fmt.Errorf("unexpected number of value ranges in batchGet response: got %d, want %d", len(resp.ValueRanges), len(emptyData))
+	}
+
+	// Match by response order, not by string-comparing valueRange.Range against the
+	// requested key: Google echoes back a canonicalized range (e.g. dropping quotes
+	// that weren't strictly required), so exact string equality can silently fail to
+	// match. BatchGet guarantees ValueRanges are returned in the same order as Ranges.
 	result := make([]*types.Data, 0, len(resp.ValueRanges))
-	for _, valueRange := range resp.ValueRanges {
+	for i, valueRange := range resp.ValueRanges {
 		var fetchedData any
 		if len(valueRange.Values) > 0 && len(valueRange.Values[0]) > 0 {
 			fetchedData = valueRange.Values[0][0]
-		} else {
-			fetchedData = nil
 		}
-		for _, emptyDt := range emptyData {
-			if emptyDt.Key == valueRange.Range {
-				result = append(result, &types.Data{
-					Location: types.Location{
-						Key:  emptyDt.Key,
-						Type: emptyDt.Type,
-					},
-					Value: fetchedData,
-				})
-				break
-			}
-		}
+		emptyDt := emptyData[i]
+		result = append(result, &types.Data{
+			Location: types.Location{
+				Key:  emptyDt.Key,
+				Type: emptyDt.Type,
+			},
+			Value: fetchedData,
+		})
 	}
 
 	return result, nil
