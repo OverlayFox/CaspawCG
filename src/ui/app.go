@@ -20,7 +20,7 @@ type App struct {
 	logger zerolog.Logger
 
 	UIService         *UIService
-	dataSourceManager data.DatasourceManager
+	dataSourceManager types.DatasourceManager
 	casparCGClients   []types.CasparCGClient
 	eventProcessor    types.EventProcessor
 

@@ -25,7 +25,7 @@ type client struct {
 	cfg            d.GoogleSheetDataSource
 	eventProcessor types.EventProcessor
 
-	dataFields []*d.Data
+	dataFields []*types.Data
 	mtx        sync.RWMutex
 
 	service *gs.Service
@@ -40,7 +40,7 @@ type Dependencies struct {
 	CredentialsFilePath string
 }
 
-func NewClient(ctx context.Context, logger zerolog.Logger, cfg d.GoogleSheetDataSource, eventProcessor types.EventProcessor) (d.DataSource, error) {
+func NewClient(ctx context.Context, logger zerolog.Logger, cfg d.GoogleSheetDataSource, eventProcessor types.EventProcessor) (types.DataSource, error) {
 	absPath, err := filepath.Abs(cfg.CredentialsFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve absolute path for service account credentials file: %w", err)
@@ -66,7 +66,7 @@ func NewClient(ctx context.Context, logger zerolog.Logger, cfg d.GoogleSheetData
 		cfg:            cfg,
 		eventProcessor: eventProcessor,
 
-		dataFields: make([]*d.Data, 0),
+		dataFields: make([]*types.Data, 0),
 
 		service: service,
 
@@ -82,7 +82,7 @@ func (c *client) GetName() string {
 	return fmt.Sprintf("GoogleSheet: %s", c.cfg.SpreadSheetID)
 }
 
-func (c *client) Prime(locations []d.Location) error {
+func (c *client) Prime(locations []types.Location) error {
 	result, err := c.batchFetch(locations)
 	if err != nil {
 		return err
@@ -108,14 +108,14 @@ func (c *client) RemovePrime(keys []string) error {
 	return nil
 }
 
-func (c *client) Get(key string) (d.Data, error) {
+func (c *client) Get(key string) (types.Data, error) {
 	c.mtx.RLock()
 	defer c.mtx.RUnlock()
 
 	for _, data := range c.dataFields {
 		if data.Key == key {
-			return d.Data{
-				Location: d.Location{
+			return types.Data{
+				Location: types.Location{
 					Key:  data.Key,
 					Type: data.Type,
 				},
@@ -124,7 +124,7 @@ func (c *client) Get(key string) (d.Data, error) {
 		}
 	}
 
-	return d.Data{}, fmt.Errorf("no data found for key: '%s'", key)
+	return types.Data{}, fmt.Errorf("no data found for key: '%s'", key)
 }
 
 func (c *client) Close() {
@@ -135,7 +135,7 @@ func (c *client) Close() {
 }
 
 // fetch fetches a singular datapoint from the google sheet
-func (c *client) batchFetch(emptyData []d.Location) ([]*d.Data, error) {
+func (c *client) batchFetch(emptyData []types.Location) ([]*types.Data, error) {
 	if len(emptyData) == 0 {
 		return nil, errors.New("no locations provided")
 	}
@@ -157,7 +157,7 @@ func (c *client) batchFetch(emptyData []d.Location) ([]*d.Data, error) {
 		return nil, err
 	}
 
-	result := make([]*d.Data, 0, len(resp.ValueRanges))
+	result := make([]*types.Data, 0, len(resp.ValueRanges))
 	for _, valueRange := range resp.ValueRanges {
 		var fetchedData any
 		if len(valueRange.Values) > 0 && len(valueRange.Values[0]) > 0 {
@@ -167,8 +167,8 @@ func (c *client) batchFetch(emptyData []d.Location) ([]*d.Data, error) {
 		}
 		for _, emptyDt := range emptyData {
 			if emptyDt.Key == valueRange.Range {
-				result = append(result, &d.Data{
-					Location: d.Location{
+				result = append(result, &types.Data{
+					Location: types.Location{
 						Key:  emptyDt.Key,
 						Type: emptyDt.Type,
 					},
@@ -196,7 +196,7 @@ func (c *client) updateDataFields() {
 				return
 			case <-ticker.C:
 				c.mtx.RLock()
-				locations := make([]d.Location, 0, len(c.dataFields))
+				locations := make([]types.Location, 0, len(c.dataFields))
 				for _, data := range c.dataFields {
 					locations = append(locations, data.Location)
 				}

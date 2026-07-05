@@ -7,30 +7,30 @@ import (
 
 	"github.com/overlayfox/casparcg-amcp-go/types/responses"
 
-	"github.com/overlayfox/caspaw-cg/src/data"
 	"github.com/overlayfox/caspaw-cg/src/types"
 )
 
 // UIService bridges the UI with the GoLang system
 type UIService struct {
 	app               *App
-	datasourceManager data.DatasourceManager
+	datasourceManager types.DatasourceManager
 	casparCGClients   []types.CasparCGClient
+	updateHandler     *UpdateHandler
 
 	wg     sync.WaitGroup
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-func NewUIService(upstreamCtx context.Context, app *App, datasourceManager data.DatasourceManager, casparCGClients []types.CasparCGClient) *UIService {
+func NewUIService(upstreamCtx context.Context, app *App, datasourceManager types.DatasourceManager, casparCGClients []types.CasparCGClient) *UIService {
 	ctx, cancel := context.WithCancel(upstreamCtx)
 	return &UIService{
 		app:               app,
 		datasourceManager: datasourceManager,
 		casparCGClients:   casparCGClients,
-
-		ctx:    ctx,
-		cancel: cancel,
+		updateHandler:     NewUpdateHandler(ctx, app.logger, datasourceManager, casparCGClients),
+		ctx:               ctx,
+		cancel:            cancel,
 	}
 }
 
@@ -131,19 +131,6 @@ func (u *UIService) NextCasparCGData(template string, layer int, channels []int,
 	}
 }
 
-func (u *UIService) updateCasparCGData(template string, layer int, channels []int, data map[string]any) {
-	for _, client := range u.casparCGClients {
-		u.wg.Add(1)
-		go func(client types.CasparCGClient) {
-			defer u.wg.Done()
-			err := client.UpdateCGData(template, layer, channels, data)
-			if err != nil {
-				u.app.logger.Error().Err(err).Msgf("Failed to update CG data for template '%s' on layer %d, channels %v", template, layer, channels)
-			}
-		}(client)
-	}
-}
-
 type UpdateData struct {
 	UID       int
 	CasparKey string
@@ -152,7 +139,7 @@ type UpdateData struct {
 	Offset    string
 }
 
-func (u *UIService) PrimeDataSource(name string, locations []data.Location) error {
+func (u *UIService) PrimeDataSource(name string, locations []types.Location) error {
 	ds, err := u.datasourceManager.GetDataSource(name)
 	if err != nil {
 		u.app.logger.Error().Err(err).Msgf("Failed to get datasource '%s'", name)
@@ -167,11 +154,11 @@ func (u *UIService) PrimeDataSource(name string, locations []data.Location) erro
 	return nil
 }
 
-func (u *UIService) GetDataSourceValue(name string, location data.Location) (data.Data, error) {
+func (u *UIService) GetDataSourceValue(name string, location types.Location) (types.Data, error) {
 	ds, err := u.datasourceManager.GetDataSource(name)
 	if err != nil {
 		u.app.logger.Error().Err(err).Msgf("Failed to get datasource '%s'", name)
-		return data.Data{}, err
+		return types.Data{}, err
 	}
 
 	u.app.logger.Info().Msgf("Getting value from datasource '%s' for location: %v", name, location)
