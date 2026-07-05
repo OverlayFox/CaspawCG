@@ -3,6 +3,7 @@ package types
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"unicode"
 )
 
@@ -68,6 +69,7 @@ func (r Range) Key() string {
 		}
 
 		col := ""
+		var colSb71 strings.Builder
 		for _, ch := range cell[:i] {
 			if !unicode.IsLetter(ch) {
 				return "", 0, false
@@ -75,8 +77,9 @@ func (r Range) Key() string {
 			if ch >= 'a' && ch <= 'z' {
 				ch = ch - ('a' - 'A')
 			}
-			col += string(ch)
+			colSb71.WriteString(string(ch))
 		}
+		col += colSb71.String()
 
 		for _, ch := range cell[i:] {
 			if !unicode.IsDigit(ch) {
