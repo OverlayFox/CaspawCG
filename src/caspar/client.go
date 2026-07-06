@@ -53,11 +53,11 @@ func (c *client) Connect() error {
 }
 
 func (c *client) GetTemplates() ([]string, error) {
-	return c.caspar.Query().TLS(new(""))
+	return c.caspar.Query().TLS(new(string))
 }
 
 func (c *client) GetMedia() ([]string, error) {
-	media, err := c.caspar.Query().CLS(new(""))
+	media, err := c.caspar.Query().CLS(new(string))
 	if err != nil {
 		return nil, err
 	}

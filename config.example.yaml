@@ -4,8 +4,10 @@
 data_source_manager:
   google_sheet_data_sources:
     - spreadsheet_id: "your_spreadsheet_id"
+      name: "Your Data Source Name"
       credentials_file_path: "path/to/your/credentials.json"
     - spreadsheet_id: "another_spreadsheet_id"
+      name: "Another Data Source Name"
       credentials_file_path: "path/to/another/credentials.json"
 
 casparcg_client:

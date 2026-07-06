@@ -12,6 +12,7 @@ type Config struct {
 }
 
 type GoogleSheetDataSource struct {
+	Name                string `mapstructure:"name"`
 	SpreadSheetID       string `mapstructure:"spreadsheet_id"`
 	CredentialsFilePath string `mapstructure:"credentials_file_path"`
 }
@@ -27,12 +28,15 @@ func (gsds *GoogleSheetDataSource) Validate() error {
 	if _, err := filepath.Abs(gsds.CredentialsFilePath); err != nil {
 		return fmt.Errorf("invalid credentials_file_path: %w", err)
 	}
-
 	if _, err := os.Stat(gsds.CredentialsFilePath); err != nil {
 		if os.IsNotExist(err) {
 			return fmt.Errorf("credentials_file_path does not exist: %s", gsds.CredentialsFilePath)
 		}
 		return fmt.Errorf("error checking credentials_file_path: %w", err)
+	}
+
+	if gsds.Name == "" {
+		gsds.Name = gsds.SpreadSheetID // default to spreadsheet_id if name is not provided
 	}
 
 	return nil
