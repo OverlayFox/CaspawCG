@@ -79,7 +79,7 @@ func NewClient(ctx context.Context, logger zerolog.Logger, cfg d.GoogleSheetData
 }
 
 func (c *client) GetName() string {
-	return fmt.Sprintf("GoogleSheet: %s", c.cfg.SpreadSheetID)
+	return c.cfg.Name
 }
 
 func (c *client) Prime(locations []types.Location) error {
