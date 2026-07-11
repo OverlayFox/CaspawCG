@@ -38,6 +38,13 @@ func (r *Resolver) GetData() (any, error) {
 	return data.Value, nil
 }
 
+func (r *Resolver) Advance() {
+	r.offset++
+	if r.offset >= len(r.dataRange.Locations) {
+		r.offset = 0 // Reset to the beginning if we reach the end
+	}
+}
+
 type Update struct {
 	logger zerolog.Logger
 
@@ -89,10 +96,7 @@ func (u *Update) Start() error {
 					}
 					casparData[casparKey] = value
 
-					resolver.offset++
-					if resolver.offset >= len(resolver.dataRange.Locations) {
-						resolver.offset = 0 // Reset to the beginning if we reach the end
-					}
+					resolver.Advance()
 				}
 
 				err := u.casparCGClient.UpdateCGData(u.template, u.layer, u.videoChannels, casparData)
