@@ -19,16 +19,37 @@ export function parseCellRef(cell) {
   return { col, row };
 }
 
-export function parseRange(input) {
+// splitSheetPrefix splits a "Sheet1!A1:A10"-style (optionally quoted, e.g. "'CG-System'!A1:A10")
+// string into its bare (unquoted) sheet name and the remaining body. ok is false if no
+// "!"-qualified sheet name is present.
+function splitSheetPrefix(input) {
   const bang = (input || "").indexOf("!");
-  if (bang <= 0) {
-    throw new Error(`Invalid range format: ${input} (missing sheet name, expected e.g. 'Sheet1!A1:A10')`);
-  }
+  if (bang <= 0) return null;
+
   let sheet = input.slice(0, bang);
   if (sheet.length >= 2 && sheet[0] === "'" && sheet[sheet.length - 1] === "'") {
     sheet = sheet.slice(1, -1);
   }
-  const body = input.slice(bang + 1);
+  return { sheet, body: input.slice(bang + 1) };
+}
+
+// normalizeLocationKey normalizes a raw "sheet!A1"-style key into a Sheets-API-safe,
+// quoted "'sheet'!A1" key. Google rejects unquoted sheet names containing characters
+// like "-" or spaces, so always quote — quoting a simple name (e.g. 'Sheet1') is valid too.
+export function normalizeLocationKey(input) {
+  const split = splitSheetPrefix(input);
+  if (!split) {
+    throw new Error(`Invalid location format: ${input} (missing sheet name, expected e.g. 'Sheet1!A1')`);
+  }
+  return `'${split.sheet}'!${split.body}`;
+}
+
+export function parseRange(input) {
+  const split = splitSheetPrefix(input);
+  if (!split) {
+    throw new Error(`Invalid range format: ${input} (missing sheet name, expected e.g. 'Sheet1!A1:A10')`);
+  }
+  const { sheet, body } = split;
 
   const parts = body.split(":");
   if (parts.length !== 2) {

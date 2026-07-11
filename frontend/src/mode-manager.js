@@ -2,7 +2,7 @@ import { AppState } from "./state.js";
 import { DOMUtils } from "./dom-utils.js";
 import { CSS_CLASSES, SELECTORS, INPUT_TYPES } from "./constants.js";
 import { FieldManager } from "./field-manager.js";
-import { parseRange } from "./range-utils.js";
+import { parseRange, normalizeLocationKey } from "./range-utils.js";
 
 /**
  * ModeManager — switches the UI between Edit and Live mode.
@@ -59,8 +59,16 @@ export const ModeManager = {
 
       if (!locationKey || !source) return;
 
+      let key;
+      try {
+        key = normalizeLocationKey(locationKey);
+      } catch (error) {
+        console.error(`Invalid location in field row:`, error);
+        return;
+      }
+
       if (!sourceMap.has(source)) sourceMap.set(source, []);
-      sourceMap.get(source).push({ Key: locationKey, Type: type });
+      sourceMap.get(source).push({ Key: key, Type: type });
     });
 
     await Promise.all(
