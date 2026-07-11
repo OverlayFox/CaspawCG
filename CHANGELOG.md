@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- added user definable names to spreadsheets
 - #43 - added update cycle system
 - added AI disclosure to the README.md
 - #45 - added next button to templates and groups

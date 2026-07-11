@@ -10,8 +10,15 @@ build:
 install-dev:
 	@echo "==> Installing development dependencies..."
 	@echo "--> Installing golangci-lint..."
-	curl -sSfL https://golangci-lint.run/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.11.2
+	curl -sSfL https://golangci-lint.run/install.sh | sudo sh -s -- -b $(go env GOPATH)/bin v2.11.2
 	golangci-lint --version
+	@echo "--> Installing Wails dependencies..."
+	sudo apt update
+	sudo apt install -y build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev
+	@echo "==> Installing Wails..."
+	go install github.com/wailsapp/wails/v2/cmd/wails@latest
+	@echo "Make sure to add `$(go env GOPATH)/bin` to your PATH if it's not already there."
+	
 
 .PHONY: lint
 lint:
