@@ -112,6 +112,12 @@ casparcg_client:
 10. Now invite the E-Mail address that is listed in `credentials.json` -> `client_email:` to your Google Sheet and give it viewing access
 11. Finally copy the google sheets `spreadsheet_id`, which is located in the URL of your google sheets: `https://docs.google.com/spreadsheets/d/THIS_HERE_IS_YOUR_SPREAD_SHEET_ID/`
 
+## Making a release
+
+1. create a new branch under the git folder for example `release/1.2.0`
+2. bump the version in the `CHANEGLOG.md` and `wails.json` and push the changes
+3. Wait for the pipeline to finish and pull the release branch into main
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
