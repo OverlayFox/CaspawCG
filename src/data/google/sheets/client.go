@@ -89,7 +89,7 @@ func (c *client) Prime(locations []types.Location) error {
 	}
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
-	c.dataFields = append(c.dataFields, result...)
+	c.dataFields = result
 	return nil
 }
 

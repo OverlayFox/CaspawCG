@@ -2,7 +2,7 @@ import { APIService } from "./api.js";
 import { DOMUtils } from "./dom-utils.js";
 import { CSS_CLASSES, SELECTORS, FIELD_TYPES, INPUT_TYPES } from "./constants.js";
 import { LayoutManager } from "./layout.js";
-import { parseRange } from "./range-utils.js";
+import { parseRange, normalizeLocationKey } from "./range-utils.js";
 
 /**
  * FieldManager — creates and manages the custom field rows inside each widget.
@@ -102,6 +102,32 @@ export const FieldManager = {
     container.appendChild(row);
   },
 
+  // getLiveIdentifier returns the identifier string currently used to fetch/match this
+  // row's value (RANGE: parsed range key at the given offset; DATASOURCE: normalized
+  // location key), or null if the row is DIRECT-type or has no resolvable location.
+  // Shared by updateLiveData (fetching) and events.js's DataUpdateHandler (push matching)
+  // so the two never drift out of sync with each other again.
+  getLiveIdentifier(row) {
+    const inputTypeSelect = DOMUtils.querySelector(SELECTORS.FIELD_INPUT_TYPE, row);
+    const inputType = inputTypeSelect?.value || INPUT_TYPES.DATASOURCE;
+
+    if (inputType === INPUT_TYPES.DIRECT) return null;
+
+    if (inputType === INPUT_TYPES.RANGE) {
+      const rangeInput = DOMUtils.querySelector(SELECTORS.FIELD_RANGE, row);
+      const offsetInput = DOMUtils.querySelector(SELECTORS.FIELD_OFFSET, row);
+      if (!rangeInput?.value) return null;
+
+      const offset = parseInt(offsetInput?.value, 10) || 0;
+      const keys = parseRange(rangeInput.value);
+      return keys[offset] ?? null;
+    }
+
+    const idInput = DOMUtils.querySelector(SELECTORS.FIELD_ID, row);
+    if (!idInput?.value) return null;
+    return normalizeLocationKey(idInput.value);
+  },
+
   async updateLiveData(row) {
     const keyInput = DOMUtils.querySelector(SELECTORS.FIELD_KEY, row);
     const typeSelect = DOMUtils.querySelector(SELECTORS.FIELD_TYPE, row);
@@ -124,18 +150,15 @@ export const FieldManager = {
       } else if (inputType === INPUT_TYPES.RANGE) {
         const type = typeSelect.value;
         const rangeInput = DOMUtils.querySelector(SELECTORS.FIELD_RANGE, row);
-        const offsetInput = DOMUtils.querySelector(SELECTORS.FIELD_OFFSET, row);
         const sourceSelect = DOMUtils.querySelector(`${SELECTORS.FIELD_RANGE_INPUTS} .f-source`, row);
         if (!rangeInput || !sourceSelect) return;
 
         const source = sourceSelect.value;
-        const offset = parseInt(offsetInput?.value, 10) || 0;
 
         valueDisplay.textContent = "Fetching...";
         try {
-          const keys = parseRange(rangeInput.value);
-          const identifier = keys[offset];
-          if (identifier === undefined) {
+          const identifier = this.getLiveIdentifier(row);
+          if (identifier === null) {
             valueDisplay.textContent = "Offset out of range";
             return;
           }
@@ -154,11 +177,16 @@ export const FieldManager = {
         const sourceSelect = DOMUtils.querySelector(`${SELECTORS.FIELD_DATASOURCE_INPUTS} .f-source`, row);
         if (!idInput || !sourceSelect) return;
 
-        const identifier = idInput.value;
         const source = sourceSelect.value;
+
+        if (!idInput.value) {
+          valueDisplay.textContent = "No location set";
+          return;
+        }
 
         valueDisplay.textContent = "Fetching...";
         try {
+          const identifier = this.getLiveIdentifier(row);
           valueDisplay.textContent = await APIService.fetchLiveData(
             identifier,
             type,
