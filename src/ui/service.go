@@ -154,6 +154,7 @@ func (u *UIService) UpdateCasparCGData(template string, layer int, channels []in
 			u.app.logger.Error().Err(err).Str("casparKey", casparKey).Msg("Failed to get data from datasource")
 		}
 		resolvedData[casparKey] = value
+		resolver.Advance()
 	}
 	u.PushCasparCGData(template, layer, channels, resolvedData, sizing, playInDelay)
 

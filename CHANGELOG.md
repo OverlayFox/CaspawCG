@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- fixed google sheets not being escaped
+- fixed the update loop not advancing
 - #33 - `Add media` button now disappears when entering live mode
 - fixed reconnection logic to casparCG-server and fixed frontend to relist elements once the server comes available again
 - #39 - elements can not be placed next to each other
