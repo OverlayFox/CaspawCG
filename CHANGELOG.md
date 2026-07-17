@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- adapted auto release system
 - changed scaling of elements to give the workarea more space
 - cleaned up JavaScript front-end
 
