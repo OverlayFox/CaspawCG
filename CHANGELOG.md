@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- reduced wails version due to incorrect version bump
 - fixed google sheets not being escaped
 - fixed the update loop not advancing
 - #33 - `Add media` button now disappears when entering live mode
