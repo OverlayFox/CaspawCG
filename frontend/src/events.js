@@ -31,6 +31,7 @@ const HIGHLIGHT_COLOR = "#2ecc71";
  * Import ConnectionStateManager to handle reconnection logic
  */
 import { ConnectionStateManager } from "./api.js";
+import { FieldManager } from "./field-manager.js";
 
 /**
  * DOM Utilities for event handling
@@ -63,15 +64,17 @@ const DataUpdateHandler = {
       return;
     }
 
-    const fieldRows = EventDOMUtils.querySelectorAll(SELECTORS.FIELD_ID);
-    fieldRows.forEach((fieldInput) => {
-      const identifier = fieldInput.value;
+    const fieldRows = EventDOMUtils.querySelectorAll(`.${CSS_CLASSES.FIELD_ROW}`);
+    fieldRows.forEach((row) => {
+      let identifier;
+      try {
+        identifier = FieldManager.getLiveIdentifier(row);
+      } catch {
+        return;
+      }
 
-      if (identifier === data.identifier) {
-        const row = fieldInput.closest(`.${CSS_CLASSES.FIELD_ROW}`);
-        if (row) {
-          this.updateFieldValue(row, data.value);
-        }
+      if (identifier !== null && identifier === data.identifier) {
+        this.updateFieldValue(row, data.value);
       }
     });
   },
