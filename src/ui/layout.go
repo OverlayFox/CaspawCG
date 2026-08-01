@@ -3,37 +3,37 @@ package ui
 import (
 	"encoding/json"
 	"os"
+
+	"github.com/rs/zerolog/log"
+
+	"github.com/overlayfox/caspaw-cg/src/types"
 )
 
 type FieldConfig struct {
-	Key       string `json:"key"`
-	Type      string `json:"type"`
-	ID        string `json:"id"`
-	Source    string `json:"source"`
-	InputType string `json:"inputType,omitempty"`
-	Value     string `json:"value,omitempty"`
-	Range     string `json:"range,omitempty"`
-	Offset    int    `json:"offset,omitempty"`
+	Key       string         `json:"key"`
+	Type      types.DataType `json:"type"`
+	InputType string         `json:"inputType"`
+	Location  string         `json:"location,omitempty"`
+	Source    string         `json:"source,omitempty"`
+	Value     string         `json:"value,omitempty"`
+	Range     string         `json:"range,omitempty"`
+	Offset    int            `json:"offset,omitempty"`
 }
 
-type WidgetConfig struct {
-	ID             string        `json:"id"`
-	X              int           `json:"x"`
-	Y              int           `json:"y"`
-	W              int           `json:"w"`
-	H              int           `json:"h"`
-	Name           string        `json:"name,omitempty"`
-	Template       string        `json:"template"`
-	Layer          int           `json:"layer"`
-	Channel        int           `json:"channel"`
-	ChannelExpr    string        `json:"channelExpr,omitempty"`
-	PosX           *int          `json:"posX,omitempty"`
-	PosY           *int          `json:"posY,omitempty"`
-	SizeX          *float64      `json:"sizeX,omitempty"`
-	SizeY          *float64      `json:"sizeY,omitempty"`
-	Delay          int           `json:"delay,omitempty"`
-	UpdateInterval int           `json:"updateInterval,omitempty"`
-	Fields         []FieldConfig `json:"fields"`
+type TemplateConfig struct {
+	ID               string        `json:"id"`
+	X                int           `json:"x"`
+	Y                int           `json:"y"`
+	W                int           `json:"w"`
+	H                int           `json:"h"`
+	Name             string        `json:"name,omitempty"`
+	Template         string        `json:"template"`
+	ChannelExpr      string        `json:"channelExpr,omitempty"`
+	Layer            int           `json:"layer"`
+	Sizing           types.Sizing  `json:"sizing"`
+	DelayMs          int           `json:"delayMs,omitempty"`
+	UpdateIntervalMs int           `json:"updateIntervalMs,omitempty"`
+	Fields           []FieldConfig `json:"fields"`
 }
 
 type MediaWidgetConfig struct {
@@ -45,9 +45,8 @@ type MediaWidgetConfig struct {
 	Name        string `json:"name,omitempty"`
 	Filename    string `json:"filename"`
 	Layer       int    `json:"layer"`
-	Channel     int    `json:"channel"`
 	ChannelExpr string `json:"channelExpr,omitempty"`
-	Delay       int    `json:"delay,omitempty"`
+	DelayMs     int    `json:"delayMs,omitempty"`
 	Loop        bool   `json:"loop"`
 }
 
@@ -58,18 +57,24 @@ type GroupConfig struct {
 	W            int                 `json:"w"`
 	H            int                 `json:"h"`
 	Name         string              `json:"name"`
-	Widgets      []WidgetConfig      `json:"widgets"`
+	Widgets      []TemplateConfig    `json:"widgets"`
 	MediaWidgets []MediaWidgetConfig `json:"mediaWidgets,omitempty"`
 }
 
 type LayoutConfig struct {
 	Version      int                 `json:"version"`
-	Widgets      []WidgetConfig      `json:"widgets"`
+	Widgets      []TemplateConfig    `json:"widgets"`
 	Groups       []GroupConfig       `json:"groups,omitempty"`
 	MediaWidgets []MediaWidgetConfig `json:"mediaWidgets,omitempty"`
 }
 
+const layoutVersion = 2
+
 const layoutFileName = "layout.json"
+
+func emptyLayout() LayoutConfig {
+	return LayoutConfig{Version: layoutVersion, Widgets: []TemplateConfig{}}
+}
 
 func SaveLayout(config LayoutConfig) error {
 	data, err := json.MarshalIndent(config, "", "  ")
@@ -80,18 +85,23 @@ func SaveLayout(config LayoutConfig) error {
 	return os.WriteFile(layoutFileName, data, 0o644)
 }
 
+// LoadLayout reads and parses layout.json. A missing file or a file that fails to
+// parse against the current schema (e.g. one saved by an older, incompatible version
+// of the app) is treated as "no layout yet" rather than an error, so a schema change
+// self-heals on first run instead of crashing the app.
 func LoadLayout() (LayoutConfig, error) {
-	var config LayoutConfig
-
 	data, err := os.ReadFile(layoutFileName)
 	if err != nil {
 		if os.IsNotExist(err) {
-			// Return empty config if file doesn't exist
-			return LayoutConfig{Version: 1, Widgets: []WidgetConfig{}}, nil
+			return emptyLayout(), nil
 		}
-		return config, err
+		return emptyLayout(), err
 	}
 
-	err = json.Unmarshal(data, &config)
-	return config, err
+	var config LayoutConfig
+	if err := json.Unmarshal(data, &config); err != nil {
+		log.Warn().Err(err).Msg("Failed to parse layout.json against the current schema; starting with an empty layout")
+		return emptyLayout(), nil
+	}
+	return config, nil
 }

@@ -141,7 +141,7 @@ button#clear-all-btn:hover {
 /* ============================================================
    GROUP CONTAINERS
    ============================================================ */
-.group-card {
+casp-group-card {
   background: #16112a;
   border: 2px solid #7c3aed;
   border-radius: var(--radius-md);
@@ -246,15 +246,15 @@ button#clear-all-btn:hover {
   padding-top: 0;
 }
 
-.group-widget-entry .widget-card {
+.group-widget-entry casp-template-card {
   height: auto;
   border-color: rgba(124, 58, 237, 0.25);
 }
 
 /* ============================================================
-   WIDGET CARDS
+   TEMPLATE CARD
    ============================================================ */
-.widget-card {
+casp-template-card {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
@@ -268,7 +268,7 @@ button#clear-all-btn:hover {
   transition: box-shadow var(--transition-normal);
 }
 
-.widget-card:hover {
+casp-template-card:hover {
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
 }
 
@@ -476,7 +476,7 @@ option {
   font-size: 13px;
 }
 
-.widget-card select:focus {
+casp-template-card select:focus {
   border-color: var(--accent-blue);
 }
 
@@ -729,8 +729,8 @@ body:not(.is-live) .live-only {
 /* ============================================================
    MEDIA WIDGET
    ============================================================ */
-.media-widget-card {
-  background-color: var(--bg-widget-card);
+casp-media-card {
+  background-color: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   padding: var(--spacing-md);
