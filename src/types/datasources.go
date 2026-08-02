@@ -273,6 +273,7 @@ type DataSource interface {
 	Prime(locations []Location) error
 	// RemovePrime removes the specified locations from the data source's primed data.
 	RemovePrime(keys []string) error
+	RemoveAllPrimes() error
 
 	// Get retrieves the data for the specified location.
 	Get(key string) (Data, error)

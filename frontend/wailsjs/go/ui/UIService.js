@@ -62,6 +62,10 @@ export function PushCasparCGDataGroup(arg1) {
   return window['go']['ui']['UIService']['PushCasparCGDataGroup'](arg1);
 }
 
+export function RemoveDataSourcesPrimes() {
+  return window['go']['ui']['UIService']['RemoveDataSourcesPrimes']();
+}
+
 export function RemoveUpdateJob(arg1) {
   return window['go']['ui']['UIService']['RemoveUpdateJob'](arg1);
 }

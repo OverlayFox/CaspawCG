@@ -4,8 +4,8 @@
  * conversion, no coercion happens here, all of that lives in Go now. Errors are not
  * caught here; callers decide how to surface them (e.g. show the message to the user).
  */
-import * as UIService from "../../wailsjs/go/ui/UIService";
 import { types, ui } from "../../wailsjs/go/models";
+import * as UIService from "../../wailsjs/go/ui/UIService";
 
 export async function getDataSources(): Promise<string[]> {
   return UIService.GetDataSources();
@@ -31,14 +31,31 @@ export async function pushCGData(
   sizing: types.Sizing,
   delayMs: number,
 ): Promise<void> {
-  return UIService.PushCasparCGData(template, layer, channelExpr, fields, sizing, delayMs);
+  return UIService.PushCasparCGData(
+    template,
+    layer,
+    channelExpr,
+    fields,
+    sizing,
+    delayMs,
+  );
 }
 
-export async function stopCGData(template: string, layer: number, channelExpr: string, delayMs: number): Promise<void> {
+export async function stopCGData(
+  template: string,
+  layer: number,
+  channelExpr: string,
+  delayMs: number,
+): Promise<void> {
   return UIService.StopCasparCGData(template, layer, channelExpr, delayMs);
 }
 
-export async function nextCGData(template: string, layer: number, channelExpr: string, delayMs: number): Promise<void> {
+export async function nextCGData(
+  template: string,
+  layer: number,
+  channelExpr: string,
+  delayMs: number,
+): Promise<void> {
   return UIService.NextCasparCGData(template, layer, channelExpr, delayMs);
 }
 
@@ -52,42 +69,83 @@ export async function updateCGData(
   delayMs: number,
   updateIntervalMs: number,
 ): Promise<string> {
-  return UIService.UpdateCasparCGData(template, layer, channelExpr, literalFields, rangeFields, sizing, delayMs, updateIntervalMs);
+  return UIService.UpdateCasparCGData(
+    template,
+    layer,
+    channelExpr,
+    literalFields,
+    rangeFields,
+    sizing,
+    delayMs,
+    updateIntervalMs,
+  );
 }
 
 export async function removeUpdateJob(uuid: string): Promise<void> {
   return UIService.RemoveUpdateJob(uuid);
 }
 
-export async function primeDataSources(subs: types.FieldSubscription[]): Promise<types.FieldSubscriptionResult[]> {
+export async function primeDataSources(
+  subs: types.FieldSubscription[],
+): Promise<types.FieldSubscriptionResult[]> {
   return UIService.PrimeDataSources(subs);
 }
 
-export async function pushCGDataGroup(dataGroups: ui.CGDataGroup[]): Promise<void> {
+export async function removeDataSources(): Promise<void> {
+  return UIService.RemoveDataSourcesPrimes();
+}
+
+export async function pushCGDataGroup(
+  dataGroups: ui.CGDataGroup[],
+): Promise<void> {
   return UIService.PushCasparCGDataGroup(dataGroups);
 }
 
-export async function stopCGDataGroup(dataGroups: ui.CGDataGroup[]): Promise<void> {
+export async function stopCGDataGroup(
+  dataGroups: ui.CGDataGroup[],
+): Promise<void> {
   return UIService.StopCasparCGDataGroup(dataGroups);
 }
 
-export async function nextCGDataGroup(dataGroups: ui.CGDataGroup[]): Promise<void> {
+export async function nextCGDataGroup(
+  dataGroups: ui.CGDataGroup[],
+): Promise<void> {
   return UIService.NextCasparCGDataGroup(dataGroups);
 }
 
-export async function playMedia(filename: string, layer: number, channelExpr: string, loop: boolean, delayMs: number): Promise<void> {
-  return UIService.PlayCasparCGMedia(filename, layer, channelExpr, loop, delayMs);
+export async function playMedia(
+  filename: string,
+  layer: number,
+  channelExpr: string,
+  loop: boolean,
+  delayMs: number,
+): Promise<void> {
+  return UIService.PlayCasparCGMedia(
+    filename,
+    layer,
+    channelExpr,
+    loop,
+    delayMs,
+  );
 }
 
-export async function stopMedia(layer: number, channelExpr: string, delayMs: number): Promise<void> {
+export async function stopMedia(
+  layer: number,
+  channelExpr: string,
+  delayMs: number,
+): Promise<void> {
   return UIService.StopCasparCGMedia(layer, channelExpr, delayMs);
 }
 
-export async function playMediaGroup(items: ui.MediaGroupItem[]): Promise<void> {
+export async function playMediaGroup(
+  items: ui.MediaGroupItem[],
+): Promise<void> {
   return UIService.PlayCasparCGMediaGroup(items);
 }
 
-export async function stopMediaGroup(items: ui.MediaGroupItem[]): Promise<void> {
+export async function stopMediaGroup(
+  items: ui.MediaGroupItem[],
+): Promise<void> {
   return UIService.StopCasparCGMediaGroup(items);
 }
 

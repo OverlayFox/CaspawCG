@@ -22,13 +22,13 @@ type UIService struct {
 	cancel context.CancelFunc
 }
 
-func NewUIService(upstreamCtx context.Context, app *App, datasourceManager types.DatasourceManager, casparCGClients types.CasparCGClient) *UIService {
+func NewUIService(upstreamCtx context.Context, app *App, datasourceManager types.DatasourceManager, casparCGClient types.CasparCGClient) *UIService {
 	ctx, cancel := context.WithCancel(upstreamCtx)
 	return &UIService{
 		app:               app,
 		datasourceManager: datasourceManager,
-		casparCGClient:    casparCGClients,
-		updateHandler:     NewUpdateHandler(ctx, app.logger, datasourceManager, casparCGClients),
+		casparCGClient:    casparCGClient,
+		updateHandler:     NewUpdateHandler(ctx, app.logger, datasourceManager, casparCGClient),
 		ctx:               ctx,
 		cancel:            cancel,
 	}
@@ -256,6 +256,21 @@ func (u *UIService) PrimeDataSources(subs []types.FieldSubscription) ([]types.Fi
 	}
 
 	return results, nil
+}
+
+func (u *UIService) RemoveDataSourcesPrimes() {
+	u.app.logger.Debug().Msg("Removing all primed data from all datasources")
+
+	for _, dsName := range u.datasourceManager.GetDataSourceNames() {
+		ds, err := u.datasourceManager.GetDataSource(dsName)
+		if err != nil {
+			u.app.logger.Error().Err(err).Msgf("Failed to get datasource '%s'", dsName)
+			continue
+		}
+		if err := ds.RemoveAllPrimes(); err != nil {
+			u.app.logger.Error().Err(err).Msgf("Failed to remove primes for datasource '%s'", dsName)
+		}
+	}
 }
 
 type CGDataGroup struct {

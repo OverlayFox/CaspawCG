@@ -199,6 +199,8 @@ export class CaspApp extends LitElement {
   }
 
   private exitLiveMode() {
+    api.removeDataSources();
+
     this.liveMode = false;
     document.body.classList.remove("is-live");
     for (const row of document.querySelectorAll("casp-field-row"))
@@ -226,7 +228,11 @@ export class CaspApp extends LitElement {
   protected override render() {
     return html`
       <div id="toolbar">
-        <button id="add-template-btn" class="edit-only" @click=${this.addTemplate}>
+        <button
+          id="add-template-btn"
+          class="edit-only"
+          @click=${this.addTemplate}
+        >
           Add New Template
         </button>
         <button id="add-media-btn" class="edit-only" @click=${this.addMedia}>

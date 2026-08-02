@@ -108,6 +108,13 @@ func (c *client) RemovePrime(keys []string) error {
 	return nil
 }
 
+func (c *client) RemoveAllPrimes() error {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
+	c.dataFields = make([]*types.Data, 0)
+	return nil
+}
+
 func (c *client) Get(key string) (types.Data, error) {
 	c.mtx.RLock()
 	defer c.mtx.RUnlock()

@@ -34,6 +34,8 @@ export function PushCasparCGData(arg1:string,arg2:number,arg3:string,arg4:Array<
 
 export function PushCasparCGDataGroup(arg1:Array<ui.CGDataGroup>):Promise<void>;
 
+export function RemoveDataSourcesPrimes():Promise<void>;
+
 export function RemoveUpdateJob(arg1:string):Promise<void>;
 
 export function SaveLayout(arg1:ui.LayoutConfig):Promise<void>;
