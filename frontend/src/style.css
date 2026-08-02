@@ -528,6 +528,12 @@ body:not(.is-live) .live-only {
   font-family: sans-serif;
 }
 
+casparcg-status-bar {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
 .status-title {
   font-weight: 600;
   margin-right: var(--spacing-lg);
