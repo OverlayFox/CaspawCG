@@ -26,10 +26,6 @@ export function GetCasparCGTemplates() {
   return window['go']['ui']['UIService']['GetCasparCGTemplates']();
 }
 
-export function GetDataSourceValue(arg1, arg2) {
-  return window['go']['ui']['UIService']['GetDataSourceValue'](arg1, arg2);
-}
-
 export function GetDataSources() {
   return window['go']['ui']['UIService']['GetDataSources']();
 }
@@ -42,12 +38,20 @@ export function NextCasparCGData(arg1, arg2, arg3, arg4) {
   return window['go']['ui']['UIService']['NextCasparCGData'](arg1, arg2, arg3, arg4);
 }
 
+export function NextCasparCGDataGroup(arg1) {
+  return window['go']['ui']['UIService']['NextCasparCGDataGroup'](arg1);
+}
+
 export function PlayCasparCGMedia(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['ui']['UIService']['PlayCasparCGMedia'](arg1, arg2, arg3, arg4, arg5);
 }
 
-export function PrimeDataSource(arg1, arg2) {
-  return window['go']['ui']['UIService']['PrimeDataSource'](arg1, arg2);
+export function PlayCasparCGMediaGroup(arg1) {
+  return window['go']['ui']['UIService']['PlayCasparCGMediaGroup'](arg1);
+}
+
+export function PrimeDataSources(arg1) {
+  return window['go']['ui']['UIService']['PrimeDataSources'](arg1);
 }
 
 export function PushCasparCGData(arg1, arg2, arg3, arg4, arg5, arg6) {
@@ -56,6 +60,10 @@ export function PushCasparCGData(arg1, arg2, arg3, arg4, arg5, arg6) {
 
 export function PushCasparCGDataGroup(arg1) {
   return window['go']['ui']['UIService']['PushCasparCGDataGroup'](arg1);
+}
+
+export function RemoveDataSourcesPrimes() {
+  return window['go']['ui']['UIService']['RemoveDataSourcesPrimes']();
 }
 
 export function RemoveUpdateJob(arg1) {
@@ -76,6 +84,10 @@ export function StopCasparCGDataGroup(arg1) {
 
 export function StopCasparCGMedia(arg1, arg2, arg3) {
   return window['go']['ui']['UIService']['StopCasparCGMedia'](arg1, arg2, arg3);
+}
+
+export function StopCasparCGMediaGroup(arg1) {
+  return window['go']['ui']['UIService']['StopCasparCGMediaGroup'](arg1);
 }
 
 export function UpdateCasparCGData(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {

@@ -1,4 +1,4 @@
-name: "Go build & tests"
+name: CI
 on:
   push:
     branches: ["main", "release/**"]
@@ -10,88 +10,72 @@ permissions:
   pull-requests: read
 
 jobs:
-  check-changelog:
+  changelog:
     runs-on: ubuntu-latest
-    if: github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/heads/release/')
+    if: github.ref != 'refs/heads/main'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - name: Check if CHANGELOG.md was updated
+      - name: Verify version bump and changelog
         run: |
           git fetch origin main
 
           OLD_VERSION=$(git show origin/main:wails.json | jq -r .info.productVersion)
           NEW_VERSION=$(jq -r .info.productVersion wails.json)
-          if [ "$OLD_VERSION" != "$NEW_VERSION" ]; then
-            echo "Version bump detected ($OLD_VERSION -> $NEW_VERSION); this is a release, skipping the changelog requirement."
-            exit 0
-          fi
+          IS_RELEASE_BRANCH="${{ startsWith(github.ref, 'refs/heads/release/') }}"
 
-          if ! git diff --name-only origin/main HEAD | grep -q '^CHANGELOG.md$'; then
-            echo "CHANGELOG.md was not updated compared to main. Please update the changelog."
-            exit 1
-          fi
+          if [ "$IS_RELEASE_BRANCH" == "true" ]; then
+            HIGHEST=$(printf '%s\n%s\n' "$OLD_VERSION" "$NEW_VERSION" | sort -V | tail -n1)
+            if [ "$NEW_VERSION" == "$OLD_VERSION" ] || [ "$HIGHEST" != "$NEW_VERSION" ]; then
+              echo "::error::wails.json productVersion ($NEW_VERSION) must be higher than main's version ($OLD_VERSION) to cut a release."
+              exit 1
+            fi
 
-  check-release-readiness:
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/heads/release/')
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Require a version bump and a matching changelog entry
-        run: |
-          git fetch origin main
+            if ! git diff --name-only origin/main HEAD | grep -q '^CHANGELOG.md$'; then
+              echo "::error::CHANGELOG.md was not updated on this release branch."
+              exit 1
+            fi
 
-          OLD_VERSION=$(git show origin/main:wails.json | jq -r .info.productVersion)
-          NEW_VERSION=$(jq -r .info.productVersion wails.json)
-          HIGHEST=$(printf '%s\n%s\n' "$OLD_VERSION" "$NEW_VERSION" | sort -V | tail -n1)
-          if [ "$NEW_VERSION" == "$OLD_VERSION" ] || [ "$HIGHEST" != "$NEW_VERSION" ]; then
-            echo "::error::wails.json productVersion ($NEW_VERSION) must be higher than main's version ($OLD_VERSION) to cut a release."
-            exit 1
-          fi
+            if ! grep -q "^## \[$NEW_VERSION\]" CHANGELOG.md; then
+              echo "::error::CHANGELOG.md must contain a '## [$NEW_VERSION]' heading with the release notes for this version."
+              exit 1
+            fi
+          else
+            if [ "$OLD_VERSION" != "$NEW_VERSION" ]; then
+              echo "Version bump detected ($OLD_VERSION -> $NEW_VERSION); this is a release, skipping the changelog requirement."
+              exit 0
+            fi
 
-          if ! git diff --name-only origin/main HEAD | grep -q '^CHANGELOG.md$'; then
-            echo "::error::CHANGELOG.md was not updated on this release branch."
-            exit 1
-          fi
-
-          if ! grep -q "^## \[$NEW_VERSION\]" CHANGELOG.md; then
-            echo "::error::CHANGELOG.md must contain a '## [$NEW_VERSION]' heading with the release notes for this version."
-            exit 1
+            if ! git diff --name-only origin/main HEAD | grep -q '^CHANGELOG.md$'; then
+              echo "CHANGELOG.md was not updated compared to main. Please update the changelog."
+              exit 1
+            fi
           fi
 
   build:
-    needs: [check-changelog, check-release-readiness]
-    if: |
-      always() &&
-      (needs.check-changelog.result == 'success' || needs.check-changelog.result == 'skipped') &&
-      (needs.check-release-readiness.result == 'success' || needs.check-release-readiness.result == 'skipped')
+    needs: changelog
+    if: always() && (needs.changelog.result == 'success' || needs.changelog.result == 'skipped')
     runs-on: ubuntu-24.04
     strategy:
       matrix:
         go-version: ["1.26"]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - name: Set up Go ${{ matrix.go-version }}
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ matrix.go-version }}
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
       - name: Install Wails system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev
-      - name: Install frontend dependencies
-        working-directory: ./frontend
-        run: npm install
-      - name: Build frontend
-        working-directory: ./frontend
-        run: npm run build
+          sudo apt-get install -y build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
       - name: Verify dependencies
@@ -111,8 +95,8 @@ jobs:
           retention-days: 7
 
   golangci:
-    needs: build
-    if: always() && needs.build.result == 'success'
+    needs: changelog
+    if: always() && (needs.changelog.result == 'success' || needs.changelog.result == 'skipped')
     name: lint
     runs-on: ubuntu-latest
     steps:
@@ -130,15 +114,41 @@ jobs:
           version: v2.11.2
           only-new-issues: true
 
+  frontend-lint:
+    needs: changelog
+    if: always() && (needs.changelog.result == 'success' || needs.changelog.result == 'skipped')
+    name: lint frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+      - name: Typecheck
+        working-directory: frontend
+        run: npm run typecheck
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+      - name: Format check
+        working-directory: frontend
+        run: npm run format:check
+
   release:
-    needs: [build, golangci]
-    if: always() && needs.build.result == 'success' && needs.golangci.result == 'success' && startsWith(github.ref, 'refs/heads/release/')
+    needs: [build, golangci, frontend-lint]
+    if: always() && needs.build.result == 'success' && needs.golangci.result == 'success' && needs.frontend-lint.result == 'success' && startsWith(github.ref, 'refs/heads/release/')
     runs-on: ubuntu-24.04
     permissions:
       contents: write
       pull-requests: write
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
 

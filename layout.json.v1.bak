@@ -1,0 +1,139 @@
+{
+  "version": 1,
+  "widgets": [
+    {
+      "id": "1785508569528",
+      "x": 3,
+      "y": 0,
+      "w": 8,
+      "h": 8,
+      "name": "Dynamic Element",
+      "template": "DANCECOMP_PERFORMANCESUMMARY_STREAM",
+      "layer": 2,
+      "channel": 1,
+      "channelExpr": "1",
+      "posX": 0,
+      "posY": 0,
+      "sizeX": 100,
+      "sizeY": 100,
+      "fields": [
+        {
+          "key": "_numQuantum",
+          "type": "string",
+          "id": "Main!B18",
+          "source": "GoogleSheet: 1ag__aae56azH_D4yqQpXXf4GXpsMespSlju_ed20vVo",
+          "inputType": "datasource"
+        },
+        {
+          "key": "_numOriginality",
+          "type": "string",
+          "id": "Main!B17",
+          "source": "GoogleSheet: 1ag__aae56azH_D4yqQpXXf4GXpsMespSlju_ed20vVo",
+          "inputType": "datasource"
+        },
+        {
+          "key": "_numDecibels",
+          "type": "string",
+          "id": "Main!B16",
+          "source": "GoogleSheet: 1ag__aae56azH_D4yqQpXXf4GXpsMespSlju_ed20vVo",
+          "inputType": "datasource"
+        },
+        {
+          "key": "_numComplexity",
+          "type": "string",
+          "id": "Main!B15",
+          "source": "GoogleSheet: 1ag__aae56azH_D4yqQpXXf4GXpsMespSlju_ed20vVo",
+          "inputType": "datasource"
+        },
+        {
+          "key": "_numConsistency",
+          "type": "string",
+          "id": "Main!B14",
+          "source": "GoogleSheet: 1ag__aae56azH_D4yqQpXXf4GXpsMespSlju_ed20vVo",
+          "inputType": "datasource"
+        },
+        {
+          "key": "_numProfessionalism",
+          "type": "string",
+          "id": "Main!B13",
+          "source": "GoogleSheet: 1ag__aae56azH_D4yqQpXXf4GXpsMespSlju_ed20vVo",
+          "inputType": "datasource"
+        },
+        {
+          "key": "_numAppearance",
+          "type": "string",
+          "id": "Main!B12",
+          "source": "GoogleSheet: 1ag__aae56azH_D4yqQpXXf4GXpsMespSlju_ed20vVo",
+          "inputType": "datasource"
+        },
+        {
+          "key": "_copyright",
+          "type": "string",
+          "id": "Main!D10",
+          "source": "GoogleSheet: 1ag__aae56azH_D4yqQpXXf4GXpsMespSlju_ed20vVo",
+          "inputType": "datasource"
+        },
+        {
+          "key": "_num",
+          "type": "string",
+          "id": "Main!D19",
+          "source": "GoogleSheet: 1ag__aae56azH_D4yqQpXXf4GXpsMespSlju_ed20vVo",
+          "inputType": "datasource"
+        },
+        {
+          "key": "_name",
+          "type": "string",
+          "id": "Main!B10",
+          "source": "GoogleSheet: 1ag__aae56azH_D4yqQpXXf4GXpsMespSlju_ed20vVo",
+          "inputType": "datasource"
+        },
+        {
+          "key": "_image",
+          "type": "string",
+          "id": "Main!C10",
+          "source": "GoogleSheet: 1ag__aae56azH_D4yqQpXXf4GXpsMespSlju_ed20vVo",
+          "inputType": "datasource"
+        }
+      ]
+    }
+  ],
+  "groups": [
+    {
+      "id": "group-1783007243760",
+      "x": 0,
+      "y": 0,
+      "w": 3,
+      "h": 6,
+      "name": "Background",
+      "widgets": [],
+      "mediaWidgets": [
+        {
+          "id": "m-1783007269360",
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0,
+          "name": "Stream",
+          "filename": "BACKGROUNDLOOP",
+          "layer": 1,
+          "channel": 1,
+          "channelExpr": "1",
+          "loop": true
+        },
+        {
+          "id": "m-1783007276922",
+          "x": 0,
+          "y": 0,
+          "w": 0,
+          "h": 0,
+          "name": "LED-Wall",
+          "filename": "BACKGROUNDLOOP_LEDWALL",
+          "layer": 1,
+          "channel": 2,
+          "channelExpr": "2",
+          "loop": true
+        }
+      ]
+    }
+  ]
+}

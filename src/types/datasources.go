@@ -209,6 +209,61 @@ type Data struct {
 	Value any
 }
 
+// FieldSubscription describes one custom-field row that resolves its value from a
+// data source, either a single location ("datasource") or an offset into a range
+// ("range"). It is the request shape for PrimeDataSources.
+type FieldSubscription struct {
+	Source    string
+	Type      DataType
+	InputType string // "datasource" | "range"
+	Location  string // used when InputType == "datasource", e.g. "Sheet1!A1"
+	Range     string // used when InputType == "range", e.g. "Sheet1!A1:A10"
+	Offset    int    // used when InputType == "range"
+}
+
+// FieldSubscriptionResult is the response counterpart to a FieldSubscription: the
+// canonical identifier to match against live-data-update events, the value fetched
+// at priming time, and a human-readable error if the subscription couldn't be resolved.
+type FieldSubscriptionResult struct {
+	Identifier string
+	Value      any
+	Error      string
+}
+
+// ResolveLocations returns the identifier this subscription resolves to (the key of
+// the location it should be matched against in live-data-update events) plus every
+// location that needs to be primed on its data source (for "range", that's the whole
+// range; for "datasource", the single location).
+func (s FieldSubscription) ResolveLocations() (identifier string, locations []Location, err error) {
+	var rng Range
+	offset := 0
+
+	switch s.InputType {
+	case "range":
+		rng, err = NewRange(s.Range)
+		offset = s.Offset
+	default: // "datasource"
+		sheet, body, ok := splitSheetPrefix(s.Location)
+		if !ok {
+			return "", nil, fmt.Errorf("invalid location format: %s (missing sheet name, expected e.g. 'Sheet1!A1')", s.Location)
+		}
+		rng, err = NewRange(fmt.Sprintf("%s!%s:%s", sheet, body, body))
+	}
+	if err != nil {
+		return "", nil, err
+	}
+
+	for i := range rng.Locations {
+		rng.Locations[i].Type = s.Type
+	}
+
+	if offset < 0 || offset >= len(rng.Locations) {
+		return "", nil, fmt.Errorf("offset %d out of range for %d location(s)", offset, len(rng.Locations))
+	}
+
+	return rng.Locations[offset].Key, rng.Locations, nil
+}
+
 type DataSource interface {
 	// GetName returns the identifier of the Datasource
 	GetName() string
@@ -218,6 +273,7 @@ type DataSource interface {
 	Prime(locations []Location) error
 	// RemovePrime removes the specified locations from the data source's primed data.
 	RemovePrime(keys []string) error
+	RemoveAllPrimes() error
 
 	// Get retrieves the data for the specified location.
 	Get(key string) (Data, error)
