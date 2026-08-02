@@ -7,9 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
+### Added
+
+- linter/formatter to frontend
+
 ### Changed
 
 - moved over to TypeScript and removed as much JavaScript as possible
+
+### Fixed
+
+- linter/formatter issues
 
 ## [0.0.2] - 2026-07-17
 
