@@ -8,8 +8,10 @@ import (
 	"strings"
 )
 
-var channelRangeRe = regexp.MustCompile(`^(\d+)-(\d+)$`)
-var channelSingleRe = regexp.MustCompile(`^\d+$`)
+var (
+	channelRangeRe  = regexp.MustCompile(`^(\d+)-(\d+)$`)
+	channelSingleRe = regexp.MustCompile(`^\d+$`)
+)
 
 // ParseChannelExpression parses a channel expression such as "1", "1-3", or "1,3-5"
 // into a sorted, deduplicated slice of channel numbers. A blank (whitespace-only)

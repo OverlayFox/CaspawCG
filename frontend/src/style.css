@@ -16,13 +16,10 @@
   --bg-field-input: #27272a;
   --bg-status-bar: #111822;
   --bg-client-chip: #1b2636;
-
   --text-main: #f4f4f5;
   --text-muted: #a1a1aa;
-
   --border-color: #333338;
   --border-secondary: #2c3e50;
-
   --accent-blue: #2563eb;
   --accent-blue-hover: #1d4ed8;
   --accent-red: #dc2626;
@@ -41,8 +38,8 @@
   --radius-lg: 12px;
 
   /* Shadows */
-  --shadow-sm: 0 4px 6px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 4px 6px rgb(0 0 0 / 20%);
+  --shadow-md: 0 4px 6px rgb(0 0 0 / 40%);
   --shadow-glow-green: 0 0 6px #2ecc71;
   --shadow-glow-red: 0 0 6px #e74c3c;
 
@@ -152,7 +149,7 @@ casp-group-card {
   flex-direction: column;
   gap: var(--spacing-sm);
   box-shadow:
-    0 0 0 1px rgba(124, 58, 237, 0.2),
+    0 0 0 1px rgb(124 58 237 / 20%),
     var(--shadow-md);
 }
 
@@ -161,7 +158,7 @@ casp-group-card {
   align-items: center;
   gap: var(--spacing-sm);
   padding-bottom: var(--spacing-sm);
-  border-bottom: 1px solid rgba(124, 58, 237, 0.4);
+  border-bottom: 1px solid rgb(124 58 237 / 40%);
   flex-shrink: 0;
 }
 
@@ -169,9 +166,9 @@ casp-group-card {
   flex: 1;
   min-width: 0;
   padding: 4px var(--spacing-sm);
-  background-color: rgba(124, 58, 237, 0.15);
+  background-color: rgb(124 58 237 / 15%);
   color: var(--text-main);
-  border: 1px solid rgba(124, 58, 237, 0.5);
+  border: 1px solid rgb(124 58 237 / 50%);
   border-radius: var(--radius-sm);
   font-size: 14px;
   font-weight: 600;
@@ -204,14 +201,14 @@ casp-group-card {
 
 .add-element-btn,
 .add-media-btn {
-  background-color: rgba(124, 58, 237, 0.3);
-  border: 1px solid rgba(124, 58, 237, 0.6);
+  background-color: rgb(124 58 237 / 30%);
+  border: 1px solid rgb(124 58 237 / 60%);
   color: #c4b5fd;
 }
 
 .add-element-btn:hover,
 .add-media-btn:hover {
-  background-color: rgba(124, 58, 237, 0.5);
+  background-color: rgb(124 58 237 / 50%);
 }
 
 .group-widgets-list {
@@ -232,12 +229,12 @@ casp-group-card {
 }
 
 .group-widgets-list::-webkit-scrollbar-thumb {
-  background: rgba(124, 58, 237, 0.4);
+  background: rgb(124 58 237 / 40%);
   border-radius: 3px;
 }
 
 .group-widget-entry {
-  border-top: 1px dashed rgba(124, 58, 237, 0.3);
+  border-top: 1px dashed rgb(124 58 237 / 30%);
   padding-top: var(--spacing-sm);
 }
 
@@ -248,7 +245,7 @@ casp-group-card {
 
 .group-widget-entry casp-template-card {
   height: auto;
-  border-color: rgba(124, 58, 237, 0.25);
+  border-color: rgb(124 58 237 / 25%);
 }
 
 /* ============================================================
@@ -269,7 +266,7 @@ casp-template-card {
 }
 
 casp-template-card:hover {
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 6px 12px rgb(0 0 0 / 30%);
 }
 
 .widget-header {
@@ -281,9 +278,9 @@ casp-template-card:hover {
 .widget-name-input {
   width: 100%;
   padding: 4px var(--spacing-sm);
-  background-color: rgba(37, 99, 235, 0.15);
+  background-color: rgb(37 99 235 / 15%);
   color: var(--text-main);
-  border: 1px solid rgba(37, 99, 235, 0.5);
+  border: 1px solid rgb(37 99 235 / 50%);
   border-radius: var(--radius-sm);
   font-size: 14px;
   font-weight: 600;
@@ -318,8 +315,7 @@ casp-template-card:hover {
    ============================================================ */
 .custom-fields-container {
   flex-grow: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden auto;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-sm);
@@ -394,7 +390,7 @@ casp-template-card:hover {
 }
 
 .field-row-edit .delete-row-btn:hover {
-  background-color: rgba(220, 38, 38, 0.1);
+  background-color: rgb(220 38 38 / 10%);
 }
 
 .f-datasource-inputs,
@@ -654,7 +650,7 @@ casparcg-status-bar {
 /* ============================================================
    RESPONSIVE DESIGN
    ============================================================ */
-@media (max-width: 768px) {
+@media (width <= 768px) {
   #toolbar {
     flex-wrap: wrap;
     padding: var(--spacing-md);
@@ -680,7 +676,7 @@ casparcg-status-bar {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgb(0 0 0 / 60%);
   display: flex;
   align-items: center;
   justify-content: center;

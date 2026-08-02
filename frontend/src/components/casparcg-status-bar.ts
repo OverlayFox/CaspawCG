@@ -43,7 +43,7 @@ export class CasparcgStatusBar extends LitElement {
     this.clients = clients;
 
     if (previous?.isAlive !== isAlive) {
-      connectionState.handleConnectionChange(isAlive);
+      void connectionState.handleConnectionChange(isAlive);
     }
   };
 
@@ -55,9 +55,9 @@ export class CasparcgStatusBar extends LitElement {
           ([id, client]) => html`
             <div id=${id} class="client-chip">
               <div
-                class="status-dot ${client.isAlive
-                  ? "status-online"
-                  : "status-offline"}"
+                class="status-dot ${
+                  client.isAlive ? "status-online" : "status-offline"
+                }"
               ></div>
               <span>${client.host}:${client.port}</span>
             </div>

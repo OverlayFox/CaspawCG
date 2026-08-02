@@ -44,6 +44,9 @@ export class CaspApp extends LitElement {
   // A top-level card/group asked to be removed. Nested removals (a template inside a
   // group) are handled by the group itself and stop propagation before reaching here.
   private onRemove = (e: CustomEvent<{ element: HTMLElement }>) => {
+    // Type param isn't inferred through this call (no contextual expected
+    // type), so the cast is load-bearing even though the rule can't see that.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     const item = e.detail.element.closest(
       ".grid-stack-item",
     ) as GridItemHTMLElement | null;
@@ -168,6 +171,9 @@ export class CaspApp extends LitElement {
   };
 
   private async enterLiveMode() {
+    // Type param isn't inferred through Array.from (no contextual expected
+    // type), so the cast is load-bearing even though the rule can't see that.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
     const rows = Array.from(
       document.querySelectorAll("casp-field-row"),
     ) as CaspFieldRow[];
@@ -199,7 +205,7 @@ export class CaspApp extends LitElement {
   }
 
   private exitLiveMode() {
-    api.removeDataSources();
+    void api.removeDataSources();
 
     this.liveMode = false;
     document.body.classList.remove("is-live");
@@ -221,7 +227,7 @@ export class CaspApp extends LitElement {
       else await api.clearAll();
     } catch (e) {
       console.error("Failed to clear:", e);
-      alert(`Failed to clear: ${e}`);
+      alert(`Failed to clear: ${String(e)}`);
     }
   };
 

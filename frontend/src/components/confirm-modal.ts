@@ -31,8 +31,12 @@ export class CaspConfirmModal extends LitElement {
         <div class="modal-dialog">
           <p class="modal-message">${this.message}</p>
           <div class="modal-actions">
-            <button id="confirm-modal-cancel" @click=${() => this.close(false)}>Cancel</button>
-            <button class="delete-btn" @click=${() => this.close(true)}>Confirm</button>
+            <button id="confirm-modal-cancel" @click=${() => this.close(false)}>
+              Cancel
+            </button>
+            <button class="delete-btn" @click=${() => this.close(true)}>
+              Confirm
+            </button>
           </div>
         </div>
       </div>

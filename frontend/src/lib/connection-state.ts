@@ -27,7 +27,10 @@ class ConnectionState {
   }
 
   private notify(): void {
-    const data: ConnectionData = { templates: this.cachedTemplates, media: this.cachedMedia };
+    const data: ConnectionData = {
+      templates: this.cachedTemplates,
+      media: this.cachedMedia,
+    };
     for (const callback of this.subscribers) {
       try {
         callback(data);
@@ -49,7 +52,10 @@ class ConnectionState {
 
   async refreshAllData(): Promise<void> {
     try {
-      const [templates, media] = await Promise.all([api.getCasparCGTemplates(), api.getCasparCGMedia()]);
+      const [templates, media] = await Promise.all([
+        api.getCasparCGTemplates(),
+        api.getCasparCGMedia(),
+      ]);
       if (templates?.length) this.cachedTemplates = templates;
       if (media?.length) this.cachedMedia = media;
       if (templates?.length || media?.length) this.notify();

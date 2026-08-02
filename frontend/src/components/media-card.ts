@@ -16,7 +16,13 @@ export class CaspMediaCard extends LitElement {
   @property({ type: Boolean }) loop = false;
 
   @state() private mediaOptions: string[] = [];
-  @state() private mediaInfoText: { filename: string; type: string; size: string; frames: number | string; frameRate: string } | null = null;
+  @state() private mediaInfoText: {
+    filename: string;
+    type: string;
+    size: string;
+    frames: number | string;
+    frameRate: string;
+  } | null = null;
   @state() private error = "";
 
   protected override createRenderRoot() {
@@ -59,7 +65,12 @@ export class CaspMediaCard extends LitElement {
     }
   }
 
-  toConfig(position: { x: number; y: number; w: number; h: number }): ui.MediaWidgetConfig {
+  toConfig(position: {
+    x: number;
+    y: number;
+    w: number;
+    h: number;
+  }): ui.MediaWidgetConfig {
     return ui.MediaWidgetConfig.createFrom({
       id: this.widgetId,
       x: position.x,
@@ -104,7 +115,13 @@ export class CaspMediaCard extends LitElement {
       return;
     }
     try {
-      await api.playMedia(this.filename, this.layer, this.channelExpr, this.loop, this.delayMs);
+      await api.playMedia(
+        this.filename,
+        this.layer,
+        this.channelExpr,
+        this.loop,
+        this.delayMs,
+      );
     } catch (e) {
       this.error = String(e);
     }
@@ -120,12 +137,18 @@ export class CaspMediaCard extends LitElement {
   }
 
   private onRemove = () => {
-    this.dispatchEvent(new CustomEvent("casp-remove", { bubbles: true, detail: { element: this } }));
+    this.dispatchEvent(
+      new CustomEvent("casp-remove", {
+        bubbles: true,
+        detail: { element: this },
+      }),
+    );
   };
 
   protected override render() {
     const escapedName = this.widgetName.replace(/"/g, "&quot;");
-    const onChange = () => this.dispatchEvent(new CustomEvent("casp-change", { bubbles: true }));
+    const onChange = () =>
+      this.dispatchEvent(new CustomEvent("casp-change", { bubbles: true }));
 
     return html`
       <div class="widget-header">
@@ -163,7 +186,8 @@ export class CaspMediaCard extends LitElement {
             max="9999"
             .value=${String(this.layer)}
             @change=${(e: Event) => {
-              this.layer = parseInt((e.target as HTMLInputElement).value, 10) || 1;
+              this.layer =
+                parseInt((e.target as HTMLInputElement).value, 10) || 1;
               onChange();
             }}
           />
@@ -183,7 +207,9 @@ export class CaspMediaCard extends LitElement {
         </div>
         <button class="action-btn live-only" @click=${this.play}>Play</button>
         <button class="action-btn live-only" @click=${this.stop}>Stop</button>
-        <button class="delete-btn edit-only" @click=${this.onRemove}>Remove</button>
+        <button class="delete-btn edit-only" @click=${this.onRemove}>
+          Remove
+        </button>
       </div>
       <div class="widget-position-size-controls">
         <div class="input-group">
@@ -195,7 +221,8 @@ export class CaspMediaCard extends LitElement {
             max="60000"
             .value=${String(this.delayMs)}
             @change=${(e: Event) => {
-              this.delayMs = parseInt((e.target as HTMLInputElement).value, 10) || 0;
+              this.delayMs =
+                parseInt((e.target as HTMLInputElement).value, 10) || 0;
               onChange();
             }}
           />
@@ -215,17 +242,44 @@ export class CaspMediaCard extends LitElement {
       </div>
       ${this.error ? html`<div class="widget-error">${this.error}</div>` : ""}
       <div class="media-info-panel edit-only">
-        ${this.mediaInfoText
-          ? html`
-              <div class="media-info-row"><span class="media-info-label">File:</span><span class="media-info-value">${this.mediaInfoText.filename}</span></div>
-              <div class="media-info-row"><span class="media-info-label">Type:</span><span class="media-info-value">${this.mediaInfoText.type}</span></div>
-              <div class="media-info-row"><span class="media-info-label">Size:</span><span class="media-info-value">${this.mediaInfoText.size}</span></div>
-              <div class="media-info-row"><span class="media-info-label">Frames:</span><span class="media-info-value">${this.mediaInfoText.frames}</span></div>
-              <div class="media-info-row">
-                <span class="media-info-label">Frame rate:</span><span class="media-info-value">${this.mediaInfoText.frameRate}</span>
-              </div>
-            `
-          : html`<span class="media-info-placeholder">Select a file to see details</span>`}
+        ${
+          this.mediaInfoText
+            ? html`
+                <div class="media-info-row">
+                  <span class="media-info-label">File:</span
+                  ><span class="media-info-value"
+                    >${this.mediaInfoText.filename}</span
+                  >
+                </div>
+                <div class="media-info-row">
+                  <span class="media-info-label">Type:</span
+                  ><span class="media-info-value"
+                    >${this.mediaInfoText.type}</span
+                  >
+                </div>
+                <div class="media-info-row">
+                  <span class="media-info-label">Size:</span
+                  ><span class="media-info-value"
+                    >${this.mediaInfoText.size}</span
+                  >
+                </div>
+                <div class="media-info-row">
+                  <span class="media-info-label">Frames:</span
+                  ><span class="media-info-value"
+                    >${this.mediaInfoText.frames}</span
+                  >
+                </div>
+                <div class="media-info-row">
+                  <span class="media-info-label">Frame rate:</span
+                  ><span class="media-info-value"
+                    >${this.mediaInfoText.frameRate}</span
+                  >
+                </div>
+              `
+            : html`<span class="media-info-placeholder"
+                >Select a file to see details</span
+              >`
+        }
       </div>
     `;
   }

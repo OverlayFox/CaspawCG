@@ -1,5 +1,9 @@
 import { EventsOn } from "../../wailsjs/runtime/runtime";
-import { CASPAR_KEEP_ALIVE_IDENTIFIER, type CasparCGKeepAlive, type LiveDataUpdate } from "../types/wails-events";
+import {
+  CASPAR_KEEP_ALIVE_IDENTIFIER,
+  type CasparCGKeepAlive,
+  type LiveDataUpdate,
+} from "../types/wails-events";
 
 /** CustomEvent name republished on `window` for every "live-data-update" from Go. */
 export const LIVE_DATA_EVENT = "casp-live-data";
@@ -19,7 +23,11 @@ export type CasparStatusEvent = CustomEvent<CasparCGKeepAlive>;
 export function initLiveEvents(): void {
   EventsOn("live-data-update", (payload: LiveDataUpdate) => {
     if (payload.identifier === CASPAR_KEEP_ALIVE_IDENTIFIER) {
-      window.dispatchEvent(new CustomEvent(CASPAR_STATUS_EVENT, { detail: payload.value as CasparCGKeepAlive }));
+      window.dispatchEvent(
+        new CustomEvent(CASPAR_STATUS_EVENT, {
+          detail: payload.value as CasparCGKeepAlive,
+        }),
+      );
       return;
     }
     window.dispatchEvent(new CustomEvent(LIVE_DATA_EVENT, { detail: payload }));

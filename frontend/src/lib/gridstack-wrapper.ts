@@ -26,6 +26,14 @@ export interface GridItemOptions {
 export class GridWrapper {
   private grid: GridStack | null = null;
 
+  /** All other methods require `init()` to have been called first. */
+  private get instance(): GridStack {
+    if (!this.grid) {
+      throw new Error("GridWrapper used before init() was called");
+    }
+    return this.grid;
+  }
+
   init(onChange: () => void): void {
     this.grid = GridStack.init({
       cellHeight: 100,
@@ -45,24 +53,27 @@ export class GridWrapper {
     contentWrapper.appendChild(content);
     wrapper.appendChild(contentWrapper);
 
-    return this.grid!.addWidget(wrapper, options);
+    return this.instance.addWidget(wrapper, options);
   }
 
   removeItem(item: GridItemHTMLElement): void {
-    this.grid!.removeWidget(item);
+    this.instance.removeWidget(item);
   }
 
   getItems(): GridItemHTMLElement[] {
-    return this.grid!.getGridItems();
+    return this.instance.getGridItems();
   }
 
   getPosition(item: GridItemHTMLElement): GridPosition {
-    const node = item.gridstackNode!;
+    const node = item.gridstackNode;
+    if (!node) {
+      throw new Error("Grid item is missing its gridstackNode");
+    }
     return { x: node.x ?? 0, y: node.y ?? 0, w: node.w ?? 1, h: node.h ?? 1 };
   }
 
   enableEditing(enabled: boolean): void {
-    this.grid!.enableMove(enabled);
-    this.grid!.enableResize(enabled);
+    this.instance.enableMove(enabled);
+    this.instance.enableResize(enabled);
   }
 }

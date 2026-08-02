@@ -34,19 +34,36 @@ export class CaspFieldRow extends LitElement {
 
   override async connectedCallback() {
     super.connectedCallback();
-    window.addEventListener(LIVE_DATA_EVENT, this.handleLiveData as EventListener);
+    window.addEventListener(
+      LIVE_DATA_EVENT,
+      this.handleLiveData as EventListener,
+    );
     this.dataSources = await api.getDataSources();
-    if (!this.source && this.dataSources.length) this.source = this.dataSources[0]!;
+    const [firstSource] = this.dataSources;
+    if (!this.source && firstSource) this.source = firstSource;
   }
 
   override disconnectedCallback() {
-    window.removeEventListener(LIVE_DATA_EVENT, this.handleLiveData as EventListener);
+    window.removeEventListener(
+      LIVE_DATA_EVENT,
+      this.handleLiveData as EventListener,
+    );
     super.disconnectedCallback();
   }
 
   private handleLiveData = (e: LiveDataEvent) => {
-    if (this.liveIdentifier !== null && e.detail.identifier === this.liveIdentifier) {
-      this.liveValue = typeof e.detail.value === "object" ? JSON.stringify(e.detail.value) : String(e.detail.value);
+    if (
+      this.liveIdentifier !== null &&
+      e.detail.identifier === this.liveIdentifier
+    ) {
+      this.liveValue =
+        typeof e.detail.value === "object"
+          ? JSON.stringify(e.detail.value)
+          : // The object case is already handled above; TS can't narrow the
+            // `unknown` type of `value` through that typeof check, so this is
+            // never actually stringifying a plain object.
+            // eslint-disable-next-line @typescript-eslint/no-base-to-string
+            String(e.detail.value);
     }
   };
 
@@ -128,8 +145,18 @@ export class CaspFieldRow extends LitElement {
     return html`
       <div class="field-row">
         <div class="edit-only field-row-edit">
-          <input type="text" placeholder="Key" class="f-key" .value=${this.key} @input=${(e: Event) => (this.key = (e.target as HTMLInputElement).value)} />
-          <select class="f-type" .value=${this.fieldType} @change=${(e: Event) => (this.fieldType = (e.target as HTMLSelectElement).value as FieldType)}>
+          <input
+            type="text"
+            placeholder="Key"
+            class="f-key"
+            .value=${this.key}
+            @input=${(e: Event) => (this.key = (e.target as HTMLInputElement).value)}
+          />
+          <select
+            class="f-type"
+            .value=${this.fieldType}
+            @change=${(e: Event) => (this.fieldType = (e.target as HTMLSelectElement).value as FieldType)}
+          >
             <option value="string">String</option>
             <option value="int">Int</option>
             <option value="float">Float</option>
@@ -144,60 +171,80 @@ export class CaspFieldRow extends LitElement {
             <option value="range">Data Source Range</option>
           </select>
 
-          ${this.inputType === "datasource"
-            ? html`
-                <div class="f-datasource-inputs">
-                  <input
-                    type="text"
-                    placeholder="Location"
-                    class="f-id"
-                    .value=${this.location}
-                    @input=${(e: Event) => (this.location = (e.target as HTMLInputElement).value)}
-                  />
-                  <select class="f-source" .value=${this.source} @change=${(e: Event) => (this.source = (e.target as HTMLSelectElement).value)}>
-                    ${this.dataSources.map((s) => html`<option value=${s}>${s}</option>`)}
-                  </select>
-                </div>
-              `
-            : ""}
-          ${this.inputType === "direct"
-            ? html`
-                <div class="f-direct-inputs">
-                  <input
-                    type="text"
-                    placeholder="Value"
-                    class="f-value"
-                    .value=${this.directValue}
-                    @input=${(e: Event) => (this.directValue = (e.target as HTMLInputElement).value)}
-                  />
-                </div>
-              `
-            : ""}
-          ${this.inputType === "range"
-            ? html`
-                <div class="f-range-inputs">
-                  <input
-                    type="text"
-                    placeholder="Range e.g. Sheet1!A1:A10"
-                    class="f-range"
-                    .value=${this.range}
-                    @input=${(e: Event) => (this.range = (e.target as HTMLInputElement).value)}
-                  />
-                  <select class="f-source" .value=${this.source} @change=${(e: Event) => (this.source = (e.target as HTMLSelectElement).value)}>
-                    ${this.dataSources.map((s) => html`<option value=${s}>${s}</option>`)}
-                  </select>
-                  <input
-                    type="number"
-                    placeholder="Offset"
-                    class="f-offset"
-                    min="0"
-                    .value=${String(this.offset)}
-                    @input=${(e: Event) => (this.offset = parseInt((e.target as HTMLInputElement).value, 10) || 0)}
-                  />
-                </div>
-              `
-            : ""}
-          <button class="delete-row-btn" aria-label="Remove field" @click=${this.onRemove}>❌</button>
+          ${
+            this.inputType === "datasource"
+              ? html`
+                  <div class="f-datasource-inputs">
+                    <input
+                      type="text"
+                      placeholder="Location"
+                      class="f-id"
+                      .value=${this.location}
+                      @input=${(e: Event) => (this.location = (e.target as HTMLInputElement).value)}
+                    />
+                    <select
+                      class="f-source"
+                      .value=${this.source}
+                      @change=${(e: Event) => (this.source = (e.target as HTMLSelectElement).value)}
+                    >
+                      ${this.dataSources.map((s) => html`<option value=${s}>${s}</option>`)}
+                    </select>
+                  </div>
+                `
+              : ""
+          }
+          ${
+            this.inputType === "direct"
+              ? html`
+                  <div class="f-direct-inputs">
+                    <input
+                      type="text"
+                      placeholder="Value"
+                      class="f-value"
+                      .value=${this.directValue}
+                      @input=${(e: Event) => (this.directValue = (e.target as HTMLInputElement).value)}
+                    />
+                  </div>
+                `
+              : ""
+          }
+          ${
+            this.inputType === "range"
+              ? html`
+                  <div class="f-range-inputs">
+                    <input
+                      type="text"
+                      placeholder="Range e.g. Sheet1!A1:A10"
+                      class="f-range"
+                      .value=${this.range}
+                      @input=${(e: Event) => (this.range = (e.target as HTMLInputElement).value)}
+                    />
+                    <select
+                      class="f-source"
+                      .value=${this.source}
+                      @change=${(e: Event) => (this.source = (e.target as HTMLSelectElement).value)}
+                    >
+                      ${this.dataSources.map((s) => html`<option value=${s}>${s}</option>`)}
+                    </select>
+                    <input
+                      type="number"
+                      placeholder="Offset"
+                      class="f-offset"
+                      min="0"
+                      .value=${String(this.offset)}
+                      @input=${(e: Event) => (this.offset = parseInt((e.target as HTMLInputElement).value, 10) || 0)}
+                    />
+                  </div>
+                `
+              : ""
+          }
+          <button
+            class="delete-row-btn"
+            aria-label="Remove field"
+            @click=${this.onRemove}
+          >
+            ❌
+          </button>
         </div>
         <div class="live-only">
           <strong class="live-key-display">${this.key}</strong>:

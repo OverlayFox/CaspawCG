@@ -70,7 +70,9 @@ export class CaspTemplateCard extends LitElement {
     if (this.updateJobUuid) {
       await api
         .removeUpdateJob(this.updateJobUuid)
-        .catch((e) => console.error("Failed to remove update job:", e));
+        .catch((e: unknown) =>
+          console.error("Failed to remove update job:", e),
+        );
       this.updateJobUuid = null;
     }
   }
@@ -288,9 +290,11 @@ export class CaspTemplateCard extends LitElement {
             onChange();
           }}
         >
-          ${this.templateOptions.includes(this.template) || !this.template
-            ? ""
-            : html`<option value=${this.template}>${this.template}</option>`}
+          ${
+            this.templateOptions.includes(this.template) || !this.template
+              ? ""
+              : html`<option value=${this.template}>${this.template}</option>`
+          }
           ${this.templateOptions.map(
             (t) => html`<option value=${t}>${t}</option>`,
           )}

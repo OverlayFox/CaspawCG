@@ -9,7 +9,9 @@ export function formatFileSize(bytes: number | undefined | null): string {
   return `${bytes} B`;
 }
 
-export function formatFrameRate(frameRate: types.FrameRate | undefined | null): string {
+export function formatFrameRate(
+  frameRate: types.FrameRate | undefined | null,
+): string {
   if (!frameRate) return "—";
   return `${frameRate.Num}/${frameRate.Den}`;
 }

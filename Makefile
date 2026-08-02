@@ -17,16 +17,32 @@ install-dev:
 	sudo apt install -y build-essential pkg-config libgtk-3-dev libwebkit2gtk-4.1-dev libsoup-3.0-dev
 	@echo "==> Installing Wails..."
 	go install github.com/wailsapp/wails/v2/cmd/wails@latest
+	@echo "--> Installing frontend dependencies (also installs the pre-commit hook)..."
+	cd frontend && npm install
 	@echo "Make sure to add `$(go env GOPATH)/bin` to your PATH if it's not already there."
-	
+
 
 .PHONY: lint
-lint:
-	golangci-lint run
+lint: lint-go lint-frontend
 
 .PHONY: lint-fix
-lint-fix:
+lint-fix: lint-go-fix lint-frontend-fix
+
+.PHONY: lint-go
+lint-go:
+	golangci-lint run
+
+.PHONY: lint-go-fix
+lint-go-fix:
 	golangci-lint run --fix
+
+.PHONY: lint-frontend
+lint-frontend:
+	cd frontend && npm run lint && npm run format:check
+
+.PHONY: lint-frontend-fix
+lint-frontend-fix:
+	cd frontend && npm run lint:fix && npm run format
 
 .PHONY: caspar-server
 caspar-server:
