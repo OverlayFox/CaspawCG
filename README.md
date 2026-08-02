@@ -1,5 +1,10 @@
 # CaspawCG
 
+![CI](https://github.com/OverlayFox/CaspawCG/actions/workflows/ci.yml/badge.svg)
+![Latest Release](https://img.shields.io/github/v/release/OverlayFox/CaspawCG)
+![Go Version](https://img.shields.io/github/go-mod/go-version/OverlayFox/CaspawCG)
+![License](https://img.shields.io/github/license/OverlayFox/CaspawCG)
+
 A GoLang + Wails application designed to integrate the CasparCG server with dynamic data sources.
 
 CaspawCG enables real-time graphics control for live broadcasting by connecting CasparCG Server with external data sources like Google Sheets, providing a UI inspired by CharacterWorks.
