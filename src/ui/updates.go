@@ -95,10 +95,9 @@ func (u *Update) Start() error {
 						u.logger.Error().Err(err).Str("casparKey", casparKey).Msg("Failed to get data from datasource")
 					}
 					casparData[casparKey] = value
-
 					resolver.Advance()
 				}
-
+				u.logger.Debug().Msgf("Updating CG data for template '%s' on layer %d, channels %v: %v", u.template, u.layer, u.videoChannels, casparData)
 				err := u.casparCGClient.UpdateCGData(u.template, u.layer, u.videoChannels, casparData)
 				if err != nil {
 					u.logger.Error().Err(err).Msg("Failed to update CG data")
