@@ -81,6 +81,34 @@ export async function updateCGData(
   );
 }
 
+export async function scheduleCGData(
+  template: string,
+  layer: number,
+  channelExpr: string,
+  literalFields: types.LiteralField[],
+  rangeFields: ui.RangeField[],
+  sizing: types.Sizing,
+  delayMs: number,
+  updateIntervalMs: number,
+  minElements: number,
+  startTimeColumn: string,
+  endTimeColumn: string,
+): Promise<string> {
+  return UIService.ScheduleCasparCGData(
+    template,
+    layer,
+    channelExpr,
+    literalFields,
+    rangeFields,
+    sizing,
+    delayMs,
+    updateIntervalMs,
+    minElements,
+    startTimeColumn,
+    endTimeColumn,
+  );
+}
+
 export async function removeUpdateJob(uuid: string): Promise<void> {
   return UIService.RemoveUpdateJob(uuid);
 }

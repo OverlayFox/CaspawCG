@@ -23,10 +23,6 @@ export class CaspFieldRow extends LitElement {
   @property({ type: String }) directValue = "";
   @property({ type: String }) range = "";
   @property({ type: Number }) offset = 0;
-  @property({ type: Number }) minElements = 0;
-  @property({ type: Number }) pastOverlap = 0;
-  @property({ type: String }) columnStartTime = "";
-  @property({ type: String }) columnEndTime = "";
 
   @state() private dataSources: string[] = [];
   @state() private liveIdentifier: string | null = null;
@@ -84,7 +80,7 @@ export class CaspFieldRow extends LitElement {
     }
     if (this.inputType === "schedule") {
       this.liveIdentifier = null;
-      this.liveValue = `Schedule: ${this.range || "no range"} (min ${this.minElements}, overlap ${this.pastOverlap}m)`;
+      this.liveValue = `Schedule: ${this.range || "no range"}`;
       return;
     }
     this.liveIdentifier = result?.Identifier || null;
@@ -130,23 +126,15 @@ export class CaspFieldRow extends LitElement {
       inputType: this.inputType,
       location: this.inputType === "datasource" ? this.location : "",
       source: this.inputType === "direct" ? "" : this.source,
-      // Stopgap: ui.FieldConfig has no minElements/pastOverlap fields yet, so schedule
-      // rows piggyback their extra settings on the otherwise-unused `value` field as
-      // JSON until the Go side gains real support for the schedule input type.
-      value:
-        this.inputType === "direct"
-          ? this.directValue
-          : this.inputType === "schedule"
-            ? JSON.stringify({
-                minElements: this.minElements,
-                pastOverlap: this.pastOverlap,
-              })
-            : "",
+      value: this.inputType === "direct" ? this.directValue : "",
       range:
         this.inputType === "range" || this.inputType === "schedule"
           ? this.range
           : "",
-      offset: this.inputType === "range" ? this.offset : 0,
+      offset:
+        this.inputType === "range" || this.inputType === "schedule"
+          ? this.offset
+          : 0,
     });
   }
 
@@ -160,19 +148,6 @@ export class CaspFieldRow extends LitElement {
     row.directValue = config.value || "";
     row.range = config.range || "";
     row.offset = config.offset || 0;
-    if (row.inputType === "schedule" && config.value) {
-      try {
-        const parsed = JSON.parse(config.value) as {
-          minElements?: number;
-          pastOverlap?: number;
-        };
-        row.minElements = parsed.minElements ?? 0;
-        row.pastOverlap = parsed.pastOverlap ?? 0;
-      } catch {
-        row.minElements = 0;
-        row.pastOverlap = 0;
-      }
-    }
     return row;
   }
 
@@ -250,9 +225,15 @@ export class CaspFieldRow extends LitElement {
               : ""
           }
           ${
-            this.inputType === "range"
+            this.inputType === "range" || this.inputType === "schedule"
               ? html`
-                  <div class="f-range-inputs">
+                  <div
+                    class=${
+                      this.inputType === "range"
+                        ? "f-range-inputs"
+                        : "f-schedule-inputs"
+                    }
+                  >
                     <input
                       type="text"
                       placeholder="Range e.g. Sheet1!A1:A10"
@@ -274,62 +255,6 @@ export class CaspFieldRow extends LitElement {
                       min="0"
                       .value=${String(this.offset)}
                       @input=${(e: Event) => (this.offset = parseInt((e.target as HTMLInputElement).value, 10) || 0)}
-                    />
-                  </div>
-                `
-              : ""
-          }
-          ${
-            this.inputType === "schedule"
-              ? html`
-                  <div class="f-schedule-inputs">
-                    <input
-                      type="text"
-                      placeholder="Data Column e.g. Sheet1!A1:A10"
-                      class="f-range"
-                      .value=${this.range}
-                      @input=${(e: Event) => (this.range = (e.target as HTMLInputElement).value)}
-                    />
-                    <select
-                      class="f-source"
-                      .value=${this.source}
-                      @change=${(e: Event) => (this.source = (e.target as HTMLSelectElement).value)}
-                    >
-                      ${this.dataSources.map((s) => html`<option value=${s}>${s}</option>`)}
-                    </select>
-                    <input
-                      type="number"
-                      placeholder="Offset"
-                      class="f-min-elements"
-                      min="0"
-                      .value=${String(this.minElements)}
-                      @input=${(e: Event) => (this.minElements = parseInt((e.target as HTMLInputElement).value, 10) || 0)}
-                    />
-                    <input
-                      type="text"
-                      placeholder="Start Time Column (e.g. E)"
-                      class="f-column-start-time"
-                      maxlength="1"
-                      .value=${this.columnStartTime}
-                      @input=${(e: Event) => {
-                        const v = (
-                          e.target as HTMLInputElement
-                        ).value.toUpperCase();
-                        this.columnStartTime = /^[A-Z]$/.test(v) ? v : "";
-                      }}
-                    />
-                    <input
-                      type="text"
-                      placeholder="End Time Column (e.g. F)"
-                      class="f-column-end-time"
-                      maxlength="1"
-                      .value=${this.columnEndTime}
-                      @input=${(e: Event) => {
-                        const v = (
-                          e.target as HTMLInputElement
-                        ).value.toUpperCase();
-                        this.columnEndTime = /^[A-Z]$/.test(v) ? v : "";
-                      }}
                     />
                   </div>
                 `

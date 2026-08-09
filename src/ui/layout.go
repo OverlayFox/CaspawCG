@@ -21,19 +21,24 @@ type FieldConfig struct {
 }
 
 type TemplateConfig struct {
-	ID               string        `json:"id"`
-	X                int           `json:"x"`
-	Y                int           `json:"y"`
-	W                int           `json:"w"`
-	H                int           `json:"h"`
-	Name             string        `json:"name,omitempty"`
-	Template         string        `json:"template"`
-	ChannelExpr      string        `json:"channelExpr,omitempty"`
-	Layer            int           `json:"layer"`
-	Sizing           types.Sizing  `json:"sizing"`
-	DelayMs          int           `json:"delayMs,omitempty"`
-	UpdateIntervalMs int           `json:"updateIntervalMs,omitempty"`
-	Fields           []FieldConfig `json:"fields"`
+	ID               string       `json:"id"`
+	X                int          `json:"x"`
+	Y                int          `json:"y"`
+	W                int          `json:"w"`
+	H                int          `json:"h"`
+	Name             string       `json:"name,omitempty"`
+	Template         string       `json:"template"`
+	ChannelExpr      string       `json:"channelExpr,omitempty"`
+	Layer            int          `json:"layer"`
+	Sizing           types.Sizing `json:"sizing"`
+	DelayMs          int          `json:"delayMs,omitempty"`
+	UpdateIntervalMs int          `json:"updateIntervalMs,omitempty"`
+
+	ScheduleMinElements     int    `json:"scheduleMinElements,omitempty"`
+	ScheduleStartTimeColumn string `json:"scheduleStartTimeColumn,omitempty"`
+	ScheduleEndTimeColumn   string `json:"scheduleEndTimeColumn,omitempty"`
+
+	Fields []FieldConfig `json:"fields"`
 }
 
 type MediaWidgetConfig struct {

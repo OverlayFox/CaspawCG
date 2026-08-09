@@ -74,6 +74,10 @@ export function SaveLayout(arg1) {
   return window['go']['ui']['UIService']['SaveLayout'](arg1);
 }
 
+export function ScheduleCasparCGData(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11) {
+  return window['go']['ui']['UIService']['ScheduleCasparCGData'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11);
+}
+
 export function StopCasparCGData(arg1, arg2, arg3, arg4) {
   return window['go']['ui']['UIService']['StopCasparCGData'](arg1, arg2, arg3, arg4);
 }

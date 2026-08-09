@@ -195,6 +195,48 @@ func (u *UIService) UpdateCasparCGData(template string, layer int, channelExpr s
 	return uuid, nil
 }
 
+func (u *UIService) ScheduleCasparCGData(template string, layer int, channelExpr string, literalFields []types.LiteralField, rangeFields []RangeField, sizing types.Sizing, delayMs, updateIntervalMs, minElements int, startTimeColumn, endTimeColumn string) (uuid string, err error) {
+	channels, err := types.ParseChannelExpression(channelExpr)
+	if err != nil {
+		return "", err
+	}
+
+	casparMaps := make(map[string]*update.Resolver, len(rangeFields))
+	for _, rf := range rangeFields {
+		dataRange, err := types.NewRange(rf.Range)
+		if err != nil {
+			u.app.logger.Error().Err(err).Str("range", rf.Range).Msg("Failed to parse range")
+			return "", err
+		}
+		for i := range dataRange.Locations {
+			dataRange.Locations[i].Type = rf.Type
+		}
+
+		ds, err := u.datasourceManager.GetDataSource(rf.Source)
+		if err != nil {
+			u.app.logger.Error().Err(err).Msgf("Failed to get datasource '%s'", rf.Source)
+			return "", err
+		}
+
+		resolver := update.NewResolver(ds, dataRange, rf.Offset)
+		casparMaps[rf.CasparKey] = &resolver
+	}
+
+	resolvedData := types.BuildDataMap(literalFields)
+	for casparKey, resolver := range casparMaps {
+		value, err := resolver.GetData()
+		if err != nil {
+			u.app.logger.Error().Err(err).Str("casparKey", casparKey).Msg("Failed to get data from datasource")
+		}
+		resolvedData[casparKey] = value
+		resolver.Advance()
+	}
+	u.pushCGData(template, layer, channels, resolvedData, sizing, time.Duration(delayMs)*time.Millisecond)
+
+	uuid = u.updateHandler.AddScheduleJob(template, layer, channels, u.casparCGClient, casparMaps, time.Duration(updateIntervalMs)*time.Millisecond, minElements, startTimeColumn, endTimeColumn)
+	return uuid, nil
+}
+
 // RemoveUpdateJob stops and removes the update job identified by uuid.
 func (u *UIService) RemoveUpdateJob(uuid string) error {
 	return u.updateHandler.RemoveUpdateJob(uuid)

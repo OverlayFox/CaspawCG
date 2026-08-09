@@ -248,6 +248,9 @@ export namespace ui {
 	    sizing: types.Sizing;
 	    delayMs?: number;
 	    updateIntervalMs?: number;
+	    scheduleMinElements?: number;
+	    scheduleStartTimeColumn?: string;
+	    scheduleEndTimeColumn?: string;
 	    fields: FieldConfig[];
 	
 	    static createFrom(source: any = {}) {
@@ -268,6 +271,9 @@ export namespace ui {
 	        this.sizing = this.convertValues(source["sizing"], types.Sizing);
 	        this.delayMs = source["delayMs"];
 	        this.updateIntervalMs = source["updateIntervalMs"];
+	        this.scheduleMinElements = source["scheduleMinElements"];
+	        this.scheduleStartTimeColumn = source["scheduleStartTimeColumn"];
+	        this.scheduleEndTimeColumn = source["scheduleEndTimeColumn"];
 	        this.fields = this.convertValues(source["fields"], FieldConfig);
 	    }
 	

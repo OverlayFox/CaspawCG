@@ -22,6 +22,9 @@ export class CaspTemplateCard extends LitElement {
   @property({ type: Number }) sizeY = 100;
   @property({ type: Number }) delayMs = 0;
   @property({ type: Number }) updateIntervalMs = 0;
+  @property({ type: Number }) scheduleMinElements = 0;
+  @property({ type: String }) scheduleStartTimeColumn = "";
+  @property({ type: String }) scheduleEndTimeColumn = "";
 
   @state() private templateOptions: string[] = [];
   @state() private error = "";
@@ -107,6 +110,9 @@ export class CaspTemplateCard extends LitElement {
       }),
       delayMs: this.delayMs,
       updateIntervalMs: this.updateIntervalMs,
+      scheduleMinElements: this.scheduleMinElements,
+      scheduleStartTimeColumn: this.scheduleStartTimeColumn,
+      scheduleEndTimeColumn: this.scheduleEndTimeColumn,
       fields: this.fieldRows().map((row) => row.toConfig()),
     });
   }
@@ -126,6 +132,9 @@ export class CaspTemplateCard extends LitElement {
     card.sizeY = config.sizing?.sizeY ?? 100;
     card.delayMs = config.delayMs || 0;
     card.updateIntervalMs = config.updateIntervalMs || 0;
+    card.scheduleMinElements = config.scheduleMinElements || 0;
+    card.scheduleStartTimeColumn = config.scheduleStartTimeColumn || "";
+    card.scheduleEndTimeColumn = config.scheduleEndTimeColumn || "";
     card.queuedFields = config.fields || [];
     return card;
   }
@@ -134,7 +143,10 @@ export class CaspTemplateCard extends LitElement {
    * and sets a visible error if fields resolve to a field with no key. */
   private literalFields(): types.LiteralField[] {
     return this.fieldRows()
-      .filter((row) => row.inputType !== "range" && row.key)
+      .filter(
+        (row) =>
+          row.inputType !== "range" && row.inputType !== "schedule" && row.key,
+      )
       .map((row) =>
         types.LiteralField.createFrom({
           CasparKey: row.key,
@@ -147,6 +159,20 @@ export class CaspTemplateCard extends LitElement {
   private rangeFields(): ui.RangeField[] {
     return this.fieldRows()
       .filter((row) => row.inputType === "range" && row.key)
+      .map((row) =>
+        ui.RangeField.createFrom({
+          CasparKey: row.key,
+          Type: row.fieldType,
+          Source: row.source,
+          Range: row.range,
+          Offset: row.offset,
+        }),
+      );
+  }
+
+  private scheduleFields(): ui.RangeField[] {
+    return this.fieldRows()
+      .filter((row) => row.inputType === "schedule" && row.key)
       .map((row) =>
         ui.RangeField.createFrom({
           CasparKey: row.key,
@@ -189,9 +215,27 @@ export class CaspTemplateCard extends LitElement {
       return;
     }
     try {
+      const scheduleFields = this.scheduleFields();
       const rangeFields = this.rangeFields();
       if (this.updateIntervalMs === 0) {
         await this.removeUpdateJobIfAny();
+      }
+      if (scheduleFields.length > 0 && this.updateIntervalMs > 0) {
+        await this.removeUpdateJobIfAny();
+        this.updateJobUuid = await api.scheduleCGData(
+          this.template,
+          this.layer,
+          this.channelExpr,
+          this.literalFields(),
+          scheduleFields,
+          this.sizing(),
+          this.delayMs,
+          this.updateIntervalMs,
+          this.scheduleMinElements,
+          this.scheduleStartTimeColumn,
+          this.scheduleEndTimeColumn,
+        );
+        return;
       }
       if (rangeFields.length > 0 && this.updateIntervalMs > 0) {
         await this.removeUpdateJobIfAny();
@@ -439,6 +483,50 @@ export class CaspTemplateCard extends LitElement {
               @change=${(e: Event) => {
                 this.updateIntervalMs =
                   parseInt((e.target as HTMLInputElement).value, 10) || 0;
+                onChange();
+              }}
+            />
+          </div>
+        </div>
+        <div class="widget-controls-row edit-only">
+          <div class="input-group">
+            <label>Schedule Min Elements:</label>
+            <input
+              type="number"
+              class="schedule-min-elements-input"
+              min="0"
+              .value=${String(this.scheduleMinElements)}
+              @change=${(e: Event) => {
+                this.scheduleMinElements =
+                  parseInt((e.target as HTMLInputElement).value, 10) || 0;
+                onChange();
+              }}
+            />
+          </div>
+          <div class="input-group">
+            <label>Start Time Column:</label>
+            <input
+              type="text"
+              class="schedule-start-time-column-input"
+              maxlength="1"
+              .value=${this.scheduleStartTimeColumn}
+              @input=${(e: Event) => {
+                const v = (e.target as HTMLInputElement).value.toUpperCase();
+                this.scheduleStartTimeColumn = /^[A-Z]$/.test(v) ? v : "";
+                onChange();
+              }}
+            />
+          </div>
+          <div class="input-group">
+            <label>End Time Column:</label>
+            <input
+              type="text"
+              class="schedule-end-time-column-input"
+              maxlength="1"
+              .value=${this.scheduleEndTimeColumn}
+              @input=${(e: Event) => {
+                const v = (e.target as HTMLInputElement).value.toUpperCase();
+                this.scheduleEndTimeColumn = /^[A-Z]$/.test(v) ? v : "";
                 onChange();
               }}
             />

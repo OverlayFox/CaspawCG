@@ -49,6 +49,17 @@ func (u *Handler) AddUpdateJob(template string, layer int, videoChannels []int, 
 	return uuid
 }
 
+func (u *Handler) AddScheduleJob(template string, layer int, videoChannels []int, casparCGClient types.CasparCGClient, casparMaps map[string]*Resolver, updateInterval time.Duration, minElements int, startTimeColumn, endTimeColumn string) (uuid string) {
+	uuid = guuid.NewString()
+	u.logger.Debug().Str("uuid", uuid).Msg("Adding schedule job")
+
+	job := NewSchedule(u.ctx, u.logger, template, layer, videoChannels, casparCGClient, casparMaps, updateInterval, minElements, startTimeColumn, endTimeColumn)
+	u.cycles[uuid] = job
+	job.Start()
+
+	return uuid
+}
+
 func (u *Handler) RemoveUpdateJob(uuid string) error {
 	u.logger.Debug().Str("uuid", uuid).Msg("Removing update job")
 
