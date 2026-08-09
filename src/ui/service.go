@@ -8,6 +8,7 @@ import (
 	"github.com/overlayfox/casparcg-amcp-go/types/responses"
 
 	"github.com/overlayfox/caspaw-cg/src/types"
+	"github.com/overlayfox/caspaw-cg/src/ui/update"
 )
 
 // UIService bridges the UI with the GoLang system
@@ -15,7 +16,7 @@ type UIService struct {
 	app               *App
 	datasourceManager types.DatasourceManager
 	casparCGClient    types.CasparCGClient
-	updateHandler     *UpdateHandler
+	updateHandler     *update.Handler
 
 	wg     sync.WaitGroup
 	ctx    context.Context
@@ -28,7 +29,7 @@ func NewUIService(upstreamCtx context.Context, app *App, datasourceManager types
 		app:               app,
 		datasourceManager: datasourceManager,
 		casparCGClient:    casparCGClient,
-		updateHandler:     NewUpdateHandler(ctx, app.logger, datasourceManager, casparCGClient),
+		updateHandler:     update.NewUpdateHandler(ctx, app.logger, datasourceManager, casparCGClient),
 		ctx:               ctx,
 		cancel:            cancel,
 	}
@@ -158,7 +159,7 @@ func (u *UIService) UpdateCasparCGData(template string, layer int, channelExpr s
 		return "", err
 	}
 
-	casparMaps := make(map[string]*Resolver, len(rangeFields))
+	casparMaps := make(map[string]*update.Resolver, len(rangeFields))
 	for _, rf := range rangeFields {
 		dataRange, err := types.NewRange(rf.Range)
 		if err != nil {
@@ -175,7 +176,7 @@ func (u *UIService) UpdateCasparCGData(template string, layer int, channelExpr s
 			return "", err
 		}
 
-		resolver := NewResolver(ds, dataRange, rf.Offset)
+		resolver := update.NewResolver(ds, dataRange, rf.Offset)
 		casparMaps[rf.CasparKey] = &resolver
 	}
 
