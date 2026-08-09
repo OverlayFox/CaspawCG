@@ -13,10 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- default update cycle is now `0`
 - moved over to TypeScript and removed as much JavaScript as possible
 
 ### Fixed
 
+- stop buttons now use the proper css styling
+- update cycles now gets removed and not started when they are set to `0`
 - linter/formatter issues
 
 ## [0.0.2] - 2026-07-17

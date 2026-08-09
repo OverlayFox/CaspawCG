@@ -21,7 +21,7 @@ export class CaspTemplateCard extends LitElement {
   @property({ type: Number }) sizeX = 100;
   @property({ type: Number }) sizeY = 100;
   @property({ type: Number }) delayMs = 0;
-  @property({ type: Number }) updateIntervalMs = 1000;
+  @property({ type: Number }) updateIntervalMs = 0;
 
   @state() private templateOptions: string[] = [];
   @state() private error = "";
@@ -125,7 +125,7 @@ export class CaspTemplateCard extends LitElement {
     card.sizeX = config.sizing?.sizeX ?? 100;
     card.sizeY = config.sizing?.sizeY ?? 100;
     card.delayMs = config.delayMs || 0;
-    card.updateIntervalMs = config.updateIntervalMs || 1000;
+    card.updateIntervalMs = config.updateIntervalMs || 0;
     card.queuedFields = config.fields || [];
     return card;
   }
@@ -190,7 +190,10 @@ export class CaspTemplateCard extends LitElement {
     }
     try {
       const rangeFields = this.rangeFields();
-      if (rangeFields.length > 0) {
+      if (this.updateIntervalMs === 0) {
+        await this.removeUpdateJobIfAny();
+      }
+      if (rangeFields.length > 0 && this.updateIntervalMs > 0) {
         await this.removeUpdateJobIfAny();
         this.updateJobUuid = await api.updateCGData(
           this.template,
@@ -295,9 +298,7 @@ export class CaspTemplateCard extends LitElement {
               ? ""
               : html`<option value=${this.template}>${this.template}</option>`
           }
-          ${this.templateOptions.map(
-            (t) => html`<option value=${t}>${t}</option>`,
-          )}
+          ${this.templateOptions.map((t) => html`<option value=${t}>${t}</option>`)}
         </select>
         <div class="input-group edit-only">
           <label>Layer:</label>
@@ -327,11 +328,21 @@ export class CaspTemplateCard extends LitElement {
             }}
           />
         </div>
-        <button class="action-btn live-only" @click=${this.execute}>
+        <button
+          class="action-btn live-only"
+          data-action="execute"
+          @click=${this.execute}
+        >
           Execute
         </button>
         <button class="action-btn live-only" @click=${this.next}>Next</button>
-        <button class="action-btn live-only" @click=${this.stop}>Stop</button>
+        <button
+          class="action-btn live-only"
+          data-action="stop"
+          @click=${this.stop}
+        >
+          Stop
+        </button>
         <button class="delete-btn edit-only" @click=${this.onRemove}>
           Remove
         </button>
