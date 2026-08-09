@@ -376,12 +376,16 @@ casp-template-card:hover {
   border-color: var(--accent-blue);
 }
 
+.field-row-edit .f-range {
+  flex: 0 1 130px;
+}
+
 .field-row-edit .f-key {
-  flex: 1 1 90px;
+  flex: 0 1 100px;
 }
 
 .field-row-edit input[type="number"] {
-  flex: 0 1 60px;
+  flex: 0 1 40px;
 }
 
 .field-row-edit .f-type {
@@ -389,7 +393,11 @@ casp-template-card:hover {
 }
 
 .field-row-edit .f-input-type {
-  flex: 0 1 160px;
+  flex: 0 1 100px;
+}
+
+.field-row-edit .f-source {
+  flex: 0 1 120px;
 }
 
 .field-row-edit .delete-row-btn {

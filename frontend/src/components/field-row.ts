@@ -25,6 +25,8 @@ export class CaspFieldRow extends LitElement {
   @property({ type: Number }) offset = 0;
   @property({ type: Number }) minElements = 0;
   @property({ type: Number }) pastOverlap = 0;
+  @property({ type: String }) columnStartTime = "";
+  @property({ type: String }) columnEndTime = "";
 
   @state() private dataSources: string[] = [];
   @state() private liveIdentifier: string | null = null;
@@ -283,7 +285,7 @@ export class CaspFieldRow extends LitElement {
                   <div class="f-schedule-inputs">
                     <input
                       type="text"
-                      placeholder="Range e.g. Sheet1!A1:A10"
+                      placeholder="Data Column e.g. Sheet1!A1:A10"
                       class="f-range"
                       .value=${this.range}
                       @input=${(e: Event) => (this.range = (e.target as HTMLInputElement).value)}
@@ -297,19 +299,37 @@ export class CaspFieldRow extends LitElement {
                     </select>
                     <input
                       type="number"
-                      placeholder="Minimum elements"
+                      placeholder="Offset"
                       class="f-min-elements"
                       min="0"
                       .value=${String(this.minElements)}
                       @input=${(e: Event) => (this.minElements = parseInt((e.target as HTMLInputElement).value, 10) || 0)}
                     />
                     <input
-                      type="number"
-                      placeholder="Past overlap (minutes)"
-                      class="f-past-overlap"
-                      min="0"
-                      .value=${String(this.pastOverlap)}
-                      @input=${(e: Event) => (this.pastOverlap = parseInt((e.target as HTMLInputElement).value, 10) || 0)}
+                      type="text"
+                      placeholder="Start Time Column (e.g. E)"
+                      class="f-column-start-time"
+                      maxlength="1"
+                      .value=${this.columnStartTime}
+                      @input=${(e: Event) => {
+                        const v = (
+                          e.target as HTMLInputElement
+                        ).value.toUpperCase();
+                        this.columnStartTime = /^[A-Z]$/.test(v) ? v : "";
+                      }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="End Time Column (e.g. F)"
+                      class="f-column-end-time"
+                      maxlength="1"
+                      .value=${this.columnEndTime}
+                      @input=${(e: Event) => {
+                        const v = (
+                          e.target as HTMLInputElement
+                        ).value.toUpperCase();
+                        this.columnEndTime = /^[A-Z]$/.test(v) ? v : "";
+                      }}
                     />
                   </div>
                 `
