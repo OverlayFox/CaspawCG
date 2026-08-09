@@ -1,11 +1,11 @@
 import { LitElement, html } from "lit";
 import { property, state } from "lit/decorators.js";
-import { ui, types } from "../../wailsjs/go/models";
+import { types, ui } from "../../wailsjs/go/models";
 import * as api from "../lib/api";
 import { LIVE_DATA_EVENT, type LiveDataEvent } from "../lib/events";
 
 export type FieldType = "string" | "int" | "float";
-export type FieldInputType = "datasource" | "direct" | "range";
+export type FieldInputType = "datasource" | "direct" | "range" | "schedule";
 
 /**
  * One custom-field row inside a template card: maps a CasparCG template key to either a
@@ -23,6 +23,8 @@ export class CaspFieldRow extends LitElement {
   @property({ type: String }) directValue = "";
   @property({ type: String }) range = "";
   @property({ type: Number }) offset = 0;
+  @property({ type: Number }) minElements = 0;
+  @property({ type: Number }) pastOverlap = 0;
 
   @state() private dataSources: string[] = [];
   @state() private liveIdentifier: string | null = null;
@@ -78,6 +80,11 @@ export class CaspFieldRow extends LitElement {
       this.liveValue = this.directValue;
       return;
     }
+    if (this.inputType === "schedule") {
+      this.liveIdentifier = null;
+      this.liveValue = `Schedule: ${this.range || "no range"} (min ${this.minElements}, overlap ${this.pastOverlap}m)`;
+      return;
+    }
     this.liveIdentifier = result?.Identifier || null;
     if (result?.Error) {
       this.liveValue = result.Error;
@@ -92,9 +99,13 @@ export class CaspFieldRow extends LitElement {
     this.liveIdentifier = null;
   }
 
-  /** Returns null for DIRECT rows — they never resolve from a data source. */
+  /**
+   * Returns null for DIRECT rows — they never resolve from a data source — and for
+   * SCHEDULE rows, which have no backend resolution path yet.
+   */
   buildSubscription(): types.FieldSubscription | null {
-    if (this.inputType === "direct") return null;
+    if (this.inputType === "direct" || this.inputType === "schedule")
+      return null;
     return types.FieldSubscription.createFrom({
       Source: this.source,
       Type: this.fieldType,
@@ -117,8 +128,22 @@ export class CaspFieldRow extends LitElement {
       inputType: this.inputType,
       location: this.inputType === "datasource" ? this.location : "",
       source: this.inputType === "direct" ? "" : this.source,
-      value: this.inputType === "direct" ? this.directValue : "",
-      range: this.inputType === "range" ? this.range : "",
+      // Stopgap: ui.FieldConfig has no minElements/pastOverlap fields yet, so schedule
+      // rows piggyback their extra settings on the otherwise-unused `value` field as
+      // JSON until the Go side gains real support for the schedule input type.
+      value:
+        this.inputType === "direct"
+          ? this.directValue
+          : this.inputType === "schedule"
+            ? JSON.stringify({
+                minElements: this.minElements,
+                pastOverlap: this.pastOverlap,
+              })
+            : "",
+      range:
+        this.inputType === "range" || this.inputType === "schedule"
+          ? this.range
+          : "",
       offset: this.inputType === "range" ? this.offset : 0,
     });
   }
@@ -133,6 +158,19 @@ export class CaspFieldRow extends LitElement {
     row.directValue = config.value || "";
     row.range = config.range || "";
     row.offset = config.offset || 0;
+    if (row.inputType === "schedule" && config.value) {
+      try {
+        const parsed = JSON.parse(config.value) as {
+          minElements?: number;
+          pastOverlap?: number;
+        };
+        row.minElements = parsed.minElements ?? 0;
+        row.pastOverlap = parsed.pastOverlap ?? 0;
+      } catch {
+        row.minElements = 0;
+        row.pastOverlap = 0;
+      }
+    }
     return row;
   }
 
@@ -169,6 +207,7 @@ export class CaspFieldRow extends LitElement {
             <option value="datasource">Data Source</option>
             <option value="direct">Direct Input</option>
             <option value="range">Data Source Range</option>
+            <option value="schedule">Schedule</option>
           </select>
 
           ${
@@ -233,6 +272,44 @@ export class CaspFieldRow extends LitElement {
                       min="0"
                       .value=${String(this.offset)}
                       @input=${(e: Event) => (this.offset = parseInt((e.target as HTMLInputElement).value, 10) || 0)}
+                    />
+                  </div>
+                `
+              : ""
+          }
+          ${
+            this.inputType === "schedule"
+              ? html`
+                  <div class="f-schedule-inputs">
+                    <input
+                      type="text"
+                      placeholder="Range e.g. Sheet1!A1:A10"
+                      class="f-range"
+                      .value=${this.range}
+                      @input=${(e: Event) => (this.range = (e.target as HTMLInputElement).value)}
+                    />
+                    <select
+                      class="f-source"
+                      .value=${this.source}
+                      @change=${(e: Event) => (this.source = (e.target as HTMLSelectElement).value)}
+                    >
+                      ${this.dataSources.map((s) => html`<option value=${s}>${s}</option>`)}
+                    </select>
+                    <input
+                      type="number"
+                      placeholder="Minimum elements"
+                      class="f-min-elements"
+                      min="0"
+                      .value=${String(this.minElements)}
+                      @input=${(e: Event) => (this.minElements = parseInt((e.target as HTMLInputElement).value, 10) || 0)}
+                    />
+                    <input
+                      type="number"
+                      placeholder="Past overlap (minutes)"
+                      class="f-past-overlap"
+                      min="0"
+                      .value=${String(this.pastOverlap)}
+                      @input=${(e: Event) => (this.pastOverlap = parseInt((e.target as HTMLInputElement).value, 10) || 0)}
                     />
                   </div>
                 `
