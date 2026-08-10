@@ -90,7 +90,6 @@ export async function scheduleCGData(
   sizing: types.Sizing,
   delayMs: number,
   updateIntervalMs: number,
-  minElements: number,
   startTimeColumn: string,
   endTimeColumn: string,
 ): Promise<string> {
@@ -103,7 +102,6 @@ export async function scheduleCGData(
     sizing,
     delayMs,
     updateIntervalMs,
-    minElements,
     startTimeColumn,
     endTimeColumn,
   );

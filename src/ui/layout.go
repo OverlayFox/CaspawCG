@@ -34,7 +34,6 @@ type TemplateConfig struct {
 	DelayMs          int          `json:"delayMs,omitempty"`
 	UpdateIntervalMs int          `json:"updateIntervalMs,omitempty"`
 
-	ScheduleMinElements     int    `json:"scheduleMinElements,omitempty"`
 	ScheduleStartTimeColumn string `json:"scheduleStartTimeColumn,omitempty"`
 	ScheduleEndTimeColumn   string `json:"scheduleEndTimeColumn,omitempty"`
 

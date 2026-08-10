@@ -195,7 +195,7 @@ func (u *UIService) UpdateCasparCGData(template string, layer int, channelExpr s
 	return uuid, nil
 }
 
-func (u *UIService) ScheduleCasparCGData(template string, layer int, channelExpr string, literalFields []types.LiteralField, rangeFields []RangeField, sizing types.Sizing, delayMs, updateIntervalMs, minElements int, startTimeColumn, endTimeColumn string) (uuid string, err error) {
+func (u *UIService) ScheduleCasparCGData(template string, layer int, channelExpr string, literalFields []types.LiteralField, rangeFields []RangeField, sizing types.Sizing, delayMs, updateIntervalMs int, startTimeColumn, endTimeColumn string) (uuid string, err error) {
 	channels, err := types.ParseChannelExpression(channelExpr)
 	if err != nil {
 		return "", err
@@ -233,7 +233,7 @@ func (u *UIService) ScheduleCasparCGData(template string, layer int, channelExpr
 	}
 	u.pushCGData(template, layer, channels, resolvedData, sizing, time.Duration(delayMs)*time.Millisecond)
 
-	uuid = u.updateHandler.AddScheduleJob(template, layer, channels, u.casparCGClient, casparMaps, time.Duration(updateIntervalMs)*time.Millisecond, minElements, startTimeColumn, endTimeColumn)
+	uuid = u.updateHandler.AddScheduleJob(template, layer, channels, u.casparCGClient, casparMaps, time.Duration(updateIntervalMs)*time.Millisecond, startTimeColumn, endTimeColumn)
 	return uuid, nil
 }
 

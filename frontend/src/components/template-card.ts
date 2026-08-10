@@ -22,7 +22,6 @@ export class CaspTemplateCard extends LitElement {
   @property({ type: Number }) sizeY = 100;
   @property({ type: Number }) delayMs = 0;
   @property({ type: Number }) updateIntervalMs = 0;
-  @property({ type: Number }) scheduleMinElements = 0;
   @property({ type: String }) scheduleStartTimeColumn = "";
   @property({ type: String }) scheduleEndTimeColumn = "";
 
@@ -110,7 +109,6 @@ export class CaspTemplateCard extends LitElement {
       }),
       delayMs: this.delayMs,
       updateIntervalMs: this.updateIntervalMs,
-      scheduleMinElements: this.scheduleMinElements,
       scheduleStartTimeColumn: this.scheduleStartTimeColumn,
       scheduleEndTimeColumn: this.scheduleEndTimeColumn,
       fields: this.fieldRows().map((row) => row.toConfig()),
@@ -132,7 +130,6 @@ export class CaspTemplateCard extends LitElement {
     card.sizeY = config.sizing?.sizeY ?? 100;
     card.delayMs = config.delayMs || 0;
     card.updateIntervalMs = config.updateIntervalMs || 0;
-    card.scheduleMinElements = config.scheduleMinElements || 0;
     card.scheduleStartTimeColumn = config.scheduleStartTimeColumn || "";
     card.scheduleEndTimeColumn = config.scheduleEndTimeColumn || "";
     card.queuedFields = config.fields || [];
@@ -231,7 +228,6 @@ export class CaspTemplateCard extends LitElement {
           this.sizing(),
           this.delayMs,
           this.updateIntervalMs,
-          this.scheduleMinElements,
           this.scheduleStartTimeColumn,
           this.scheduleEndTimeColumn,
         );
@@ -490,43 +486,31 @@ export class CaspTemplateCard extends LitElement {
         </div>
         <div class="widget-controls-row edit-only">
           <div class="input-group">
-            <label>Schedule Min Elements:</label>
-            <input
-              type="number"
-              class="schedule-min-elements-input"
-              min="0"
-              .value=${String(this.scheduleMinElements)}
-              @change=${(e: Event) => {
-                this.scheduleMinElements =
-                  parseInt((e.target as HTMLInputElement).value, 10) || 0;
-                onChange();
-              }}
-            />
-          </div>
-          <div class="input-group">
-            <label>Start Time Column:</label>
+            <label>Start Time Range:</label>
             <input
               type="text"
               class="schedule-start-time-column-input"
-              maxlength="1"
+              placeholder="e.g. Schedule!A1:A10"
               .value=${this.scheduleStartTimeColumn}
               @input=${(e: Event) => {
-                const v = (e.target as HTMLInputElement).value.toUpperCase();
-                this.scheduleStartTimeColumn = /^[A-Z]$/.test(v) ? v : "";
+                this.scheduleStartTimeColumn = (
+                  e.target as HTMLInputElement
+                ).value;
                 onChange();
               }}
             />
           </div>
           <div class="input-group">
-            <label>End Time Column:</label>
+            <label>End Time Range:</label>
             <input
               type="text"
               class="schedule-end-time-column-input"
-              maxlength="1"
+              placeholder="e.g. Schedule!A1:A10"
               .value=${this.scheduleEndTimeColumn}
               @input=${(e: Event) => {
-                const v = (e.target as HTMLInputElement).value.toUpperCase();
-                this.scheduleEndTimeColumn = /^[A-Z]$/.test(v) ? v : "";
+                this.scheduleEndTimeColumn = (
+                  e.target as HTMLInputElement
+                ).value;
                 onChange();
               }}
             />

@@ -12,10 +12,9 @@ type Schedule struct {
 	*Update
 
 	currentAbsRowNumber int // the absolute row number the current displayed schedule is on
-	minElements         int // the minimum number of elements to display in the schedule
 }
 
-func NewSchedule(upstreamCtx context.Context, logger zerolog.Logger, template string, layer int, videoChannels []int, casparCGClient types.CasparCGClient, casparMaps map[string]*Resolver, updateInterval time.Duration, minElements int, startTimeColumn, endTimeColumn string) types.UpdateJob {
+func NewSchedule(upstreamCtx context.Context, logger zerolog.Logger, template string, layer int, videoChannels []int, casparCGClient types.CasparCGClient, casparMaps map[string]*Resolver, updateInterval time.Duration, startTimeColumn, endTimeColumn string) types.UpdateJob {
 	ctx, cancel := context.WithCancel(upstreamCtx)
 	return &Schedule{
 		Update: &Update{
@@ -34,7 +33,6 @@ func NewSchedule(upstreamCtx context.Context, logger zerolog.Logger, template st
 			cancel: cancel,
 		},
 		currentAbsRowNumber: 0,
-		minElements:         minElements,
 	}
 }
 
