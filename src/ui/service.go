@@ -205,10 +205,6 @@ func (u *UIService) ScheduleCasparCGData(template string, layer int, channelExpr
 	if len(rangeFields) == 0 {
 		return "", errors.New("no schedule fields provided")
 	}
-
-	// Schedule fields and the start/end time columns have no live-mode priming path on
-	// the frontend (unlike "range"/"datasource" fields, which go through PrimeDataSources),
-	// so this resolves and primes everything itself before building any resolver.
 	fieldRanges := make(map[string]types.Range, len(rangeFields))
 	locationsBySource := make(map[string][]types.Location)
 	for _, rf := range rangeFields {
