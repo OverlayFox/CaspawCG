@@ -5,8 +5,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/overlayfox/caspaw-cg/src/types"
 	"github.com/rs/zerolog"
+
+	"github.com/overlayfox/caspaw-cg/src/types"
 )
 
 type ScheduleSheet struct {
