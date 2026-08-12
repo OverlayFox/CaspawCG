@@ -83,11 +83,6 @@ func NewClient(ctx context.Context, logger zerolog.Logger, cfg d.GoogleSheetData
 	return client, nil
 }
 
-// resolveSpreadsheetLocation looks up the spreadsheet's configured time zone (e.g.
-// "Europe/Berlin") so serial date numbers - which carry no time zone of their own, only
-// a civil wall-clock value - can be interpreted the same way Sheets itself interprets
-// them. Falls back to UTC (logging why) if the property is missing or unrecognized, so a
-// lookup hiccup degrades to the old behavior instead of failing client construction.
 func resolveSpreadsheetLocation(ctx context.Context, logger zerolog.Logger, service *gs.Service, spreadsheetID string) *time.Location {
 	spreadsheet, err := service.Spreadsheets.Get(spreadsheetID).Fields("properties.timeZone").Context(ctx).Do()
 	if err != nil {
@@ -186,10 +181,6 @@ func (c *client) batchFetch(emptyData []types.Location) ([]*types.Data, error) {
 	resp, err := c.service.Spreadsheets.Values.
 		BatchGet(c.cfg.SpreadSheetID).
 		Ranges(keys...).
-		// UNFORMATTED_VALUE returns each cell's raw underlying value instead of a
-		// locale/display-formatted string (e.g. a datetime cell comes back as a serial
-		// day number rather than a string like "19/08/2026 15:00:00" whose layout
-		// depends on the spreadsheet's locale and the cell's own number format).
 		ValueRenderOption("UNFORMATTED_VALUE").
 		Context(c.ctx).Do()
 	if err != nil {
@@ -200,10 +191,6 @@ func (c *client) batchFetch(emptyData []types.Location) ([]*types.Data, error) {
 		return nil, fmt.Errorf("unexpected number of value ranges in batchGet response: got %d, want %d", len(resp.ValueRanges), len(emptyData))
 	}
 
-	// Match by response order, not by string-comparing valueRange.Range against the
-	// requested key: Google echoes back a canonicalized range (e.g. dropping quotes
-	// that weren't strictly required), so exact string equality can silently fail to
-	// match. BatchGet guarantees ValueRanges are returned in the same order as Ranges.
 	result := make([]*types.Data, 0, len(resp.ValueRanges))
 	for i, valueRange := range resp.ValueRanges {
 		var fetchedData any
@@ -228,20 +215,6 @@ func (c *client) batchFetch(emptyData []types.Location) ([]*types.Data, error) {
 	return result, nil
 }
 
-// serialToUnix converts a Sheets serial date number (as returned by the API's
-// UNFORMATTED_VALUE + default SERIAL_NUMBER date-time rendering, e.g. 46145.625 for a
-// half-past-three datetime) into a Unix timestamp. The serial number is a civil
-// wall-clock value with no time zone of its own, so its calendar fields (year, month,
-// day, hour, ...) must be read back in the spreadsheet's configured time zone
-// (c.location) rather than UTC - otherwise every converted timestamp would be off by
-// the spreadsheet's UTC offset.
-//
-// The day-count arithmetic itself is still done against a UTC epoch, not one
-// constructed directly in c.location: anchoring the epoch to 1899 in a real zone risks
-// resolving to that zone's pre-standardization "Local Mean Time" offset (e.g. old
-// Europe/Berlin used UTC+0:53), which would throw off every date by that stale offset.
-// Doing the arithmetic in UTC and only reinterpreting the resulting wall-clock fields in
-// c.location avoids that: the zone lookup then applies to the real target date.
 func (c *client) serialToUnix(serial float64) int64 {
 	epochUTC := time.Date(1899, time.December, 30, 0, 0, 0, 0, time.UTC)
 	wallClock := epochUTC.Add(time.Duration(serial * 24 * float64(time.Hour)))
