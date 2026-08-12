@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
@@ -201,7 +202,15 @@ func (u *UIService) ScheduleCasparCGData(template string, layer int, channelExpr
 		return "", err
 	}
 
-	casparMaps := make(map[string]*update.Resolver, len(rangeFields))
+	if len(rangeFields) == 0 {
+		return "", errors.New("no schedule fields provided")
+	}
+
+	// Schedule fields and the start/end time columns have no live-mode priming path on
+	// the frontend (unlike "range"/"datasource" fields, which go through PrimeDataSources),
+	// so this resolves and primes everything itself before building any resolver.
+	fieldRanges := make(map[string]types.Range, len(rangeFields))
+	locationsBySource := make(map[string][]types.Location)
 	for _, rf := range rangeFields {
 		dataRange, err := types.NewRange(rf.Range)
 		if err != nil {
@@ -211,29 +220,61 @@ func (u *UIService) ScheduleCasparCGData(template string, layer int, channelExpr
 		for i := range dataRange.Locations {
 			dataRange.Locations[i].Type = rf.Type
 		}
+		fieldRanges[rf.CasparKey] = dataRange
+		locationsBySource[rf.Source] = append(locationsBySource[rf.Source], dataRange.Locations...)
+	}
 
-		ds, err := u.datasourceManager.GetDataSource(rf.Source)
+	startRange, err := types.NewRange(startTimeColumn)
+	if err != nil {
+		u.app.logger.Error().Err(err).Str("range", startTimeColumn).Msg("Failed to parse start time range")
+		return "", err
+	}
+	endRange, err := types.NewRange(endTimeColumn)
+	if err != nil {
+		u.app.logger.Error().Err(err).Str("range", endTimeColumn).Msg("Failed to parse end time range")
+		return "", err
+	}
+	for i := range startRange.Locations {
+		startRange.Locations[i].Type = types.DataTypeDateTime
+	}
+	for i := range endRange.Locations {
+		endRange.Locations[i].Type = types.DataTypeDateTime
+	}
+	timeSource := rangeFields[0].Source
+	locationsBySource[timeSource] = append(locationsBySource[timeSource], startRange.Locations...)
+	locationsBySource[timeSource] = append(locationsBySource[timeSource], endRange.Locations...)
+
+	dataSources := make(map[string]types.DataSource, len(locationsBySource))
+	for source, locations := range locationsBySource {
+		ds, err := u.datasourceManager.GetDataSource(source)
 		if err != nil {
-			u.app.logger.Error().Err(err).Msgf("Failed to get datasource '%s'", rf.Source)
+			u.app.logger.Error().Err(err).Msgf("Failed to get datasource '%s'", source)
 			return "", err
 		}
+		u.app.logger.Info().Msgf("Priming datasource '%s' with %d location(s)", source, len(locations))
+		if err := ds.Prime(locations); err != nil {
+			u.app.logger.Error().Err(err).Msgf("Failed to prime datasource '%s'", source)
+			return "", err
+		}
+		dataSources[source] = ds
+	}
 
-		resolver := update.NewResolver(ds, dataRange, rf.Offset)
+	casparMaps := make(update.CasparMaps, len(rangeFields))
+	for _, rf := range rangeFields {
+		resolver := update.NewResolver(dataSources[rf.Source], fieldRanges[rf.CasparKey], rf.Offset)
 		casparMaps[rf.CasparKey] = &resolver
 	}
 
-	resolvedData := types.BuildDataMap(literalFields)
-	for casparKey, resolver := range casparMaps {
-		value, err := resolver.GetData()
-		if err != nil {
-			u.app.logger.Error().Err(err).Str("casparKey", casparKey).Msg("Failed to get data from datasource")
-		}
-		resolvedData[casparKey] = value
-		resolver.Advance()
-	}
-	u.pushCGData(template, layer, channels, resolvedData, sizing, time.Duration(delayMs)*time.Millisecond)
+	startResolver := update.NewResolver(dataSources[timeSource], startRange, 0)
+	endResolver := update.NewResolver(dataSources[timeSource], endRange, 0)
 
-	uuid = u.updateHandler.AddScheduleJob(template, layer, channels, u.casparCGClient, casparMaps, time.Duration(updateIntervalMs)*time.Millisecond, startTimeColumn, endTimeColumn)
+	scheduleSheet := update.ScheduleSheet{
+		StartTimeRange: &startResolver,
+		EndTimeRange:   &endResolver,
+		CasparMaps:     casparMaps,
+	}
+
+	uuid = u.updateHandler.AddScheduleJob(template, layer, channels, u.casparCGClient, scheduleSheet, types.BuildDataMap(literalFields), sizing, time.Duration(delayMs)*time.Millisecond, time.Duration(updateIntervalMs)*time.Millisecond, startTimeColumn, endTimeColumn)
 	return uuid, nil
 }
 

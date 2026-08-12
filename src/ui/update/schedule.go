@@ -2,20 +2,40 @@ package update
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/overlayfox/caspaw-cg/src/types"
 	"github.com/rs/zerolog"
 )
 
+type ScheduleSheet struct {
+	StartTimeRange *Resolver `json:"start_time_resolver"`
+	EndTimeRange   *Resolver `json:"end_time_resolver"`
+
+	CasparMaps CasparMaps `json:"caspar_maps"` // [casparKey]Resolver
+}
+
 type Schedule struct {
 	*Update
 
-	currentAbsRowNumber int // the absolute row number the current displayed schedule is on
+	minEvents     int // the minimum number of rows to keep on screen even when fewer than that are still active
+	ScheduleSheet ScheduleSheet
+
+	literalData map[string]any // static fields pushed alongside the resolved schedule data on every update
+	sizing      types.Sizing
+	delay       time.Duration
+
+	offsetSlice   []int
+	currentOffset int
 }
 
-func NewSchedule(upstreamCtx context.Context, logger zerolog.Logger, template string, layer int, videoChannels []int, casparCGClient types.CasparCGClient, casparMaps map[string]*Resolver, updateInterval time.Duration, startTimeColumn, endTimeColumn string) types.UpdateJob {
+func NewSchedule(upstreamCtx context.Context, logger zerolog.Logger, template string, layer int, videoChannels []int, casparCGClient types.CasparCGClient, casparMapsWithTiming ScheduleSheet, literalData map[string]any, sizing types.Sizing, delay, updateInterval time.Duration) types.UpdateJob {
 	ctx, cancel := context.WithCancel(upstreamCtx)
+	offsetSlice := make([]int, casparMapsWithTiming.StartTimeRange.GetRowAmount())
+	for i := range offsetSlice {
+		offsetSlice[i] = i
+	}
 	return &Schedule{
 		Update: &Update{
 			logger: logger.With().Str("component", "schedule").Str("template", template).Logger(),
@@ -25,15 +45,63 @@ func NewSchedule(upstreamCtx context.Context, logger zerolog.Logger, template st
 			videoChannels: videoChannels,
 
 			casparCGClient: casparCGClient,
-			casparMaps:     casparMaps,
+			casparMaps:     nil,
 
 			updateInterval: updateInterval,
 
 			ctx:    ctx,
 			cancel: cancel,
 		},
-		currentAbsRowNumber: 0,
+		minEvents:     casparMapsWithTiming.CasparMaps.GetElementsAmount(),
+		ScheduleSheet: casparMapsWithTiming,
+
+		literalData: literalData,
+		sizing:      sizing,
+		delay:       delay,
+
+		offsetSlice: offsetSlice,
 	}
+}
+
+func (s *Schedule) dropPastOffsets() {
+	now := time.Now()
+	keptOffsets := s.offsetSlice[:0:0]
+
+	for _, startOffset := range s.offsetSlice {
+		nextEventOffset := (startOffset + s.minEvents + 1) % len(s.offsetSlice)
+
+		nextEventEnd, err := s.ScheduleSheet.EndTimeRange.GetRowData(nextEventOffset)
+		if err != nil {
+			s.logger.Error().Err(err).Msg("Failed to get next event end time")
+			continue
+		}
+		nextEventEndTime, ok := nextEventEnd.(time.Time)
+		if !ok {
+			s.logger.Error().Err(errors.New("invalid type assertion")).Msg("Failed to assert next event end time")
+			continue
+		}
+
+		if now.After(nextEventEndTime) {
+			s.logger.Debug().Int("new_offset_slice_length", len(s.offsetSlice)).Msg("Removed expired event from offset slice")
+			continue
+		}
+
+		keptOffsets = append(keptOffsets, startOffset)
+	}
+	s.offsetSlice = keptOffsets
+}
+
+func resolveCasparData(casparMaps CasparMaps, offset int) (map[string]any, error) {
+	casparData := make(map[string]any)
+	for casparKey, resolver := range casparMaps {
+		data, err := resolver.GetRowData(offset)
+		if err != nil {
+			return nil, err
+		}
+		casparData[casparKey] = data
+	}
+
+	return casparData, nil
 }
 
 func (s *Schedule) Start() error {
@@ -43,16 +111,43 @@ func (s *Schedule) Start() error {
 			case <-s.ctx.Done():
 				return
 			case <-time.After(s.updateInterval):
-				casparData := make(map[string]any)
-				for casparKey, resolver := range s.casparMaps {
-					values, err := resolver.GetAllData()
-					if err != nil {
-						s.logger.Error().Err(err).Str("casparKey", casparKey).Msg("Failed to get data from datasource")
-						continue
-					}
-					casparData[casparKey] = values
+				if len(s.offsetSlice) <= s.minEvents {
+					return // terminate the update loop
 				}
-				s.logger.Info().Any("casparData", casparData).Msg("Fetched schedule data")
+				s.dropPastOffsets()
+
+				casparData := make(map[string]any)
+				for _, startOffset := range s.offsetSlice {
+					if startOffset == s.currentOffset {
+						desiredOffset := (startOffset + 1) % len(s.offsetSlice) // move forward by one
+						offset := s.offsetSlice[desiredOffset]                  // get the actual offset
+						for i := range s.minEvents {
+							if i == 0 {
+								s.currentOffset = offset
+							}
+
+							casparMaps, err := s.ScheduleSheet.CasparMaps.GetBySlot(i)
+							if err != nil {
+								s.logger.Error().Err(err).Msg("Failed to get caspar maps by slot")
+								continue
+							}
+
+							desiredOffset := (offset + i) % len(s.offsetSlice)
+							eventOffset := s.offsetSlice[desiredOffset]
+							casparEventData, err := resolveCasparData(casparMaps, eventOffset)
+							if err != nil {
+								s.logger.Error().Err(err).Msg("Failed to resolve caspar data")
+								continue
+							}
+							casparData = mergeMaps(casparData, casparEventData)
+						}
+					}
+				}
+
+				s.logger.Debug().Interface("casparData", casparData).Msg("Schedule update")
+				if err := s.casparCGClient.UpdateCGData(s.template, s.layer, s.videoChannels, casparData); err != nil {
+					s.logger.Error().Err(err).Msg("Failed to update CG data")
+				}
 			}
 		}
 	})

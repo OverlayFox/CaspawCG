@@ -28,7 +28,8 @@ type client struct {
 	dataFields []*types.Data
 	mtx        sync.RWMutex
 
-	service *gs.Service
+	service  *gs.Service
+	location *time.Location
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -60,15 +61,19 @@ func NewClient(ctx context.Context, logger zerolog.Logger, cfg d.GoogleSheetData
 		return nil, fmt.Errorf("failed to create Google Sheets service: %w", err)
 	}
 
+	clientLogger := logger.With().Str("component", fmt.Sprintf("google-sheets-client-%s", cfg.SpreadSheetID)).Logger()
+	location := resolveSpreadsheetLocation(ctx, clientLogger, service, cfg.SpreadSheetID)
+
 	ctx, cancel := context.WithCancel(ctx)
 	client := &client{
-		logger:         logger.With().Str("component", fmt.Sprintf("google-sheets-client-%s", cfg.SpreadSheetID)).Logger(),
+		logger:         clientLogger,
 		cfg:            cfg,
 		eventProcessor: eventProcessor,
 
 		dataFields: make([]*types.Data, 0),
 
-		service: service,
+		service:  service,
+		location: location,
 
 		ctx:    ctx,
 		cancel: cancel,
@@ -76,6 +81,28 @@ func NewClient(ctx context.Context, logger zerolog.Logger, cfg d.GoogleSheetData
 	client.updateDataFields() // start update cycle
 
 	return client, nil
+}
+
+// resolveSpreadsheetLocation looks up the spreadsheet's configured time zone (e.g.
+// "Europe/Berlin") so serial date numbers - which carry no time zone of their own, only
+// a civil wall-clock value - can be interpreted the same way Sheets itself interprets
+// them. Falls back to UTC (logging why) if the property is missing or unrecognized, so a
+// lookup hiccup degrades to the old behavior instead of failing client construction.
+func resolveSpreadsheetLocation(ctx context.Context, logger zerolog.Logger, service *gs.Service, spreadsheetID string) *time.Location {
+	spreadsheet, err := service.Spreadsheets.Get(spreadsheetID).Fields("properties.timeZone").Context(ctx).Do()
+	if err != nil {
+		logger.Warn().Err(err).Msg("failed to fetch spreadsheet time zone, defaulting to UTC")
+		return time.UTC
+	}
+
+	tz := spreadsheet.Properties.TimeZone
+	location, err := time.LoadLocation(tz)
+	if err != nil {
+		logger.Warn().Err(err).Str("timeZone", tz).Msg("failed to load spreadsheet time zone, defaulting to UTC")
+		return time.UTC
+	}
+
+	return location
 }
 
 func (c *client) GetName() string {
@@ -159,6 +186,11 @@ func (c *client) batchFetch(emptyData []types.Location) ([]*types.Data, error) {
 	resp, err := c.service.Spreadsheets.Values.
 		BatchGet(c.cfg.SpreadSheetID).
 		Ranges(keys...).
+		// UNFORMATTED_VALUE returns each cell's raw underlying value instead of a
+		// locale/display-formatted string (e.g. a datetime cell comes back as a serial
+		// day number rather than a string like "19/08/2026 15:00:00" whose layout
+		// depends on the spreadsheet's locale and the cell's own number format).
+		ValueRenderOption("UNFORMATTED_VALUE").
 		Context(c.ctx).Do()
 	if err != nil {
 		return nil, err
@@ -179,6 +211,11 @@ func (c *client) batchFetch(emptyData []types.Location) ([]*types.Data, error) {
 			fetchedData = valueRange.Values[0][0]
 		}
 		emptyDt := emptyData[i]
+		if emptyDt.Type == types.DataTypeDateTime {
+			if serial, ok := fetchedData.(float64); ok {
+				fetchedData = c.serialToUnix(serial)
+			}
+		}
 		result = append(result, &types.Data{
 			Location: types.Location{
 				Key:  emptyDt.Key,
@@ -189,6 +226,30 @@ func (c *client) batchFetch(emptyData []types.Location) ([]*types.Data, error) {
 	}
 
 	return result, nil
+}
+
+// serialToUnix converts a Sheets serial date number (as returned by the API's
+// UNFORMATTED_VALUE + default SERIAL_NUMBER date-time rendering, e.g. 46145.625 for a
+// half-past-three datetime) into a Unix timestamp. The serial number is a civil
+// wall-clock value with no time zone of its own, so its calendar fields (year, month,
+// day, hour, ...) must be read back in the spreadsheet's configured time zone
+// (c.location) rather than UTC - otherwise every converted timestamp would be off by
+// the spreadsheet's UTC offset.
+//
+// The day-count arithmetic itself is still done against a UTC epoch, not one
+// constructed directly in c.location: anchoring the epoch to 1899 in a real zone risks
+// resolving to that zone's pre-standardization "Local Mean Time" offset (e.g. old
+// Europe/Berlin used UTC+0:53), which would throw off every date by that stale offset.
+// Doing the arithmetic in UTC and only reinterpreting the resulting wall-clock fields in
+// c.location avoids that: the zone lookup then applies to the real target date.
+func (c *client) serialToUnix(serial float64) int64 {
+	epochUTC := time.Date(1899, time.December, 30, 0, 0, 0, 0, time.UTC)
+	wallClock := epochUTC.Add(time.Duration(serial * 24 * float64(time.Hour)))
+	return time.Date(
+		wallClock.Year(), wallClock.Month(), wallClock.Day(),
+		wallClock.Hour(), wallClock.Minute(), wallClock.Second(), wallClock.Nanosecond(),
+		c.location,
+	).Unix()
 }
 
 func (c *client) updateDataFields() {
