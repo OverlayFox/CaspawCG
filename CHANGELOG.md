@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- #66 - added schedule option to allow caspaw-cg to parse schedule information and filter out events without disrupting visual flow
 - linter/formatter to frontend
 
 ### Changed
