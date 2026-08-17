@@ -40,6 +40,8 @@ export function RemoveUpdateJob(arg1:string):Promise<void>;
 
 export function SaveLayout(arg1:ui.LayoutConfig):Promise<void>;
 
+export function ScheduleCasparCGData(arg1:string,arg2:number,arg3:string,arg4:Array<types.LiteralField>,arg5:Array<ui.RangeField>,arg6:types.Sizing,arg7:number,arg8:number,arg9:string,arg10:string):Promise<string>;
+
 export function StopCasparCGData(arg1:string,arg2:number,arg3:string,arg4:number):Promise<void>;
 
 export function StopCasparCGDataGroup(arg1:Array<ui.CGDataGroup>):Promise<void>;

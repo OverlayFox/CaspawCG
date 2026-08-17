@@ -1,11 +1,11 @@
 import { LitElement, html } from "lit";
 import { property, state } from "lit/decorators.js";
-import { ui, types } from "../../wailsjs/go/models";
+import { types, ui } from "../../wailsjs/go/models";
 import * as api from "../lib/api";
 import { LIVE_DATA_EVENT, type LiveDataEvent } from "../lib/events";
 
 export type FieldType = "string" | "int" | "float";
-export type FieldInputType = "datasource" | "direct" | "range";
+export type FieldInputType = "datasource" | "direct" | "range" | "schedule";
 
 /**
  * One custom-field row inside a template card: maps a CasparCG template key to either a
@@ -78,6 +78,11 @@ export class CaspFieldRow extends LitElement {
       this.liveValue = this.directValue;
       return;
     }
+    if (this.inputType === "schedule") {
+      this.liveIdentifier = null;
+      this.liveValue = `Schedule: ${this.range || "no range"}`;
+      return;
+    }
     this.liveIdentifier = result?.Identifier || null;
     if (result?.Error) {
       this.liveValue = result.Error;
@@ -92,9 +97,13 @@ export class CaspFieldRow extends LitElement {
     this.liveIdentifier = null;
   }
 
-  /** Returns null for DIRECT rows — they never resolve from a data source. */
+  /**
+   * Returns null for DIRECT rows — they never resolve from a data source — and for
+   * SCHEDULE rows, which have no backend resolution path yet.
+   */
   buildSubscription(): types.FieldSubscription | null {
-    if (this.inputType === "direct") return null;
+    if (this.inputType === "direct" || this.inputType === "schedule")
+      return null;
     return types.FieldSubscription.createFrom({
       Source: this.source,
       Type: this.fieldType,
@@ -118,8 +127,14 @@ export class CaspFieldRow extends LitElement {
       location: this.inputType === "datasource" ? this.location : "",
       source: this.inputType === "direct" ? "" : this.source,
       value: this.inputType === "direct" ? this.directValue : "",
-      range: this.inputType === "range" ? this.range : "",
-      offset: this.inputType === "range" ? this.offset : 0,
+      range:
+        this.inputType === "range" || this.inputType === "schedule"
+          ? this.range
+          : "",
+      offset:
+        this.inputType === "range" || this.inputType === "schedule"
+          ? this.offset
+          : 0,
     });
   }
 
@@ -169,6 +184,7 @@ export class CaspFieldRow extends LitElement {
             <option value="datasource">Data Source</option>
             <option value="direct">Direct Input</option>
             <option value="range">Data Source Range</option>
+            <option value="schedule">Schedule</option>
           </select>
 
           ${
@@ -209,9 +225,15 @@ export class CaspFieldRow extends LitElement {
               : ""
           }
           ${
-            this.inputType === "range"
+            this.inputType === "range" || this.inputType === "schedule"
               ? html`
-                  <div class="f-range-inputs">
+                  <div
+                    class=${
+                      this.inputType === "range"
+                        ? "f-range-inputs"
+                        : "f-schedule-inputs"
+                    }
+                  >
                     <input
                       type="text"
                       placeholder="Range e.g. Sheet1!A1:A10"

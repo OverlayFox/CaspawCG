@@ -376,6 +376,30 @@ casp-template-card:hover {
   border-color: var(--accent-blue);
 }
 
+.field-row-edit .f-range {
+  flex: 0 1 130px;
+}
+
+.field-row-edit .f-key {
+  flex: 0 1 100px;
+}
+
+.field-row-edit input[type="number"] {
+  flex: 0 1 40px;
+}
+
+.field-row-edit .f-type {
+  flex: 0 1 90px;
+}
+
+.field-row-edit .f-input-type {
+  flex: 0 1 100px;
+}
+
+.field-row-edit .f-source {
+  flex: 0 1 120px;
+}
+
 .field-row-edit .delete-row-btn {
   flex-shrink: 0;
   width: 32px;
@@ -394,10 +418,12 @@ casp-template-card:hover {
 }
 
 .f-datasource-inputs,
-.f-direct-inputs {
+.f-direct-inputs,
+.f-range-inputs,
+.f-schedule-inputs {
   display: flex;
   gap: 6px;
-  flex: 1;
+  flex: 3 1 0;
   min-width: 0;
 }
 
@@ -449,6 +475,12 @@ casp-template-card:hover {
 body.is-live .widget-position-size-controls input {
   pointer-events: none;
   opacity: 0.7;
+}
+
+.schedule-start-time-column-input,
+.schedule-end-time-column-input {
+  width: 160px;
+  text-align: left;
 }
 
 /* ============================================================

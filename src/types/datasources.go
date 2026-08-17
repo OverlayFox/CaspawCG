@@ -11,11 +11,12 @@ import (
 type DataType string
 
 const (
-	DataTypeInt    DataType = "int"
-	DataTypeString DataType = "string"
-	DataTypeFloat  DataType = "float"
-	DataTypePath   DataType = "path"
-	DataTypeURL    DataType = "url"
+	DataTypeInt      DataType = "int"
+	DataTypeString   DataType = "string"
+	DataTypeFloat    DataType = "float"
+	DataTypePath     DataType = "path"
+	DataTypeURL      DataType = "url"
+	DataTypeDateTime DataType = "datetime"
 )
 
 // Location represents a location in a data source, identified by a key and its data type.

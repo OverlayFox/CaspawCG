@@ -2,12 +2,14 @@ package ui
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"time"
 
 	"github.com/overlayfox/casparcg-amcp-go/types/responses"
 
 	"github.com/overlayfox/caspaw-cg/src/types"
+	"github.com/overlayfox/caspaw-cg/src/ui/update"
 )
 
 // UIService bridges the UI with the GoLang system
@@ -15,7 +17,7 @@ type UIService struct {
 	app               *App
 	datasourceManager types.DatasourceManager
 	casparCGClient    types.CasparCGClient
-	updateHandler     *UpdateHandler
+	updateHandler     *update.Handler
 
 	wg     sync.WaitGroup
 	ctx    context.Context
@@ -28,7 +30,7 @@ func NewUIService(upstreamCtx context.Context, app *App, datasourceManager types
 		app:               app,
 		datasourceManager: datasourceManager,
 		casparCGClient:    casparCGClient,
-		updateHandler:     NewUpdateHandler(ctx, app.logger, datasourceManager, casparCGClient),
+		updateHandler:     update.NewUpdateHandler(ctx, app.logger, datasourceManager, casparCGClient),
 		ctx:               ctx,
 		cancel:            cancel,
 	}
@@ -158,7 +160,7 @@ func (u *UIService) UpdateCasparCGData(template string, layer int, channelExpr s
 		return "", err
 	}
 
-	casparMaps := make(map[string]*Resolver, len(rangeFields))
+	casparMaps := make(map[string]*update.Resolver, len(rangeFields))
 	for _, rf := range rangeFields {
 		dataRange, err := types.NewRange(rf.Range)
 		if err != nil {
@@ -175,7 +177,7 @@ func (u *UIService) UpdateCasparCGData(template string, layer int, channelExpr s
 			return "", err
 		}
 
-		resolver := NewResolver(ds, dataRange, rf.Offset)
+		resolver := update.NewResolver(ds, dataRange, rf.Offset)
 		casparMaps[rf.CasparKey] = &resolver
 	}
 
@@ -191,6 +193,84 @@ func (u *UIService) UpdateCasparCGData(template string, layer int, channelExpr s
 	u.pushCGData(template, layer, channels, resolvedData, sizing, time.Duration(delayMs)*time.Millisecond)
 
 	uuid = u.updateHandler.AddUpdateJob(template, layer, channels, u.casparCGClient, casparMaps, time.Duration(updateIntervalMs)*time.Millisecond)
+	return uuid, nil
+}
+
+func (u *UIService) ScheduleCasparCGData(template string, layer int, channelExpr string, literalFields []types.LiteralField, rangeFields []RangeField, sizing types.Sizing, delayMs, updateIntervalMs int, startTimeColumn, endTimeColumn string) (uuid string, err error) {
+	channels, err := types.ParseChannelExpression(channelExpr)
+	if err != nil {
+		return "", err
+	}
+
+	if len(rangeFields) == 0 {
+		return "", errors.New("no schedule fields provided")
+	}
+	fieldRanges := make(map[string]types.Range, len(rangeFields))
+	locationsBySource := make(map[string][]types.Location)
+	for _, rf := range rangeFields {
+		dataRange, err := types.NewRange(rf.Range)
+		if err != nil {
+			u.app.logger.Error().Err(err).Str("range", rf.Range).Msg("Failed to parse range")
+			return "", err
+		}
+		for i := range dataRange.Locations {
+			dataRange.Locations[i].Type = rf.Type
+		}
+		fieldRanges[rf.CasparKey] = dataRange
+		locationsBySource[rf.Source] = append(locationsBySource[rf.Source], dataRange.Locations...)
+	}
+
+	startRange, err := types.NewRange(startTimeColumn)
+	if err != nil {
+		u.app.logger.Error().Err(err).Str("range", startTimeColumn).Msg("Failed to parse start time range")
+		return "", err
+	}
+	endRange, err := types.NewRange(endTimeColumn)
+	if err != nil {
+		u.app.logger.Error().Err(err).Str("range", endTimeColumn).Msg("Failed to parse end time range")
+		return "", err
+	}
+	for i := range startRange.Locations {
+		startRange.Locations[i].Type = types.DataTypeDateTime
+	}
+	for i := range endRange.Locations {
+		endRange.Locations[i].Type = types.DataTypeDateTime
+	}
+	timeSource := rangeFields[0].Source
+	locationsBySource[timeSource] = append(locationsBySource[timeSource], startRange.Locations...)
+	locationsBySource[timeSource] = append(locationsBySource[timeSource], endRange.Locations...)
+
+	dataSources := make(map[string]types.DataSource, len(locationsBySource))
+	for source, locations := range locationsBySource {
+		ds, err := u.datasourceManager.GetDataSource(source)
+		if err != nil {
+			u.app.logger.Error().Err(err).Msgf("Failed to get datasource '%s'", source)
+			return "", err
+		}
+		u.app.logger.Info().Msgf("Priming datasource '%s' with %d location(s)", source, len(locations))
+		if err := ds.Prime(locations); err != nil {
+			u.app.logger.Error().Err(err).Msgf("Failed to prime datasource '%s'", source)
+			return "", err
+		}
+		dataSources[source] = ds
+	}
+
+	casparMaps := make(update.CasparMaps, len(rangeFields))
+	for _, rf := range rangeFields {
+		resolver := update.NewResolver(dataSources[rf.Source], fieldRanges[rf.CasparKey], rf.Offset)
+		casparMaps[rf.CasparKey] = &resolver
+	}
+
+	startResolver := update.NewResolver(dataSources[timeSource], startRange, 0)
+	endResolver := update.NewResolver(dataSources[timeSource], endRange, 0)
+
+	scheduleSheet := update.ScheduleSheet{
+		StartTimeRange: &startResolver,
+		EndTimeRange:   &endResolver,
+		CasparMaps:     casparMaps,
+	}
+
+	uuid = u.updateHandler.AddScheduleJob(template, layer, channels, u.casparCGClient, scheduleSheet, types.BuildDataMap(literalFields), sizing, time.Duration(delayMs)*time.Millisecond, time.Duration(updateIntervalMs)*time.Millisecond, startTimeColumn, endTimeColumn)
 	return uuid, nil
 }
 
